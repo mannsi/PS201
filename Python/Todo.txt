@@ -1,4 +1,5 @@
 # TODO
+# Git test. Send Frikki an email
 # Somehow deal with if the app is opened before the Arduino is connected. Reconnect button or something
 # Deal with ugly UI
 # Streamline the output process. Should be able to run a single script that outputs everything. Might be a problem bc of virtual machine
