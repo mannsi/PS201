@@ -7,7 +7,6 @@ class Connection():
     self.portFound = False
     self.baudRate = baudrate
     self.timeout = timeout
-    self.portNumber = -1
     self.programId = programId
     self.connected = False
     self.handshakeSignal = handshakeSignal
@@ -42,13 +41,15 @@ class Connection():
   def connect(self):
     if not self.connected:
       try:
+        print("Trying to connect")
         (portNumber, connection) = self.__findArduinoPort__()
+        print("Connecion success")
         self.connection = connection
         self.connected = True
-        logging.info("Connected")
+        logging.info("Connected on port %s" % portNumber)
         return True
-      except Exception as err:
-        logging.info("Error connecting to port. Error message: %s" % err)
+      except Exception as e:
+        logging.info("Error connecting to port. Error message: %s" % e)
         return False
     return True
 
@@ -57,8 +58,13 @@ class Connection():
 
   def getValue(self, command):
     self.connect()
-    value = self.__getValue__(self.connection,command)
-    return value
+    try:
+      value = self.__getValue__(self.connection,command)
+      return value
+    except Exception as e:
+      self.connection.close()
+      self.connected = False
+      raise Exception()
 
   def __getValue__(self, serialConnection, command):
     stream = bytearray(3)
@@ -67,14 +73,18 @@ class Connection():
     stream[2] = 0
     logging.debug("Sending command to arduino. Command: %s" % command)
     serialConnection.write(stream)
-    logging.info("Reading message from arduino")
     value = int(serialConnection.read())
-    logging.debug("Value from arduino: %s" % value)
+    logging.debug("Reading message from arduino. Value: %s" % value)
     return value
 
   def setValue(self, command, value):
     self.connect()
-    self.__setValue__(self.connection, command, value)
+    try:
+      self.__setValue__(self.connection, command, value)
+    except Exception as e:
+      self.connection.close()
+      self.connected = False
+      raise Exception()
 
   def __setValue__(self, serialConnection, command, value):
     stream = bytearray(3)

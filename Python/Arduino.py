@@ -3,9 +3,8 @@ import threading
 import logging
 
 class ArduinoController():
-  def __init__(self, shouldLog = False):
-    if shouldLog:
-      logging.basicConfig(format='%(asctime)s %(message)s', filename='arduino.log', level=logging.DEBUG)
+  def __init__(self, loglevel):
+    logging.basicConfig(format='%(asctime)s %(message)s', filename='arduino.log', level=loglevel)
 
     self.connection = SerialCommunication.Connection(baudrate = 9600, timeout = 2, handshakeSignal = 7, programId = 17)
     self.processLock = threading.Lock()
@@ -52,19 +51,18 @@ class ArduinoController():
   def ledSwitch(self):
     with self.processLock:
       if self.ledStatus:
-        self.connection.setValue(self.ledStateChange, 0)
         self.ledStatus = 0
       else:
-        self.connection.setValue(self.ledStateChange, 1)
         self.ledStatus = 1
+      self.connection.setValue(self.ledStateChange, self.ledStatus)
 
   def connect(self):
     with self.processLock:
       connectionSuccessful = self.connection.connect()
     return connectionSuccessful
 
-  def setLogging(self, shouldLog):
+  def setLogging(self, shouldLog, loglevel):
     if shouldLog:
-      logging.basicConfig(level=logging.DEBUG)
+      logging.basicConfig(level=loglevel)
     else:
       logging.propagate = False

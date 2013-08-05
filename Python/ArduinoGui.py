@@ -17,6 +17,9 @@ targetVoltageString = "TARGETVOLTAGE"
 #mainWindowSize = '500x300+200+200'
 mainWindowTitle = "Arduino Controller"
 
+connected = "connected"
+disconnected = "disconnected"
+
 class ThreadHelper():
   def __init__(self, controller, queue):
     self.controller = controller
@@ -30,36 +33,64 @@ class ThreadHelper():
       if self.__connectWorkerPostFunc__:
         self.__connectWorkerPostFunc__()
     else:
+      print("Connection exception. Failed to connect")
       self.queue.put(noDeviceFoundstr)
 
   def __ledSwitchWorker__(self):
-    self.controller.ledSwitch()
+    try:
+      self.controller.ledSwitch()
+    except Exception as e:
+      self.__connectionLost__("led worker")
 
   def __setTargetVoltageWorker__(self, targetVoltage):
-    self.controller.setTargetVoltage(targetVoltage)
+    try:
+      self.controller.setTargetVoltage(targetVoltage)
+    except Exception as e:
+      self.__connectionLost__("set target voltage worker")
 
   def __setTargetCurrentWorker__(self, targetCurrent):
-    self.controller.setTargetCurrent(targetCurrent)
+    try:
+      self.controller.setTargetCurrent(targetCurrent)
+    except Exception as e:
+      self.__connectionLost__("set target current worker")
 
   def __updateRealCurrentWorker__(self):
-    realCurrent = self.controller.getRealCurrent()
-    self.queue.put(realCurrentString)
-    self.queue.put(realCurrent)
+    try:
+      realCurrent = self.controller.getRealCurrent()
+      self.queue.put(realCurrentString)
+      self.queue.put(realCurrent)
+    except Exception as e:
+      self.__connectionLost__("update real current worker")
 
   def __updateRealVoltageWorker__(self):
-    realVoltage = self.controller.getRealVoltage()
-    self.queue.put(realVoltageString)
-    self.queue.put(realVoltage)
+    try:
+      realVoltage = self.controller.getRealVoltage()
+      self.queue.put(realVoltageString)
+      self.queue.put(realVoltage)
+    except Exception as e:
+      self.__connectionLost__("update real voltage worker")
 
   def __updateTargetCurrentWorker__(self):
-    targetCurrent = self.controller.getTargetCurrent()
-    self.queue.put(targetCurrentString)
-    self.queue.put(targetCurrent)
+    try:
+      targetCurrent = self.controller.getTargetCurrent()
+      self.queue.put(targetCurrentString)
+      self.queue.put(targetCurrent)
+    except Exception as e:
+      self.__connectionLost__("update target current worker")
 
   def __updateTargetVoltageWorker__(self):
-    targetVoltage = self.controller.getTargetVoltage()
-    self.queue.put(targetVoltageString)
-    self.queue.put(targetVoltage)
+    try:
+      targetVoltage = self.controller.getTargetVoltage()
+      self.queue.put(targetVoltageString)
+      self.queue.put(targetVoltage)
+    except Exception as e:
+      self.__connectionLost__("update target voltage worker")
+
+  def __connectionLost__(self, source):
+    logging.debug("Lost connection in %s", source)
+    self.queue.put(connectString)
+    self.queue.put(noDeviceFoundstr)
+    print("connection lost worker")
 
   def connect(self, postProcessingFunction = None):
     self.__connectWorkerPostFunc__ = postProcessingFunction
@@ -82,11 +113,12 @@ class ThreadHelper():
 
 class Gui():
   def __init__(self):
-    shouldLog = True
+    loglevel = logging.DEBUG
     self.queue = queue.Queue()
-    self.controller = Arduino.ArduinoController(shouldLog = shouldLog)
+    self.controller = Arduino.ArduinoController(loglevel = loglevel)
     self.threadHelper = ThreadHelper(controller=self.controller, queue=self.queue)
-    self.autoRefreshOn = 0
+    self.periodicUpdateRunning = False
+
     self.mainWindow = tkinter.Tk()
     self.mainWindow.title(mainWindowTitle)
     self.mainWindow.geometry()
@@ -96,46 +128,29 @@ class Gui():
     self.lblEmpty = tkinter.Label(self.mainWindow, text="").grid(row=1, column=0)
     self.valueFrames = ValueFrames(self.mainWindow, setTargetVoltageM=self.threadHelper.setTargetVoltage, setTargetCurrentM=self.threadHelper.setTargetCurrent)
     self.valueFrames.grid(row=2, column=1, columnspan=4)
-    self.autoRefreshVar = tkinter.IntVar()
-    self.chkAutoRefresh = tkinter.Checkbutton(self.mainWindow, text = "Auto refresh", variable = self.autoRefreshVar, command = lambda: self.autoRefreshClick(self.autoRefreshVar.get()), state=tkinter.DISABLED)
-    self.chkAutoRefresh.grid(row=3, column = 3, sticky=tkinter.E)
-    self.btnRefresh = tkinter.Button(self.mainWindow, text = "Refresh",command = self.refreshClick, state=tkinter.DISABLED, pady=5)
-    self.btnRefresh.grid(row=3, column = 4, sticky=tkinter.E)
     self.ledSwitchButton = tkinter.Button(self.mainWindow, text = "Led button", width = 20, command = self.ledClick)
     self.ledSwitchButton.grid(row=4, column=2)
     self.chkloggingVar = tkinter.IntVar(value=1)
     self.chklogging = tkinter.Checkbutton(self.mainWindow, text = "Log", variable = self.chkloggingVar, command = self.loggingClick)
     self.chklogging.grid(row=5, column=2)
 
-  def refreshClick(self):
-    self.threadHelper.updateCurrentAndVoltage()
-
   def loggingClick(self):
     checkedValue = self.chkloggingVar.get()
-    self.controller.setLogging(checkedValue)
-
-  def autoRefreshClick(self, autoRefreshValue):
-    logging("Autorefresh clicked. Value of auto refresh: ", autoRefreshValue)
-    self.autoRefreshOn = autoRefreshValue
-    if autoRefreshValue:
-      self.periodicCurrentVoltageUpdate()
+    self.controller.setLogging(checkedValue, logging.DEBUG)
 
   def ledClick(self):
     self.threadHelper.ledSwitch()
 
   def connect(self):
-    self.periodicUiUpdate()
-    self.autoRefreshOn = self.autoRefreshVar.get()
+    logging.debug("Checking for connection")
     self.threadHelper.connect(self.onConnect)
 
   def onConnect(self):
-    self.threadHelper.updateCurrentAndVoltage()
-    if self.autoRefreshOn:
-      self.periodicCurrentVoltageUpdate()
+    print("onConnect")
+    self.connected = True
+    self.periodicCurrentVoltageUpdate()
 
   def connectedStateChanged(self, connected):
-    chkAutoRefresh = self.chkAutoRefresh
-    btnRefresh = self.btnRefresh
     btnSetTargetVoltage = self.valueFrames.targetValues.btnSetTargetVoltage
     btnSetTargetCurrent = self.valueFrames.targetValues.btnSetTargetCurrent
 
@@ -143,8 +158,6 @@ class Gui():
       newState = tkinter.NORMAL
     else:
       newState = tkinter.DISABLED
-    chkAutoRefresh["state"] = newState
-    btnRefresh["state"] = newState
     btnSetTargetVoltage["state"] = newState
     btnSetTargetCurrent["state"] = newState
 
@@ -158,8 +171,13 @@ class Gui():
 
           if connectStatus == connectedString:
             self.connectedStateChanged(True)
-          else:
+          elif connectStatus == noDeviceFoundstr:
+            # When this state is reached I must stop listening more for this state since many thread will return this state
+            # I also have to stop the current threads until the connectedString is returned
+            print("periodic update UI no device found. Queue size ", self.queue.qsize())
+            self.connected = False
             self.connectedStateChanged(False)
+            self.connect()
 
         elif action == realCurrentString:
           realCurrentValue = self.queue.get(0)
@@ -180,12 +198,18 @@ class Gui():
     else:
       self.mainWindow.after(guiRefreshRate, self.periodicUiUpdate)
 
-  def periodicCurrentVoltageUpdate(self):
-    if self.autoRefreshOn:
-      self.threadHelper.updateCurrentAndVoltage()
-      self.mainWindow.after(valuesRefreshRate, self.periodicCurrentVoltageUpdate)
+  def periodicCurrentVoltageUpdate(self, recursiveCall = None):
+    if self.connected:
+      if not self.periodicUpdateRunning or recursiveCall:
+        self.periodicUpdateRunning = True
+        print("periodicCurrentVoltageUpdate")
+        self.threadHelper.updateCurrentAndVoltage()
+        self.mainWindow.after(valuesRefreshRate, self.periodicCurrentVoltageUpdate, True)
+    else:
+      self.periodicUpdateRunning = False
 
   def show(self):
+    self.periodicUiUpdate()
     self.connect()
     self.mainWindow.mainloop()
 
