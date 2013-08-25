@@ -4,8 +4,16 @@ import queue
 import threading
 import logging
 
+import matplotlib
+matplotlib.use('TkAgg')
+from numpy import arange, sin, pi
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+testPlotSize = 10
 guiRefreshRate = 100
 valuesRefreshRate = 3000
+graphRefreshRate = 1000
 connectingString ="Connecting ... "
 connectedString = "Connected !    "
 noDeviceFoundstr= "No device found"
@@ -128,11 +136,46 @@ class Gui():
     self.lblEmpty = tkinter.Label(self.mainWindow, text="").grid(row=1, column=0)
     self.valueFrames = ValueFrames(self.mainWindow, setTargetVoltageM=self.threadHelper.setTargetVoltage, setTargetCurrentM=self.threadHelper.setTargetCurrent)
     self.valueFrames.grid(row=2, column=1, columnspan=4)
+
     self.ledSwitchButton = tkinter.Button(self.mainWindow, text = "Led button", width = 20, command = self.ledClick)
     self.ledSwitchButton.grid(row=4, column=2)
     self.chkloggingVar = tkinter.IntVar(value=1)
     self.chklogging = tkinter.Checkbutton(self.mainWindow, text = "Log", variable = self.chkloggingVar, command = self.loggingClick)
     self.chklogging.grid(row=5, column=2)
+
+    # Add graph
+
+
+    self.canvasFrame = tkinter.Frame(master = self.mainWindow)
+    self.AddCanvas(self.canvasFrame)
+    self.canvasFrame.grid(row=6, column=1, columnspan = 4, sticky=tkinter.E+tkinter.W)
+
+  def AddCanvas(self, parent):
+    self.figure = Figure(figsize=(5,4), dpi=100)
+    self.subplot = self.figure.add_subplot(111)
+    y = arange(0.0, 11.0, 1)
+    x = arange(0.0, 11.0, 1)
+    self.subplot.plot(y,x)
+
+    self.canvas = FigureCanvasTkAgg(self.figure, master=parent)
+    self.canvas.show()
+    self.canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+    self.canvas._tkcanvas.pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+
+  def testUpdatingGraph(self):
+    print("updateGraph")
+
+    global testPlotSize
+    testPlotSize += 1
+
+    y = arange(0.0, testPlotSize, 1)
+    x = arange(0.0, testPlotSize, 1)
+    self.subplot.clear()
+    self.subplot.plot(y,x)
+    self.canvas.draw()
+
+    self.mainWindow.after(graphRefreshRate, self.testUpdatingGraph)
+
 
   def loggingClick(self):
     checkedValue = self.chkloggingVar.get()
@@ -208,9 +251,13 @@ class Gui():
     else:
       self.periodicUpdateRunning = False
 
+
   def show(self):
-    self.periodicUiUpdate()
-    self.connect()
+    #self.periodicUiUpdate()
+
+    self.testUpdatingGraph()
+
+    #self.connect()
     self.mainWindow.mainloop()
 
 class ValueFrame(tkinter.Frame):
@@ -262,6 +309,7 @@ class ValueFrames(tkinter.Frame):
     separator.pack(fill=tkinter.Y,side=tkinter.LEFT, pady=5)
     self.targetValues = ValueFrame(self,frameType="target", setTargetVoltageM=setTargetVoltageM, setTargetCurrentM=setTargetCurrentM)
     self.targetValues.pack(side=tkinter.LEFT,fill=tkinter.BOTH,expand=1)
+
 
 
 if __name__ == "__main__":
