@@ -144,8 +144,6 @@ class Gui():
     self.chklogging.grid(row=5, column=2)
 
     # Add graph
-
-
     self.canvasFrame = tkinter.Frame(master = self.mainWindow)
     self.AddCanvas(self.canvasFrame)
     self.canvasFrame.grid(row=6, column=1, columnspan = 4, sticky=tkinter.E+tkinter.W)

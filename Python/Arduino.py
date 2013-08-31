@@ -3,7 +3,7 @@ import threading
 import logging
 
 class ArduinoController():
-  def __init__(self, loglevel):
+  def __init__(self, loglevel = logging.ERROR):
     logging.basicConfig(format='%(asctime)s %(message)s', filename='arduino.log', level=loglevel)
 
     self.connection = SerialCommunication.Connection(baudrate = 9600, timeout = 2, handshakeSignal = 7, programId = 17)

@@ -41,9 +41,9 @@ class Connection():
   def connect(self):
     if not self.connected:
       try:
-        print("Trying to connect")
+        logging.info("Trying to connect")
         (portNumber, connection) = self.__findArduinoPort__()
-        print("Connecion success")
+        logging.info("Connecion success")
         self.connection = connection
         self.connected = True
         logging.info("Connected on port %s" % portNumber)
