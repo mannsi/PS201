@@ -1,6 +1,8 @@
 import queue
 import threading
 import logging
+from datetime import datetime
+from apscheduler.scheduler import Scheduler
 
 connectedString = "Connected !"
 connectingSting = "Connecting ..."
@@ -12,8 +14,6 @@ targetCurrentString = "TARGETCURRENT"
 targetVoltageString = "TARGETVOLTAGE"
 outputOnOffString = "OUTPUTONOFF"
 
-connected = "connected"
-disconnected = "disconnected"
 
 class ThreadHelper():
   def __init__(self, controller):
@@ -100,10 +100,10 @@ class ThreadHelper():
     threading.Thread(target=self.__ledSwitchWorker__).start()
 
   def setTargetVoltage(self, voltage):
-    threading.Thread(target=self.__setTargetVoltageWorker__, args = voltage).start()
+    threading.Thread(target=self.__setTargetVoltageWorker__, args = [voltage]).start()
 
   def setTargetCurrent(self, current):
-    threading.Thread(target=self.__setTargetCurrentWorker__, args = current).start()
+    threading.Thread(target=self.__setTargetCurrentWorker__, args = [current]).start()
 
   def updateCurrentAndVoltage(self):
     threading.Thread(target=self.__updateRealCurrentWorker__).start()
@@ -111,3 +111,47 @@ class ThreadHelper():
     threading.Thread(target=self.__updateTargetCurrentWorker__).start()
     threading.Thread(target=self.__updateTargetVoltageWorker__).start()
     threading.Thread(target=self.__updateOutputOnOffWorker__).start()
+
+  def startScheduledJob(self, startingVoltage, startingCurrent, changeType, plusMinus, stepSize, timeStepSize, timeType):
+    self.startingVoltage = startingVoltage
+    self.startingCurrent = startingCurrent
+    self.changeType = changeType
+    self.timeType = timeType
+
+    if plusMinus == "+":
+      self.valueStep = stepSize
+    elif plusMinus == "-":
+      self.valueStep = -stepSize
+
+    # Offsets the first increment done by the job
+    if self.changeType == "voltage":
+      self.scTargetVoltage = startingVoltage - self.valueStep
+      self.scTargetCurrent = startingCurrent
+    elif self.changeType == "current":
+      self.scTargetVoltage = startingVoltage
+      self.scTargetCurrent = startingCurrent - self.valueStep
+
+    #Initial run
+    self.__scheduleJob__()
+
+    self.sched = Scheduler()
+    self.sched.start()
+
+    if timeType == "sec":
+      self.sched.add_interval_job(self.__scheduleJob__, seconds=timeStepSize)
+    elif timeType == "min":
+      self.sched.add_interval_job(self.__scheduleJob__, minutes=timeStepSize)
+    elif timeType == "hour":
+      self.sched.add_interval_job(self.__scheduleJob__, hours=timeStepSize)
+
+  def stopSceduledJob(self):
+    self.sched.shutdown()
+
+  def __scheduleJob__(self):
+    if self.changeType == "voltage":
+      self.scTargetVoltage += self.valueStep
+      self.__setTargetVoltageWorker__(self.scTargetVoltage)
+    elif self.changeType == "current":
+      self.scTargetCurrent += self.valueStep
+      self.__setTargetCurrentWorker__(self.scTargetCurrent)
+

@@ -1,6 +1,6 @@
 # TODO
 # Finish getOnOff function in controller
-# Add Program tab
+# Add the save to file func
 
 from tkinter import *
 from tkinter.ttk import *
@@ -14,18 +14,18 @@ from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 """
-mainWindowSize = '600x300'
+mainWindowSize = '550x300'
 mainWindowTitle = "PSP200 Controller"
 
 normalWidgetList = []
 inverseWidgetList = []
 controller = PspController.Controller(loglevel = logging.DEBUG)
+threadHelper = ThreadHelper.ThreadHelper(controller)
 
 class Gui():
   def __init__(self):
     self.guiRefreshRate = 100
     self.deviceRefreshRate = 2000
-    self.threadHelper = ThreadHelper.ThreadHelper(controller)
     self.setAvailableUsbPorts()
 
   def connectToDevice(self, usbPort):
@@ -34,7 +34,7 @@ class Gui():
       usbPortNumber = self.avilableUsbPorts[usbPort]
     else:
       usbPortNumber = usbPort
-    self.threadHelper.connect(usbPortNumber, self.onConnectToDevice)
+    threadHelper.connect(usbPortNumber, self.onConnectToDevice)
 
   def setAvailableUsbPorts(self):
     self.avilableUsbPorts = controller.getAvailableUsbPorts()
@@ -62,35 +62,35 @@ class Gui():
   Periodically checks the threadHelper queue for updates to the UI.
   """
   def periodicUiUpdate(self):
-    if self.threadHelper.queue.qsize():
+    if threadHelper.queue.qsize():
       try:
-        action = self.threadHelper.queue.get(0)
+        action = threadHelper.queue.get(0)
         if action == ThreadHelper.connectString:
-          connectStatus = self.threadHelper.queue.get(0)
+          connectStatus = threadHelper.queue.get(0)
           self.topPanel.lblStatusValueVar.set(connectStatus)
           if connectStatus == ThreadHelper.connectedString:
             self.connectedStateChanged(True)
           elif connectStatus == noDeviceFoundstr:
             # When this state is reached I must stop listening more for this state since many thread will return this state
             # I also have to stop the current threads until the connectedString is returned
-            print("periodic update UI no device found. Queue size ", self.threadHelper.queue.qsize())
+            print("periodic update UI no device found. Queue size ", threadHelper.queue.qsize())
             self.connected = False
             self.connectedStateChanged(False)
 
         elif action == ThreadHelper.realCurrentString:
-          realCurrentValue = self.threadHelper.queue.get(0)
+          realCurrentValue = threadHelper.queue.get(0)
           self.realCurrentUpdate(realCurrentValue)
         elif action == ThreadHelper.realVoltageString:
-          realVoltageValue = self.threadHelper.queue.get(0)
+          realVoltageValue = threadHelper.queue.get(0)
           self.realVoltageUpdate(realVoltageValue)
         elif action == ThreadHelper.targetCurrentString:
-          targetCurrentValue = self.threadHelper.queue.get(0)
+          targetCurrentValue = threadHelper.queue.get(0)
           self.targetCurrentUpdate(targetCurrentValue)
         elif action == ThreadHelper.targetVoltageString:
-          targetVoltageValue = self.threadHelper.queue.get(0)
+          targetVoltageValue = threadHelper.queue.get(0)
           self.targetVoltageUpdate(targetVoltageValue)
         elif action == ThreadHelper.outputOnOffString:
-          outputOnOff = self.threadHelper.queue.get(0)
+          outputOnOff = threadHelper.queue.get(0)
           self.outPutOnOffUpdate(outputOnOff)
       except:
         pass
@@ -105,7 +105,7 @@ class Gui():
   """
   def periodicValuesUpdate(self):
     if self.connected:
-        self.threadHelper.updateCurrentAndVoltage()
+        threadHelper.updateCurrentAndVoltage()
         self.mainWindow.after(self.deviceRefreshRate, self.periodicValuesUpdate)
 
   def connectedStateChanged(self, connected):
@@ -142,7 +142,7 @@ class TopPanel(Frame):
     self.parent = parent
 
     self.chkOutputOnVar = IntVar(value=0)
-    self.chkOutputOn = Checkbutton(self, text = "Output ON", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
+    self.chkOutputOn = Checkbutton(self, text = "Output On", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
     self.chkOutputOn.pack(side=LEFT, anchor=N)
     normalWidgetList.append(self.chkOutputOn)
 
@@ -172,7 +172,7 @@ class TopPanel(Frame):
 class VoltageFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    self.voltageEntryVar = IntVar(None)
+    self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state=DISABLED)
     self.voltageEntry.pack(side=RIGHT)
     normalWidgetList.append(self.voltageEntry)
@@ -181,7 +181,7 @@ class VoltageFrame(Frame):
 class CurrentFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    self.currentEntryVar = IntVar(None)
+    self.currentEntryVar = DoubleVar(None)
     self.currentEntry = Entry(self, textvariable=self.currentEntryVar, state=DISABLED)
     self.currentEntry.pack(side=RIGHT)
     normalWidgetList.append(self.currentEntry)
@@ -191,32 +191,123 @@ class TabControl(Notebook):
   def __init__(self, parent):
     Notebook.__init__(self, parent, name='tab control 123')
     self.add(ManualTab(self), text='Manual')
-    self.add(Frame(), text='Program')
+    self.add(ScheduleTab(self), text='Schedule')
     self.add(Frame(), text='Graph')
 
 class ManualTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
     parent.ManualTab = self
-    entryState = DISABLED
     innerFrame = Frame(self)
     innerFrame.pack(fill=BOTH,expand=1, ipady=1, padx=10, pady=5)
     voltageLabel = Label(innerFrame, text="Voltage").grid(row=0,column=0)
-    self.voltageEntryVar = IntVar(None)
-    self.voltageEntry = Entry(innerFrame, textvariable=self.voltageEntryVar, state=entryState)
+    self.voltageEntryVar = DoubleVar(None)
+    self.voltageEntry = Entry(innerFrame, textvariable=self.voltageEntryVar)
     self.voltageEntry.grid(row=0, column=1)
-    normalWidgetList.append(self.voltageEntry)
     currentLabel = Label(innerFrame, text="Current").grid(row=1,column=0)
-    self.currentEntryVar = IntVar(None)
-    self.currentEntry = Entry(innerFrame, textvariable=self.currentEntryVar, state=entryState)
+    self.currentEntryVar = DoubleVar(None)
+    self.currentEntry = Entry(innerFrame, textvariable=self.currentEntryVar)
     self.currentEntry.grid(row=1, column=1)
-    normalWidgetList.append(self.currentEntry)
-    self.btnSetTargetCurrent = Button(innerFrame, text = "Set", state=entryState)
+    self.btnSetTargetCurrent = Button(innerFrame, text = "Set", state=DISABLED, command=self.setTargetCurrent)
     self.btnSetTargetCurrent.grid(row=1, column = 2, sticky=E)
     normalWidgetList.append(self.btnSetTargetCurrent)
-    self.btnSetTargetVoltage = Button(innerFrame, text = "Set", state=entryState)
+    self.btnSetTargetVoltage = Button(innerFrame, text = "Set", state=DISABLED, command=self.setTargetVoltage)
     self.btnSetTargetVoltage.grid(row=0, column = 2, sticky=E)
     normalWidgetList.append(self.btnSetTargetVoltage)
+
+  def setTargetCurrent(self):
+    threadHelper.setTargetCurrent(self.currentEntryVar.get())
+
+  def setTargetVoltage(self):
+    threadHelper.setTargetVoltage(self.voltageEntryVar.get())
+
+class ScheduleTab(Frame):
+  def __init__(self, parent):
+    Frame.__init__(self,parent)
+    parent.ManualTab = self
+    self.addStartingValueFrame()
+    self.addChangeLineFrame()
+    self.addEveryXFrame()
+
+    self.chkSaveToFileVar = IntVar(value=0)
+    self.chkSaveToFile = Checkbutton(self, text = "Save results to file", variable = self.chkSaveToFileVar, state=DISABLED)
+    self.chkSaveToFile.pack()
+
+    self.btnStart = Button(self, text = "Start", state=DISABLED, command=self.btnStartClick)
+    self.btnStart.pack()
+    normalWidgetList.append(self.btnStart)
+
+  def btnStartClick(self):
+    # Check if values are ok
+
+    stepSize = self.stepSizeVar.get()
+    timeStepSize = self.timeSizeVar.get()
+
+    if stepSize == 0 or timeStepSize == 0:
+      print("illegal values")
+      return
+    startingVoltage = self.startVoltageEntryVar.get()
+    startingCurrent = self.startCurrentEntryVar.get()
+    changeType = self.changeType_value.get()
+    plusMinus = self.plusMinus_value.get()
+    timeType = self.timeSizeType_value.get()
+    threadHelper.startScheduledJob(startingVoltage, startingCurrent, changeType, plusMinus, stepSize, timeStepSize, timeType)
+    """
+    print("Starting volt: " , self.startVoltageEntryVar.get())
+    print("Starting curr: " , self.startCurrentEntryVar.get())
+    print("Changing unit: " , self.changeType_value.get())
+    print("+/-: " , self.plusMinus_value.get())
+    print("Step size: " , self.stepSizeVar.get())
+    print("Time step size: " , self.timeSizeVar.get())
+    print("Time step unit: " , self.timeSizeType_value.get())
+    print("Save to file: " , self.chkSaveToFileVar.get())
+    """
+
+  def addStartingValueFrame(self):
+    startingFrame = Frame(self)
+    startingFrame.pack(fill=X,ipady=1, padx=10, pady=5)
+    voltageLabel = Label(startingFrame, text="Starting voltage").grid(row=0,column=0)
+    self.startVoltageEntryVar = DoubleVar(None)
+    self.startVoltageEntry = Entry(startingFrame, textvariable=self.startVoltageEntryVar)
+    self.startVoltageEntry.grid(row=0, column=1)
+    currentLabel = Label(startingFrame, text="Starting current").grid(row=1,column=0)
+    self.startCurrentEntryVar = DoubleVar(None)
+    self.startCurrentEntry = Entry(startingFrame, textvariable=self.startCurrentEntryVar)
+    self.startCurrentEntry.grid(row=1, column=1)
+
+  def addChangeLineFrame(self):
+    changeLine = Frame(self)
+    changeLine.pack(side=TOP, anchor = W)
+    Label(changeLine, text="Change").pack(side=LEFT)
+    self.changeType_value = StringVar()
+    changeType = Combobox(changeLine, textvariable=self.changeType_value, state='readonly', width = 7)
+    changeType['values'] = ('voltage', 'current')
+    changeType.current(0)
+    changeType.pack(side=LEFT)
+    Label(changeLine, text="by").pack(side=LEFT)
+    self.plusMinus_value = StringVar()
+    plusMinus = Combobox(changeLine, textvariable=self.plusMinus_value, state='readonly', width = 2)
+    plusMinus['values'] = ('+', '-')
+    plusMinus.current(0)
+    plusMinus.pack(side=LEFT)
+    self.stepSizeVar = DoubleVar(None)
+    stepSize = Entry(changeLine, textvariable=self.stepSizeVar, width = 7)
+    stepSize.pack(side=LEFT)
+    normalWidgetList.append(stepSize)
+
+  def addEveryXFrame(self):
+    everyXLine = Frame(self)
+    everyXLine.pack(side=TOP, anchor = W)
+    Label(everyXLine, text="every").pack(side=LEFT)
+    self.timeSizeVar = DoubleVar(None)
+    self.timeSize = Entry(everyXLine, textvariable=self.timeSizeVar,width = 7)
+    self.timeSize.pack(side=LEFT)
+
+    self.timeSizeType_value = StringVar()
+    timeSizeType = Combobox(everyXLine, textvariable=self.timeSizeType_value, state='readonly', width = 7)
+    timeSizeType['values'] = ('sec', 'min', 'hour')
+    timeSizeType.current(0)
+    timeSizeType.pack(side=LEFT)
 
 if __name__ == "__main__":
   gui = Gui()

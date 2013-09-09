@@ -1,6 +1,7 @@
 import SerialCommunication
 import threading
 import logging
+import struct
 
 class Controller():
   def __init__(self, loglevel = logging.ERROR):
@@ -56,11 +57,11 @@ class Controller():
 
   def setTargetVoltage(self, targetVoltage):
     with self.processLock:
-      self.connection.setValue(self.deviceReadTargetVoltage, targetVoltage)
+      self.connection.setValue(self.deviceReadTargetVoltage, struct.pack(">H",int(100*targetVoltage)))
 
   def setTargetCurrent(self, targetCurrent):
     with self.processLock:
-      self.connection.setValue(self.deviceReadTargetCurrent, targetCurrent)
+      self.connection.setValue(self.deviceReadTargetCurrent, struct.pack(">H",int(100*targetCurrent)))
 
   def setOutputOnOff(self, shouldBeOn):
     if shouldBeOn:
