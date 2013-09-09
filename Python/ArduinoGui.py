@@ -187,7 +187,7 @@ class Gui():
     self.threadHelper.connect(self.onConnect)
 
   def onConnect(self):
-    print("onConnect")
+    #print("onConnect")
     self.connected = True
     self.periodicCurrentVoltageUpdate()
 
@@ -243,7 +243,7 @@ class Gui():
     if self.connected:
       if not self.periodicUpdateRunning or recursiveCall:
         self.periodicUpdateRunning = True
-        print("periodicCurrentVoltageUpdate")
+        #print("periodicCurrentVoltageUpdate")
         self.threadHelper.updateCurrentAndVoltage()
         self.mainWindow.after(valuesRefreshRate, self.periodicCurrentVoltageUpdate, True)
     else:
@@ -292,10 +292,10 @@ class ValueFrame(tkinter.Frame):
       self.btnSetTargetVoltage.grid(row=0, column = 2, sticky=tkinter.E)
 
   def setTargetVoltage(self, targetVoltage):
-    self.setTargetVoltageM(targetVoltage)
+    self.setTargetVoltageM(int(float(targetVoltage) * 100)))
 
   def setTargetCurrent(self, targetCurrent):
-    self.setTargetCurrentM(targetCurrent)
+    self.setTargetCurrentM(int(float(targetCurrent) * 100)))
 
 class ValueFrames(tkinter.Frame):
   def __init__(self, parent, setTargetVoltageM, setTargetCurrentM):

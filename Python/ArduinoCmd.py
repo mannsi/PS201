@@ -1,11 +1,12 @@
 import serial
 import time
 import struct
+import binascii
 
-port='/dev/ttyUSB1'
+port=3
 print("--Selecting USB port %s--" % port)
 
-greetings = "USB connected. Now what motherfucker ?\n"
+greetings = "USB connected. Now what ?\n"
 directions = "\t1 = Set voltage\n\t2 = Read voltage\n\t3 = Set current\n\t4 = Read current\n\t5 = Turn on output\n\t6 = Turn off output\n\t7 = Read input voltage\n\t8 = Read preregulator voltage\n\t9 = Exit \n: "
 
 try:
@@ -16,12 +17,12 @@ try:
     if command == 1:
       voltage = float(input("What is the target voltage you want ? : "))
       voltage = int(voltage * 100)
-      connection.write("C0".decode('hex'))
+      connection.write(b'\xc0')
       connection.write(struct.pack(">H",voltage))
     elif command == 2:
       print("Reading voltage")
-      connection.write("D0".decode('hex'))
-      voltageValue = connection.readline()
+      connection.write(b'\xd0')
+      voltageValue = connection.read()
       if voltageValue:
         print("Got value: %s" % voltageValue)
       else:
