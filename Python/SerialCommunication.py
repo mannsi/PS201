@@ -2,6 +2,7 @@ import serial
 import sys
 import logging
 import platform
+import glob
 
 class Connection():
   def __init__(self, baudrate, timeout, handshakeSignal, programId):
