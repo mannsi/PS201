@@ -56,9 +56,9 @@ class Connection():
 
   def getAvailableUsbPorts(self):
     system_name = platform.system()
+    available = dict()
     if system_name == "Windows":
       # Scan for available ports.
-      available = dict()
       for portNumber in range(256):
         try:
           con = serial.Serial(portNumber, self.baudRate, timeout = self.timeout)
@@ -66,13 +66,17 @@ class Connection():
           con.close()
         except serial.SerialException:
           pass
-      return available
     elif system_name == "Darwin":
       # Mac
-      return [(x,x) for x in glob.glob('/dev/tty*') + glob.glob('/dev/cu*')]
+      usbList = glob.glob('/dev/tty*') + glob.glob('/dev/cu*')
+      for usbPort in usbList:
+        available[usbPort] = usbPort
     else:
       # Assume Linux or something else
-      return [(x,x) for x in glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')]
+      usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
+      for usbPort in usbList:
+        available[usbPort] = usbPort
+    return available
 
   def connect(self, usbPortNumber):
     if not self.connected:
