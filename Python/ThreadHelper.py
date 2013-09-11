@@ -123,20 +123,20 @@ class ThreadHelper():
     nextFireTime = datetime.now() + timedelta(seconds=1)
     for line in lines:
       self.sched.add_date_job(func = self.addJobForLine, date=nextFireTime, args=[line])
-      timeType = line.timeSizeType_value.get()
+      timeType = line.getTimeType()
       if timeType == "sec":
-        nextFireTime += timedelta(seconds=line.durationEntryVar.get())
+        nextFireTime += timedelta(seconds=line.getDuration())
       elif timeType == "min":
-        nextFireTime += timedelta(minutes=line.durationEntryVar.get())
+        nextFireTime += timedelta(minutes=line.getDuration())
       elif timeType == "hour":
-        nextFireTime += timedelta(hours=line.durationEntryVar.get())
+        nextFireTime += timedelta(hours=line.getDuration())
 
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
 
   def addJobForLine(self, line):
-    self.__setTargetVoltageWorker__(line.voltageEntryVar.get())
+    self.__setTargetVoltageWorker__(line.getVoltage())
     time.sleep(50 / 1000)
-    self.__setTargetCurrentWorker__(line.currentEntryVar.get())
+    self.__setTargetCurrentWorker__(line.getCurrent())
 
   def initializeDevice(self):
     self.__setTargetVoltageWorker__(0)

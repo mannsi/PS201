@@ -35,7 +35,7 @@ class Controller():
 
   def getRealCurrent(self):
     with self.processLock:
-      value = self.connection.getValue(self.deviceWriteRealCurrent)
+      value = self.connection.getValue(self.deviceWriteRealCurrent) * 1000
     return value
 
   def getTargetVoltage(self):
@@ -45,7 +45,7 @@ class Controller():
 
   def getTargetCurrent(self):
     with self.processLock:
-      value = self.connection.getValue(self.deviceWriteTargetCurrent)
+      value = self.connection.getValue(self.deviceWriteTargetCurrent) * 1000
     return value
 
   # TODO
@@ -61,7 +61,7 @@ class Controller():
 
   def setTargetCurrent(self, targetCurrent):
     with self.processLock:
-      self.connection.setValue(self.deviceReadTargetCurrent, struct.pack(">H",int(100*targetCurrent)))
+      self.connection.setValue(self.deviceReadTargetCurrent, struct.pack(">H",int(targetCurrent/10)))
 
   def setOutputOnOff(self, shouldBeOn):
     if shouldBeOn:

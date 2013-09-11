@@ -14,7 +14,7 @@ from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 """
-mainWindowSize = '550x300'
+mainWindowSize = '650x300'
 mainWindowTitle = "PSP200 Controller"
 
 normalWidgetList = []
@@ -160,10 +160,12 @@ class TopPanel(Frame):
     self.lblStatusValue = Label(statusPanel, textvariable=self.lblStatusValueVar).pack(side=RIGHT)
     statusPanel.pack()
 
-    self.voltageFrame = VoltageFrame(self)
-    self.voltageFrame.pack()
-    self.currentFrame = CurrentFrame(self)
-    self.currentFrame.pack()
+    valuesFrames = Frame(self)
+    self.voltageFrame = VoltageFrame(valuesFrames)
+    self.voltageFrame.pack(anchor=W)
+    self.currentFrame = CurrentFrame(valuesFrames)
+    self.currentFrame.pack(anchor=W)
+    valuesFrames.pack()
 
   def outPutOnOff(self):
     chkValue = self.chkOutputOnVar.get()
@@ -172,18 +174,21 @@ class TopPanel(Frame):
 class VoltageFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
+    Label(self, text="Output voltage:").pack(side=LEFT)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state='readonly')
-    self.voltageEntry.pack(side=RIGHT)
-    Label(self, text="Output voltage:").pack(side=RIGHT)
+    self.voltageEntry.pack(side=LEFT)
+    Label(self, text="(V)").pack(side=LEFT)
 
 class CurrentFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    self.currentEntryVar = DoubleVar(None)
+    Label(self, text="Output current:").pack(side=LEFT)
+    self.currentEntryVar = IntVar(None)
     self.currentEntry = Entry(self, textvariable=self.currentEntryVar, state='readonly')
-    self.currentEntry.pack(side=RIGHT)
-    self.currentLabel = Label(self, text="Output current:").pack(side=RIGHT)
+    self.currentEntry.pack(side=LEFT)
+    Label(self, text="(mA)").pack(side=LEFT)
+
 
 class TabControl(Notebook):
   def __init__(self, parent):
@@ -198,12 +203,12 @@ class ManualTab(Frame):
     parent.ManualTab = self
     innerFrame = Frame(self)
     innerFrame.pack(fill=BOTH,expand=1, ipady=1, padx=10, pady=5)
-    Label(innerFrame, text="Voltage").grid(row=0,column=0)
+    Label(innerFrame, text="Voltage(V)").grid(row=0,column=0)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(innerFrame, textvariable=self.voltageEntryVar)
     self.voltageEntry.grid(row=0, column=1)
-    Label(innerFrame, text="Current").grid(row=1,column=0)
-    self.currentEntryVar = DoubleVar(None)
+    Label(innerFrame, text="Current(mA)").grid(row=1,column=0)
+    self.currentEntryVar = IntVar(None)
     self.currentEntry = Entry(innerFrame, textvariable=self.currentEntryVar)
     self.currentEntry.grid(row=1, column=1)
     self.btnSetTargetCurrent = Button(innerFrame, text = "Set", state=DISABLED, command=self.setTargetCurrent)
@@ -246,8 +251,8 @@ class ScheduleTab(Frame):
   def addLinesFrame(self):
     linesFrameHub = Frame(self)
     self.linesFrame = Frame(linesFrameHub)
-    Label(self.linesFrame, text="Voltage").grid(row=0,column=0,sticky=W)
-    Label(self.linesFrame, text="Current").grid(row=0,column=1,sticky=W)
+    Label(self.linesFrame, text="Voltage(V)").grid(row=0,column=0,sticky=W)
+    Label(self.linesFrame, text="Current(mA)").grid(row=0,column=1,sticky=W)
     Label(self.linesFrame, text="Duration").grid(row=0,column=2, columnspan=2,sticky=W)
     self.lines = []
     self.rowNumber = 1
@@ -258,7 +263,16 @@ class ScheduleTab(Frame):
     linesFrameHub.pack()
 
   def addLine(self):
-    line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine)
+    if self.rowNumber == 1:
+      line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine)
+    else:
+      prevLine = self.lines[self.rowNumber - 2]
+      print(prevLine.getVoltage())
+      print(prevLine.getCurrent())
+      print(prevLine.getTimeType())
+      print(prevLine.getDuration())
+      line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
+
     line.voltageEntry.grid(row=self.rowNumber,column=0)
     line.currentEntry.grid(row=self.rowNumber,column=1)
     line.timeSizeType.grid(row=self.rowNumber,column=2)
@@ -274,18 +288,38 @@ class ScheduleTab(Frame):
     self.rowNumber -= 1
 
 class ScheduleLine():
-  def __init__(self, parent, rowNumber, removeLineFunc):
+  def __init__(self, parent, rowNumber, removeLineFunc, voltage=0, current=0, timeType='sec', duration=0):
     self.voltageEntryVar = DoubleVar(None)
+    self.voltageEntryVar.set(voltage)
     self.voltageEntry = Entry(parent, textvariable=self.voltageEntryVar,width=10)
-    self.currentEntryVar = DoubleVar(None)
+    self.currentEntryVar = IntVar(None)
+    self.currentEntryVar.set(current)
     self.currentEntry = Entry(parent, textvariable=self.currentEntryVar,width=10)
     self.timeSizeType_value = StringVar()
     self.timeSizeType = Combobox(parent, textvariable=self.timeSizeType_value,state='readonly',width=7)
     self.timeSizeType['values'] = ('sec', 'min', 'hour')
-    self.timeSizeType.current(0)
+    if timeType=='sec':
+      self.timeSizeType.current(0)
+    elif timeType=='min':
+      self.timeSizeType.current(1)
+    elif timeType=='hour':
+      self.timeSizeType.current(2)
     self.durationEntryVar = DoubleVar(None)
+    self.durationEntryVar.set(duration)
     self.durationEntry = Entry(parent, textvariable=self.durationEntryVar,width=10)
     self.removeLineButton = Button(parent,text="-",width=3, command= lambda:removeLineFunc(rowNumber,[self.voltageEntry,self.currentEntry,self.timeSizeType,self.durationEntry,self.removeLineButton]))
+
+  def getVoltage(self):
+    return self.voltageEntryVar.get()
+
+  def getCurrent(self):
+    return self.currentEntryVar.get()
+
+  def getTimeType(self):
+    return self.timeSizeType_value.get()
+
+  def getDuration(self):
+    return self.durationEntryVar.get()
 
 """
 class ScheduleTab(Frame):
