@@ -173,18 +173,16 @@ class VoltageFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
     self.voltageEntryVar = DoubleVar(None)
-    self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state=DISABLED)
+    self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state='readonly')
     self.voltageEntry.pack(side=RIGHT)
-    normalWidgetList.append(self.voltageEntry)
-    self.voltageLabel = Label(self, text="Output voltage:").pack(side=RIGHT)
+    Label(self, text="Output voltage:").pack(side=RIGHT)
 
 class CurrentFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
     self.currentEntryVar = DoubleVar(None)
-    self.currentEntry = Entry(self, textvariable=self.currentEntryVar, state=DISABLED)
+    self.currentEntry = Entry(self, textvariable=self.currentEntryVar, state='readonly')
     self.currentEntry.pack(side=RIGHT)
-    normalWidgetList.append(self.currentEntry)
     self.currentLabel = Label(self, text="Output current:").pack(side=RIGHT)
 
 class TabControl(Notebook):
@@ -200,11 +198,11 @@ class ManualTab(Frame):
     parent.ManualTab = self
     innerFrame = Frame(self)
     innerFrame.pack(fill=BOTH,expand=1, ipady=1, padx=10, pady=5)
-    voltageLabel = Label(innerFrame, text="Voltage").grid(row=0,column=0)
+    Label(innerFrame, text="Voltage").grid(row=0,column=0)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(innerFrame, textvariable=self.voltageEntryVar)
     self.voltageEntry.grid(row=0, column=1)
-    currentLabel = Label(innerFrame, text="Current").grid(row=1,column=0)
+    Label(innerFrame, text="Current").grid(row=1,column=0)
     self.currentEntryVar = DoubleVar(None)
     self.currentEntry = Entry(innerFrame, textvariable=self.currentEntryVar)
     self.currentEntry.grid(row=1, column=1)
@@ -224,7 +222,75 @@ class ManualTab(Frame):
 class ScheduleTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    parent.ManualTab = self
+    self.addLinesFrame()
+
+    buttonFrame = Frame(self)
+
+    self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
+    self.btnStart.pack(side=LEFT)
+    self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
+    self.btnStop.pack(side=LEFT)
+    buttonFrame.pack()
+    normalWidgetList.append(self.btnStart)
+
+  def start(self):
+    threadHelper.startSchedule(self.lines)
+    self.btnStop.configure(state = NORMAL)
+    self.btnStart.configure(state = DISABLED)
+
+  def stop(self):
+    threadHelper.stopSchedule()
+    self.btnStart.configure(state = NORMAL)
+    self.btnStop.configure(state = DISABLED)
+
+  def addLinesFrame(self):
+    linesFrameHub = Frame(self)
+    self.linesFrame = Frame(linesFrameHub)
+    Label(self.linesFrame, text="Voltage").grid(row=0,column=0,sticky=W)
+    Label(self.linesFrame, text="Current").grid(row=0,column=1,sticky=W)
+    Label(self.linesFrame, text="Duration").grid(row=0,column=2, columnspan=2,sticky=W)
+    self.lines = []
+    self.rowNumber = 1
+    self.addLine()
+    self.linesFrame.pack()
+    self.btnAddLine = Button(linesFrameHub,text="+",width=3, command=self.addLine)
+    self.btnAddLine.pack(anchor=E)
+    linesFrameHub.pack()
+
+  def addLine(self):
+    line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine)
+    line.voltageEntry.grid(row=self.rowNumber,column=0)
+    line.currentEntry.grid(row=self.rowNumber,column=1)
+    line.timeSizeType.grid(row=self.rowNumber,column=2)
+    line.durationEntry.grid(row=self.rowNumber,column=3)
+    line.removeLineButton.grid(row=self.rowNumber,column=4)
+    self.rowNumber += 1
+    self.lines.append(line)
+
+  def removeLine(self, rowNumber, listOfWidgets):
+    for widget in listOfWidgets:
+      widget.grid_forget()
+    self.lines.pop(rowNumber-1)
+    self.rowNumber -= 1
+
+class ScheduleLine():
+  def __init__(self, parent, rowNumber, removeLineFunc):
+    self.voltageEntryVar = DoubleVar(None)
+    self.voltageEntry = Entry(parent, textvariable=self.voltageEntryVar,width=10)
+    self.currentEntryVar = DoubleVar(None)
+    self.currentEntry = Entry(parent, textvariable=self.currentEntryVar,width=10)
+    self.timeSizeType_value = StringVar()
+    self.timeSizeType = Combobox(parent, textvariable=self.timeSizeType_value,state='readonly',width=7)
+    self.timeSizeType['values'] = ('sec', 'min', 'hour')
+    self.timeSizeType.current(0)
+    self.durationEntryVar = DoubleVar(None)
+    self.durationEntry = Entry(parent, textvariable=self.durationEntryVar,width=10)
+    self.removeLineButton = Button(parent,text="-",width=3, command= lambda:removeLineFunc(rowNumber,[self.voltageEntry,self.currentEntry,self.timeSizeType,self.durationEntry,self.removeLineButton]))
+
+"""
+class ScheduleTab(Frame):
+  def __init__(self, parent):
+    Frame.__init__(self,parent)
     self.addStartingValueFrame()
     self.addChangeLineFrame()
     self.addEveryXFrame()
@@ -252,7 +318,6 @@ class ScheduleTab(Frame):
     plusMinus = self.plusMinus_value.get()
     timeType = self.timeSizeType_value.get()
     threadHelper.startScheduledJob(startingVoltage, startingCurrent, changeType, plusMinus, stepSize, timeStepSize, timeType)
-    """
     print("Starting volt: " , self.startVoltageEntryVar.get())
     print("Starting curr: " , self.startCurrentEntryVar.get())
     print("Changing unit: " , self.changeType_value.get())
@@ -261,16 +326,15 @@ class ScheduleTab(Frame):
     print("Time step size: " , self.timeSizeVar.get())
     print("Time step unit: " , self.timeSizeType_value.get())
     print("Save to file: " , self.chkSaveToFileVar.get())
-    """
 
   def addStartingValueFrame(self):
     startingFrame = Frame(self)
     startingFrame.pack(fill=X,ipady=1, padx=10, pady=5)
-    voltageLabel = Label(startingFrame, text="Starting voltage").grid(row=0,column=0)
+    Label(startingFrame, text="Starting voltage").grid(row=0,column=0)
     self.startVoltageEntryVar = DoubleVar(None)
     self.startVoltageEntry = Entry(startingFrame, textvariable=self.startVoltageEntryVar)
     self.startVoltageEntry.grid(row=0, column=1)
-    currentLabel = Label(startingFrame, text="Starting current").grid(row=1,column=0)
+    Label(startingFrame, text="Starting current").grid(row=1,column=0)
     self.startCurrentEntryVar = DoubleVar(None)
     self.startCurrentEntry = Entry(startingFrame, textvariable=self.startCurrentEntryVar)
     self.startCurrentEntry.grid(row=1, column=1)
@@ -308,7 +372,7 @@ class ScheduleTab(Frame):
     timeSizeType['values'] = ('sec', 'min', 'hour')
     timeSizeType.current(0)
     timeSizeType.pack(side=LEFT)
-
+"""
 if __name__ == "__main__":
   gui = Gui()
   gui.show()

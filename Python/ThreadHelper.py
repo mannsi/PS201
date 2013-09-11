@@ -1,8 +1,9 @@
 import queue
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from apscheduler.scheduler import Scheduler
+import time
 
 connectedString = "Connected !"
 connectingSting = "Connecting ..."
@@ -108,50 +109,40 @@ class ThreadHelper():
   def updateCurrentAndVoltage(self):
     threading.Thread(target=self.__updateRealCurrentWorker__).start()
     threading.Thread(target=self.__updateRealVoltageWorker__).start()
-    threading.Thread(target=self.__updateTargetCurrentWorker__).start()
-    threading.Thread(target=self.__updateTargetVoltageWorker__).start()
-    threading.Thread(target=self.__updateOutputOnOffWorker__).start()
+    #threading.Thread(target=self.__updateTargetCurrentWorker__).start()
+    #threading.Thread(target=self.__updateTargetVoltageWorker__).start()
+    #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
 
-  def startScheduledJob(self, startingVoltage, startingCurrent, changeType, plusMinus, stepSize, timeStepSize, timeType):
-    self.startingVoltage = startingVoltage
-    self.startingCurrent = startingCurrent
-    self.changeType = changeType
-    self.timeType = timeType
-
-    if plusMinus == "+":
-      self.valueStep = stepSize
-    elif plusMinus == "-":
-      self.valueStep = -stepSize
-
-    # Offsets the first increment done by the job
-    if self.changeType == "voltage":
-      self.scTargetVoltage = startingVoltage - self.valueStep
-      self.scTargetCurrent = startingCurrent
-    elif self.changeType == "current":
-      self.scTargetVoltage = startingVoltage
-      self.scTargetCurrent = startingCurrent - self.valueStep
-
-    #Initial run
-    self.__scheduleJob__()
-
+  def startSchedule(self, lines):
     self.sched = Scheduler()
     self.sched.start()
 
-    if timeType == "sec":
-      self.sched.add_interval_job(self.__scheduleJob__, seconds=timeStepSize)
-    elif timeType == "min":
-      self.sched.add_interval_job(self.__scheduleJob__, minutes=timeStepSize)
-    elif timeType == "hour":
-      self.sched.add_interval_job(self.__scheduleJob__, hours=timeStepSize)
+    numLines = len(lines)
+    if numLines == 0:
+      return
+    nextFireTime = datetime.now() + timedelta(seconds=1)
+    for line in lines:
+      self.sched.add_date_job(func = self.addJobForLine, date=nextFireTime, args=[line])
+      timeType = line.timeSizeType_value.get()
+      if timeType == "sec":
+        nextFireTime += timedelta(seconds=line.durationEntryVar.get())
+      elif timeType == "min":
+        nextFireTime += timedelta(minutes=line.durationEntryVar.get())
+      elif timeType == "hour":
+        nextFireTime += timedelta(hours=line.durationEntryVar.get())
 
-  def stopSceduledJob(self):
+    self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
+
+  def addJobForLine(self, line):
+    self.__setTargetVoltageWorker__(line.voltageEntryVar.get())
+    time.sleep(50 / 1000)
+    self.__setTargetCurrentWorker__(line.currentEntryVar.get())
+
+  def initializeDevice(self):
+    self.__setTargetVoltageWorker__(0)
+    time.sleep(50 / 1000)
+    self.__setTargetCurrentWorker__(0)
+
+  def stopSchedule(self):
     self.sched.shutdown()
-
-  def __scheduleJob__(self):
-    if self.changeType == "voltage":
-      self.scTargetVoltage += self.valueStep
-      self.__setTargetVoltageWorker__(self.scTargetVoltage)
-    elif self.changeType == "current":
-      self.scTargetCurrent += self.valueStep
-      self.__setTargetCurrentWorker__(self.scTargetCurrent)
 
