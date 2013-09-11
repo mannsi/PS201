@@ -44,16 +44,16 @@ class Gui():
     self.periodicValuesUpdate()
 
   def targetVoltageUpdate(self, targetVoltage):
-    self.topPanel.voltageFrame.voltageEntryVar.set(targetVoltage)
+    self.tabControl.ManualTab.voltageEntryVar.set(targetVoltage)
 
   def targetCurrentUpdate(self, targetCurrent):
-    self.topPanel.currntFrame.currentEntryVar.set(targetCurrent)
+    self.tabControl.ManualTab.currentEntryVar.set(targetCurrent)
 
   def realVoltageUpdate(self, realVoltage):
-    self.tabControl.ManualTab.voltageEntryVar.set(realVoltage)
+    self.topPanel.voltageFrame.voltageEntryVar.set(realVoltage)
 
   def realCurrentUpdate(self, realCurrent):
-    self.tabControl.ManualTab.currentEntryVar.set(realCurrent)
+    self.topPanel.currntFrame.currentEntryVar.set(realCurrent)
 
   def outPutOnOffUpdate(self, shouldBeOn):
     self.topPanel.chkOutputOnVar.set(shouldBeOn)
