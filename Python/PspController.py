@@ -14,6 +14,7 @@ class Controller():
     #These values are meant for the device. 'Write' means the device outputs
     self.deviceWriteRealVoltage = b'\xd0'
     self.deviceWriteRealCurrent = b'\xd1'
+    self.deviceWritePreRegulatorVoltage = b'\xd3'
     self.deviceReadTargetVoltage = b'\xc0'
     self.deviceReadTargetCurrent = b'\xc1'
     self.deviceWriteTargetVoltage = b'\xe0'
@@ -31,12 +32,17 @@ class Controller():
 
   def getRealVoltage(self):
     with self.processLock:
-      value = self.connection.getValue(self.deviceWriteRealVoltage)
+      value = float(self.connection.getValue(self.deviceWriteRealVoltage))
     return value
 
   def getRealCurrent(self):
     with self.processLock:
       value = float(self.connection.getValue(self.deviceWriteRealCurrent)) * 1000
+    return value
+
+  def getPreRegulatorVoltage(self):
+    with self.processLock:
+      value = float(self.connection.getValue(self.deviceWritePreRegulatorVoltage))
     return value
 
   def getTargetVoltage(self):

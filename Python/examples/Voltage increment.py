@@ -25,6 +25,8 @@ else:
 print("Script running")
 controller.setTargetCurrent(current)
 time.sleep(50/1000)
+controller.setOutputOnOff(True)
+time.sleep(50/1000)
 with open('VoltageIncrement.txt', 'w') as f:
   while True:
     controller.setTargetVoltage(voltage)

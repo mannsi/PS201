@@ -7,11 +7,8 @@ import PspController
 import time
 from datetime import datetime
 
-timeIncrement = 1
-voltage = 0
-finalVoltage = 120
-voltageIncrement = 0.1
-current = 200 #mA
+targetVoltage = 4.2
+current = 500 #mA
 usbPortNumber = 3
 controller = PspController.Controller()
 connected = controller.connect(usbPortNumber)
@@ -27,17 +24,14 @@ controller.setTargetCurrent(current)
 time.sleep(50/1000)
 controller.setOutputOnOff(True)
 time.sleep(50/1000)
-with open('NDLT.txt', 'w') as f:
-  while True:
-    controller.setTargetVoltage(voltage)
-    time.sleep(50/1000)
-    realVoltage = controller.getRealVoltage()
-    realCurrent = controller.getRealCurrent()
-    outputString = "%s \t %s \t %s \n" % (datetime.now(), realVoltage, realCurrent)
-    f.write(outputString)
+controller.setTargetVoltage(targetVoltage)
 
-    if voltage >= finalVoltage:
-      break
+while True:
+  print("Checking of voltage has reached 4.2 V")
+  time.sleep(50/1000)
+  realVoltage = controller.getRealVoltage()
+  if (realVoltage - targetVoltage) < 0.1:
+    print("Yebb, turn off output")
+    controller.setOutputOnOff(False)
+    break
 
-    voltage += voltageIncrement
-    time.sleep(timeIncrement)

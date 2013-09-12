@@ -11,6 +11,7 @@ noDeviceFoundstr= "No device found"
 connectString = "CONNECT"
 realCurrentString = "REALCURRENT"
 realVoltageString = "REALVOLTAGE"
+preRegVoltageString = "PREREGVOLTAGE"
 targetCurrentString = "TARGETCURRENT"
 targetVoltageString = "TARGETVOLTAGE"
 outputOnOffString = "OUTPUTONOFF"
@@ -70,6 +71,14 @@ class ThreadHelper():
     except Exception as e:
       self.__connectionLost__("update target current worker")
 
+  def __updatePreRegVoltageWorker__(self):
+    try:
+      preRegVoltage = self.controller.getPreRegulatorVoltage()
+      self.queue.put(preRegVoltageString)
+      self.queue.put(preRegVoltage)
+    except Exception as e:
+      self.__connectionLost__("update real voltage worker")
+
   def __updateTargetVoltageWorker__(self):
     try:
       targetVoltage = self.controller.getTargetVoltage()
@@ -111,6 +120,7 @@ class ThreadHelper():
     threading.Thread(target=self.__updateRealVoltageWorker__).start()
     threading.Thread(target=self.__updateTargetCurrentWorker__).start()
     threading.Thread(target=self.__updateTargetVoltageWorker__).start()
+    threading.Thread(target=self.__updatePreRegVoltageWorker__).start()
     #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
 
   def startSchedule(self, lines):

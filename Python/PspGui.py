@@ -58,6 +58,9 @@ class Gui():
   def outPutOnOffUpdate(self, shouldBeOn):
     self.topPanel.chkOutputOnVar.set(shouldBeOn)
 
+  def preRegVoltageUpdate(self, preRegVoltage):
+    self.topPanel.valuesFrame.preRegVoltageVar.set("PreReg: %s" % (preRegVoltage))
+
   """
   Periodically checks the threadHelper queue for updates to the UI.
   """
@@ -92,6 +95,9 @@ class Gui():
         elif action == ThreadHelper.outputOnOffString:
           outputOnOff = threadHelper.queue.get(0)
           self.outPutOnOffUpdate(outputOnOff)
+        elif action == ThreadHelper.preRegVoltageString:
+          preRegVoltageValue = threadHelper.queue.get(0)
+          self.preRegVoltageUpdate(preRegVoltageValue)
       except:
         pass
       finally:
@@ -181,6 +187,8 @@ class ValuesFrame(Frame):
     Label(self, text="(V)").grid(row=0,column=2,sticky=W)
     self.targetVoltageVar = StringVar()
     Label(self, textvariable=self.targetVoltageVar).grid(row=0,column=3,sticky=W)
+    self.preRegVoltageVar = StringVar()
+    Label(self, textvariable=self.preRegVoltageVar).grid(row=0,column=4,sticky=W)
     #Current
     Label(self, text="I:", font=(fontName, fontSize)).grid(row=1,column=0)
     self.currentEntryVar = IntVar(None)
