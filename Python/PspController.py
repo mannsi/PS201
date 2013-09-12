@@ -35,7 +35,7 @@ class Controller():
 
   def getRealCurrent(self):
     with self.processLock:
-      value = self.connection.getValue(self.deviceWriteRealCurrent) * 1000
+      value = float(self.connection.getValue(self.deviceWriteRealCurrent)) * 1000
     return value
 
   def getTargetVoltage(self):
@@ -45,7 +45,7 @@ class Controller():
 
   def getTargetCurrent(self):
     with self.processLock:
-      value = self.connection.getValue(self.deviceWriteTargetCurrent) * 1000
+      value = float(self.connection.getValue(self.deviceWriteTargetCurrent)) * 1000
     return value
 
   # TODO
