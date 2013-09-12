@@ -19,7 +19,7 @@ mainWindowTitle = "PSP200 Controller"
 
 normalWidgetList = []
 inverseWidgetList = []
-controller = PspController.Controller(loglevel = logging.DEBUG)
+controller = PspController.Controller(shouldLog = True, loglevel = logging.DEBUG)
 threadHelper = ThreadHelper.ThreadHelper(controller)
 
 class Gui():
@@ -195,7 +195,7 @@ class TabControl(Notebook):
     Notebook.__init__(self, parent, name='tab control 123')
     self.add(ManualTab(self), text='Manual')
     self.add(ScheduleTab(self), text='Schedule')
-    self.add(Frame(), text='Graph')
+    #self.add(Frame(), text='Graph')
 
 class ManualTab(Frame):
   def __init__(self, parent):

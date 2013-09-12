@@ -4,8 +4,9 @@ import logging
 import struct
 
 class Controller():
-  def __init__(self, loglevel = logging.ERROR):
-    logging.basicConfig(format='%(asctime)s %(message)s', filename='PSP200.log', level=loglevel)
+  def __init__(self, shouldLog = False, loglevel = logging.ERROR):
+    if shouldLog:
+      logging.basicConfig(format='%(asctime)s %(message)s', filename='PSP200.log', level=loglevel)
 
     self.connection = SerialCommunication.Connection(baudrate = 9600, timeout = 2, handshakeSignal = b'\xa0', programId = b'\xa1')
     self.processLock = threading.Lock()
