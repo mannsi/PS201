@@ -1,7 +1,5 @@
 # TODO
 # Finish getOnOff function in controller
-# Add the save to file func
-
 from tkinter import *
 from tkinter.ttk import *
 import ThreadHelper
@@ -25,7 +23,7 @@ threadHelper = ThreadHelper.ThreadHelper(controller)
 class Gui():
   def __init__(self):
     self.guiRefreshRate = 100
-    self.deviceRefreshRate = 2000
+    self.deviceRefreshRate = 1000
     self.setAvailableUsbPorts()
 
   def connectToDevice(self, usbPort):
@@ -44,10 +42,10 @@ class Gui():
     self.periodicValuesUpdate()
 
   def targetVoltageUpdate(self, targetVoltage):
-    self.topPanel.valuesFrame.targetVoltageVar.set("Target: %s" % (targetVoltage))
+    self.tabControl.statusTab.voltageEntryVar.set(targetVoltage)
 
   def targetCurrentUpdate(self, targetCurrent):
-    self.topPanel.valuesFrame.targetCurrentVar.set("Target: %s" % (targetCurrent))
+    self.tabControl.statusTab.currentEntryVar.set(targetCurrent)
 
   def realVoltageUpdate(self, realVoltage):
     self.topPanel.valuesFrame.voltageEntryVar.set(realVoltage)
@@ -59,7 +57,7 @@ class Gui():
     self.topPanel.chkOutputOnVar.set(shouldBeOn)
 
   def preRegVoltageUpdate(self, preRegVoltage):
-    self.topPanel.valuesFrame.preRegVoltageVar.set("PreReg: %s" % (preRegVoltage))
+    self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
 
   """
   Periodically checks the threadHelper queue for updates to the UI.
@@ -177,51 +175,73 @@ class TopPanel(Frame):
 class ValuesFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    fontName = "Courier New"
-    fontSize = 30
+    fontName = "Verdana"
+    fontSize = 25
     #Voltage
-    Label(self, text="V:", font=(fontName, fontSize)).grid(row=0,column=0)
+    Label(self, text="V", font=(fontName, fontSize)).grid(row=0,column=0)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.voltageEntry.grid(row=0,column=1,sticky=W)
     Label(self, text="(V)").grid(row=0,column=2,sticky=W)
-    self.targetVoltageVar = StringVar()
-    Label(self, textvariable=self.targetVoltageVar).grid(row=0,column=3,sticky=W)
-    self.preRegVoltageVar = StringVar()
-    Label(self, textvariable=self.preRegVoltageVar).grid(row=0,column=4,sticky=W)
+    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=0,column=3)
+    self.targetVoltageEntryVar = DoubleVar(None)
+    self.targetVoltageEntry = Entry(self, textvariable=self.targetVoltageEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
+    self.targetVoltageEntry.bind('<Return>', self.setTargetVoltage)
+    self.targetVoltageEntry.grid(row=0,column=4,sticky=W)
+    normalWidgetList.append(self.targetVoltageEntry)
+    self.btnSetTargetVoltage = Button(self, text = "Set", state=DISABLED, command=self.setTargetVoltage)
+    self.btnSetTargetVoltage.grid(row=0,column=5,sticky=N+S)
+    normalWidgetList.append(self.btnSetTargetVoltage)
     #Current
-    Label(self, text="I:", font=(fontName, fontSize)).grid(row=1,column=0)
+    Label(self, text="I", font=(fontName, fontSize)).grid(row=1,column=0)
     self.currentEntryVar = IntVar(None)
     self.currentEntry = Entry(self, textvariable=self.currentEntryVar,state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.currentEntry.grid(row=1,column=1,sticky=W)
     Label(self, text="(mA)").grid(row=1,column=2,sticky=W)
-    self.targetCurrentVar = StringVar()
-    Label(self, textvariable=self.targetCurrentVar).grid(row=1,column=3,sticky=W)
+    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=1,column=3)
+    self.targetCurrentEntryVar = IntVar(None)
+    self.targetCurrentEntry = Entry(self, textvariable=self.targetCurrentEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
+    self.targetCurrentEntry.bind('<Return>', self.setTargetCurrent)
+    self.targetCurrentEntry.grid(row=1,column=4,sticky=W)
+    normalWidgetList.append(self.targetCurrentEntry)
+    self.btnSetTargetCurrent = Button(self, text = "Set", state=DISABLED, command=self.setTargetCurrent)
+    self.btnSetTargetCurrent.grid(row=1,column=5,sticky=N+S)
+    normalWidgetList.append(self.btnSetTargetCurrent)
+
+  def setTargetCurrent(self,args=None):
+    threadHelper.setTargetCurrent(self.targetCurrentEntryVar.get())
+
+  def setTargetVoltage(self,args=None):
+    threadHelper.setTargetVoltage(self.targetVoltageEntryVar.get())
 
 class TabControl(Notebook):
   def __init__(self, parent):
     Notebook.__init__(self, parent, name='tab control 123')
-    self.add(ManualTab(self), text='Manual')
+    self.add(StatusTab(self), text='Status')
     self.add(ScheduleTab(self), text='Schedule')
 
-class ManualTab(Frame):
+class StatusTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    parent.ManualTab = self
-    Label(self, text="Target voltage(V):").grid(row=0,column=0,sticky=E)
+    parent.statusTab = self
+    fontName = "Verdana"
+    fontSize = 15
+
+    Label(self, text="Target voltage:",font=(fontName, fontSize)).grid(row=0,column=0,sticky=E)
     self.voltageEntryVar = DoubleVar(None)
-    self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar,width=10)
+    self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
     self.voltageEntry.grid(row=0, column=1)
-    Label(self, text="Target current(mA):").grid(row=1,column=0,sticky=E)
+    Label(self, text="(V):").grid(row=0,column=2,sticky=W)
+    Label(self, text="Target current:",font=(fontName, fontSize)).grid(row=1,column=0,sticky=E)
     self.currentEntryVar = IntVar(None)
-    self.currentEntry = Entry(self, textvariable=self.currentEntryVar,width=10)
+    self.currentEntry = Entry(self, textvariable=self.currentEntryVar,width=8,state='readonly',font=(fontName, fontSize))
     self.currentEntry.grid(row=1, column=1)
-    self.btnSetTargetCurrent = Button(self, text = "Set", state=DISABLED, command=self.setTargetCurrent)
-    self.btnSetTargetCurrent.grid(row=1, column = 2, sticky=E)
-    normalWidgetList.append(self.btnSetTargetCurrent)
-    self.btnSetTargetVoltage = Button(self, text = "Set", state=DISABLED, command=self.setTargetVoltage)
-    self.btnSetTargetVoltage.grid(row=0, column = 2, sticky=E)
-    normalWidgetList.append(self.btnSetTargetVoltage)
+    Label(self, text="(mA):").grid(row=1,column=2,sticky=W)
+    Label(self, text="Pre reg voltage:",font=(fontName, fontSize)).grid(row=2,column=0,sticky=E)
+    self.preRegVoltageEntryVar = DoubleVar(None)
+    self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
+    self.preRegVoltageEntry.grid(row=2, column=1)
+    Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
   def setTargetCurrent(self):
     threadHelper.setTargetCurrent(self.currentEntryVar.get())
@@ -272,10 +292,6 @@ class ScheduleTab(Frame):
       line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine)
     else:
       prevLine = self.lines[self.rowNumber - 2]
-      print(prevLine.getVoltage())
-      print(prevLine.getCurrent())
-      print(prevLine.getTimeType())
-      print(prevLine.getDuration())
       line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
 
     line.voltageEntry.grid(row=self.rowNumber,column=0)
