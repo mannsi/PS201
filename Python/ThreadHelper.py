@@ -109,8 +109,8 @@ class ThreadHelper():
   def updateCurrentAndVoltage(self):
     threading.Thread(target=self.__updateRealCurrentWorker__).start()
     threading.Thread(target=self.__updateRealVoltageWorker__).start()
-    #threading.Thread(target=self.__updateTargetCurrentWorker__).start()
-    #threading.Thread(target=self.__updateTargetVoltageWorker__).start()
+    threading.Thread(target=self.__updateTargetCurrentWorker__).start()
+    threading.Thread(target=self.__updateTargetVoltageWorker__).start()
     #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
 
   def startSchedule(self, lines):
