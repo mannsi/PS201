@@ -141,6 +141,7 @@ class ThreadHelper():
       elif timeType == "hour":
         nextFireTime += timedelta(hours=line.getDuration())
 
+    self.controller.setOutputOnOff(True)
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
 
   def addJobForLine(self, line):
