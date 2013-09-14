@@ -30,7 +30,7 @@ time.sleep(50/1000)
 with open('VoltageIncrement.txt', 'w') as f:
   while True:
     controller.setTargetVoltage(voltage)
-    time.sleep(50/1000)
+    #time.sleep(50/1000)
     realVoltage = controller.getRealVoltage()
     realCurrent = controller.getRealCurrent()
     outputString = "%s \t %s \t %s \n" % (datetime.now(), realVoltage, realCurrent)

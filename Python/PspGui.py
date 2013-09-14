@@ -5,6 +5,7 @@ from tkinter.ttk import *
 import ThreadHelper
 import PspController
 import logging
+import tkinter.simpledialog
 """
 import matplotlib
 matplotlib.use('TkAgg')
@@ -175,22 +176,17 @@ class TopPanel(Frame):
 class ValuesFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
+    self.parent=parent
     fontName = "Verdana"
-    fontSize = 25
+    fontSize = 20
     #Voltage
     Label(self, text="V", font=(fontName, fontSize)).grid(row=0,column=0)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.voltageEntry.grid(row=0,column=1,sticky=W)
     Label(self, text="(V)").grid(row=0,column=2,sticky=W)
-    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=0,column=3)
-    self.targetVoltageEntryVar = DoubleVar(None)
-    self.targetVoltageEntry = Entry(self, textvariable=self.targetVoltageEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
-    self.targetVoltageEntry.bind('<Return>', self.setTargetVoltage)
-    self.targetVoltageEntry.grid(row=0,column=4,sticky=W)
-    normalWidgetList.append(self.targetVoltageEntry)
-    self.btnSetTargetVoltage = Button(self, text = "Set", state=DISABLED, command=self.setTargetVoltage)
-    self.btnSetTargetVoltage.grid(row=0,column=5,sticky=N+S)
+    self.btnSetTargetVoltage = Button(self,text="Set",state=DISABLED,command=self.setTargetVoltage,width=4)
+    self.btnSetTargetVoltage.grid(row=0,column=3,sticky=N+S+E,pady=5)
     normalWidgetList.append(self.btnSetTargetVoltage)
     #Current
     Label(self, text="I", font=(fontName, fontSize)).grid(row=1,column=0)
@@ -198,21 +194,19 @@ class ValuesFrame(Frame):
     self.currentEntry = Entry(self, textvariable=self.currentEntryVar,state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.currentEntry.grid(row=1,column=1,sticky=W)
     Label(self, text="(mA)").grid(row=1,column=2,sticky=W)
-    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=1,column=3)
-    self.targetCurrentEntryVar = IntVar(None)
-    self.targetCurrentEntry = Entry(self, textvariable=self.targetCurrentEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
-    self.targetCurrentEntry.bind('<Return>', self.setTargetCurrent)
-    self.targetCurrentEntry.grid(row=1,column=4,sticky=W)
-    normalWidgetList.append(self.targetCurrentEntry)
-    self.btnSetTargetCurrent = Button(self, text = "Set", state=DISABLED, command=self.setTargetCurrent)
-    self.btnSetTargetCurrent.grid(row=1,column=5,sticky=N+S)
+    self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
+    self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
     normalWidgetList.append(self.btnSetTargetCurrent)
 
   def setTargetCurrent(self,args=None):
-    threadHelper.setTargetCurrent(self.targetCurrentEntryVar.get())
+    targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current",parent=self)
+    if targetCurrent:
+      threadHelper.setTargetCurrent(targetCurrent)
 
   def setTargetVoltage(self,args=None):
-    threadHelper.setTargetVoltage(self.targetVoltageEntryVar.get())
+    targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage",parent=self)
+    if targetVoltage:
+      threadHelper.setTargetVoltage(targetVoltage)
 
 class TabControl(Notebook):
   def __init__(self, parent):
@@ -225,7 +219,7 @@ class StatusTab(Frame):
     Frame.__init__(self,parent)
     parent.statusTab = self
     fontName = "Verdana"
-    fontSize = 15
+    fontSize = 12
 
     Label(self, text="Target voltage:",font=(fontName, fontSize)).grid(row=0,column=0,sticky=E)
     self.voltageEntryVar = DoubleVar(None)
@@ -283,6 +277,7 @@ class ScheduleTab(Frame):
     self.rowNumber = 1
     self.addLine()
     self.linesFrame.pack()
+    style = Style()
     self.btnAddLine = Button(linesFrameHub,text="+",width=3, command=self.addLine)
     self.btnAddLine.pack(anchor=E)
     linesFrameHub.pack()

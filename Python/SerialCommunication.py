@@ -106,11 +106,14 @@ class Connection():
       raise Exception()
 
   def __getValue__(self, serialConnection, command):
-    logging.debug("Sending command to arduino. Command: %s" % command)
+    logging.debug("Sending command to device. Command: %s" % command)
     serialConnection.write(command)
     value = serialConnection.readline()
+    while not value:
+      print("value empty")
+      value = serialConnection.readline()
     returnValue = str(value, 'ascii').strip()
-    logging.debug("Reading message from arduino. Value: %s" % returnValue)
+    logging.debug("Reading message from device. Value: %s" % returnValue)
     return returnValue
 
   def setValue(self, command, value = None):
@@ -122,7 +125,7 @@ class Connection():
       raise Exception()
 
   def __setValue__(self, serialConnection, command, value):
-    loggingString = "Sending command to arduino. Command:%s" % command
+    loggingString = "Sending command to device. Command:%s" % command
     if value:
       loggingString += ". value:%s" % value
     logging.debug(loggingString)
