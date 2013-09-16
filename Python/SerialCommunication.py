@@ -109,9 +109,6 @@ class Connection():
     logging.debug("Sending command to device. Command: %s" % command)
     serialConnection.write(command)
     value = serialConnection.readline()
-    while not value:
-      print("value empty")
-      value = serialConnection.readline()
     returnValue = str(value, 'ascii').strip()
     logging.debug("Reading message from device. Value: %s" % returnValue)
     return returnValue

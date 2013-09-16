@@ -60,6 +60,9 @@ class Gui():
   def preRegVoltageUpdate(self, preRegVoltage):
     self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
 
+  def scheduleDone(self):
+    self.tabControl.scheduleTab.stop()
+
   """
   Periodically checks the threadHelper queue for updates to the UI.
   """
@@ -97,6 +100,8 @@ class Gui():
         elif action == ThreadHelper.preRegVoltageString:
           preRegVoltageValue = threadHelper.queue.get(0)
           self.preRegVoltageUpdate(preRegVoltageValue)
+        elif action == ThreadHelper.scheduleDoneString:
+          self.scheduleDone()
       except:
         pass
       finally:
@@ -210,9 +215,27 @@ class ValuesFrame(Frame):
 
 class TabControl(Notebook):
   def __init__(self, parent):
-    Notebook.__init__(self, parent, name='tab control 123')
+    Notebook.__init__(self, parent, name='tab control')
     self.add(StatusTab(self), text='Status')
     self.add(ScheduleTab(self), text='Schedule')
+    #self.add(ExamplesTab(self), text='Examples')
+
+class ExamplesTab(Frame):
+  def __init__(self, parent):
+    Frame.__init__(self,parent)
+    ex1 = Example(self,"Simple voltage increment", "A simple example that increments the voltage periodically and saves the results to file")
+    ex1.pack()
+    ex2 = Example(self,"(Non)Destructive LED testing", "Here Frissi will have to both accept the example and give me a description to put here")
+    ex2.pack()
+    ex3 = Example(self,"LiPo battery charging", "Here Frissi will have to both accept the example and give me a description to put here")
+    ex3.pack()
+
+# TODO add button and make less ugly
+class Example(Frame):
+  def __init__(self,parent,title,text):
+    Frame.__init__(self,parent)
+    Label(self, text=title).pack()
+    Label(self, text=text).pack()
 
 class StatusTab(Frame):
   def __init__(self, parent):
@@ -237,15 +260,10 @@ class StatusTab(Frame):
     self.preRegVoltageEntry.grid(row=2, column=1)
     Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
-  def setTargetCurrent(self):
-    threadHelper.setTargetCurrent(self.currentEntryVar.get())
-
-  def setTargetVoltage(self):
-    threadHelper.setTargetVoltage(self.voltageEntryVar.get())
-
 class ScheduleTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
+    parent.scheduleTab = self
     self.innerFrame = Frame(self)
     self.addLinesFrame()
     buttonFrame = Frame(self.innerFrame)
@@ -304,7 +322,7 @@ class ScheduleTab(Frame):
     self.rowNumber -= 1
 
 class ScheduleLine():
-  def __init__(self, parent, rowNumber, removeLineFunc, voltage=0, current=0, timeType='sec', duration=0):
+  def __init__(self, parent, rowNumber, removeLineFunc, voltage=0.0, current=0, timeType='sec', duration=0):
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntryVar.set(voltage)
     self.voltageEntry = Entry(parent, textvariable=self.voltageEntryVar,width=10)
