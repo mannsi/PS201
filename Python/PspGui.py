@@ -7,6 +7,7 @@ import PspController
 import logging
 import tkinter.simpledialog
 from AboutDialog import *
+from RampDialog import *
 import tkBaseDialog
 from ScheduleLineFrame import *
 #from AutoScrollbarFrame import *
@@ -42,6 +43,7 @@ class Gui():
     btnConnect.pack(side=RIGHT)
     inverseWidgetList.append(btnConnect)
     self.addMenuBar()
+
 
   def addMenuBar(self):
     menubar = Menu(self.mainWindow)
@@ -257,6 +259,7 @@ class ValuesFrame(Frame):
 
 class TabControl(Notebook):
   def __init__(self, parent):
+    self.parent = parent
     Notebook.__init__(self, parent, name='tab control')
     self.add(StatusTab(self), text='Status')
     self.add(ScheduleTab(self), text='Schedule')
@@ -278,11 +281,7 @@ class Example(Frame):
     Frame.__init__(self,parent)
     Label(self, text=title).pack()
     Label(self, text=text).pack()
-    Button(self, text = "Run", command = self.dialogTest).pack()
 
-  def dialogTest(self):
-    pass
-    #dialog = MyDialog(self)
 
 class StatusTab(Frame):
   def __init__(self, parent):
@@ -311,12 +310,19 @@ class ScheduleTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
     parent.scheduleTab = self
+    self.parent =parent
     self.addLinesFrame()
     buttonFrame = Frame(self)
     self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
     self.btnAdd.pack(side=LEFT)
-    self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.clearLines)
+    self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.resetLines)
     self.btnClearLines.pack(side=LEFT)
+
+    self.btnVoltageRamping = Button(buttonFrame, text = "Voltage ramping", command=self.voltageRamping)
+    self.btnVoltageRamping.pack(side=LEFT)
+    self.btnCurrentRamping = Button(buttonFrame, text = "Current ramping", command=self.currentRamping)
+    self.btnCurrentRamping.pack(side=LEFT)
+
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
     self.btnStop.pack(side=RIGHT)
     self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
@@ -338,12 +344,27 @@ class ScheduleTab(Frame):
     self.scheduleLineFrame.addLine()
 
   def addLinesFrame(self):
-    canvas = Canvas(self,height=100,highlightthickness=0, bg='green')
+    canvas = Canvas(self,height=100,highlightthickness=0)
     self.scheduleLineFrame = ScheduleLineFrame(canvas)
     #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
 
-  def clearLines(self):
+  def resetLines(self):
     self.scheduleLineFrame.clearAllLines()
+    self.scheduleLineFrame.initializeView()
+
+  def voltageRamping(self):
+    dialog = RampDialog(self,title="Voltage ramp",type="VoltageRamp")
+    if dialog.okClicked:
+        self.scheduleLineFrame.clearAllLines()
+        for l in dialog.voltageRampLines:
+          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+
+  def currentRamping(self):
+    dialog = RampDialog(self,title="Current ramp",type = "CurrentRamp")
+    if dialog.okClicked:
+        self.scheduleLineFrame.clearAllLines()
+        for l in dialog.voltageRampLines:
+          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
 if __name__ == "__main__":
   gui = Gui()
