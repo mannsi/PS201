@@ -249,12 +249,12 @@ class ValuesFrame(Frame):
 
   def setTargetCurrent(self,args=None):
     targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current",parent=self)
-    if targetCurrent:
+    if targetCurrent is not None:
       threadHelper.setTargetCurrent(targetCurrent)
 
   def setTargetVoltage(self,args=None):
     targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage",parent=self)
-    if targetVoltage:
+    if targetVoltage is not None:
       threadHelper.setTargetVoltage(targetVoltage)
 
 class TabControl(Notebook):
