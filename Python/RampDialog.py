@@ -85,18 +85,18 @@ class RampDialog(tkBaseDialog.Dialog):
     voltageRamp.duration = self.durationEntryVar.get()
     voltageRamp.numSteps = self.numStepsEntryVar.get()
     voltageRamp.timeType = self.timeType_value.get()
-    self.voltageRampLines = self.createLinesFromRamp(voltageRamp)
+    self.voltageRampLines = self.createLinesFromVoltageRamp(voltageRamp)
     self.okClicked = True
     
-  def createVoltageRamp(self):
-    voltageRamp = VoltageRamp()
-    voltageRamp.current = self.currentEntryVar.get()
-    voltageRamp.startingVoltage = self.startingVoltageEntryVar.get()
-    voltageRamp.endingVoltage = self.endingVoltageEntryVar.get()
+  def createCurrentRamp(self):
+    voltageRamp = CurrentRamp()
+    voltageRamp.voltage = self.voltageEntryVar.get()
+    voltageRamp.startingCurrent = self.startingCurrentEntryVar.get()
+    voltageRamp.endingCurrent = self.endingCurrentEntryVar.get()
     voltageRamp.duration = self.durationEntryVar.get()
     voltageRamp.numSteps = self.numStepsEntryVar.get()
     voltageRamp.timeType = self.timeType_value.get()
-    self.voltageRampLines = self.createLinesFromVoltageRamp(voltageRamp)
+    self.currentRampLines = self.createLinesFromCurrentRamp(voltageRamp)
 
   def createLinesFromVoltageRamp(self, voltageRamp):
     lines = []
@@ -122,7 +122,7 @@ class RampDialog(tkBaseDialog.Dialog):
     for i in range(currentRamp.numSteps):
       line = ScheduleLineStruct()
       line.voltage = currentRamp.voltage
-      line.voltage = current
+      line.current = current
       line.duration = timeIncrement
       line.timeType = currentRamp.timeType
       lines.append(line)

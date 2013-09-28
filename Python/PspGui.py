@@ -363,7 +363,7 @@ class ScheduleTab(Frame):
     dialog = RampDialog(self,title="Current ramp",type = "CurrentRamp")
     if dialog.okClicked:
         self.scheduleLineFrame.clearAllLines()
-        for l in dialog.voltageRampLines:
+        for l in dialog.currentRampLines:
           self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
 if __name__ == "__main__":

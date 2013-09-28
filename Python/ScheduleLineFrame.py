@@ -47,10 +47,11 @@ class ScheduleLineFrame(Frame):
     self.scrollbarActive = False
 
   def getWidgetsHeight(self):
+    self.update_idletasks()
     widgetsHeight = self.headerLabelV.winfo_height()
     for line in self.lines:
       if line:
-        widgetsHeight += line.voltageEntry.winfo_height() + 4
+        widgetsHeight += line.removeLineButton.winfo_height()
     return widgetsHeight
 
   def addHeaderLine(self):
