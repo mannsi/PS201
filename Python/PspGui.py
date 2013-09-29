@@ -192,6 +192,7 @@ class TopPanel(Frame):
     self.parent = parent
 
     topLinFrame = Frame(self)
+    self.selectedPort = selectedPort
     self.chkOutputOnVar = IntVar(value=0)
     self.chkOutputOn = Checkbutton(topLinFrame, text = "Output On", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
     self.chkOutputOn.pack(side=LEFT, anchor=N)
@@ -207,6 +208,7 @@ class TopPanel(Frame):
     self.usbPort.pack(side=RIGHT, anchor=N)
     inverseWidgetList.append(self.usbPort)
     lblUsbSelectText = Label(topLinFrame, text="USB port: ").pack(side=RIGHT, anchor=N)
+    self.usbPort.bind("<Button-1>", self.comboBoxDropDown)
 
     statusPanel = Frame(topLinFrame)
     self.lblStatus = Label(statusPanel, text="Status: ").pack(side=LEFT)
@@ -217,7 +219,10 @@ class TopPanel(Frame):
 
     self.valuesFrame = ValuesFrame(self)
     self.valuesFrame.pack(pady=10)
-
+ 
+  def comboBoxDropDown(self,event): 
+    self.usbPort['values'] = [x for x in controller.getAvailableUsbPorts().keys()]
+    
   def outPutOnOff(self):
     chkValue = self.chkOutputOnVar.get()
     controller.setOutputOnOff(chkValue)
