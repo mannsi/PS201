@@ -37,3 +37,26 @@ void USART_Transmit(uint16_t num)
 	}
 }
 
+unsigned char USART_RecieveCommand()
+{
+	if(UCSRA & 1 << RXC)
+	{
+		// Decode the signal in main loop
+		return UDR;
+	}
+	// return 0 for no command
+	return 0;
+}
+
+uint16_t USART_ReceiveData()
+{
+	uint16_t out;
+	// DANGEROUS! we wait for data
+	while( !(UCSRA & (1<<RXC)));
+	out = UDR<<8;
+	while( !(UCSRA & (1<<RXC)));
+	out |= UDR;
+	
+	return out;
+}
+

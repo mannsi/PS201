@@ -226,7 +226,6 @@ int main(void)
 				{
 					LCD_Cursor(0,3);
 					LCD_WriteFloat(voltageRead);
-					USART_Transmit(voltageRead);
 				}
 				break;
 			case ADC_CURRENT:
@@ -258,6 +257,72 @@ int main(void)
 				break;
 			}
 			ADC_STARTCONVERSION;
+		}
+
+
+		// Listen for USB command
+		unsigned char command = USART_RecieveCommand();
+		uint16_t newData;
+
+		switch(command)
+		{
+		case USART_SEND_HANDSHAKE:
+			USART_TransmitChar(USART_HANDSHAKE);
+			break;
+		case USART_RECEIVE_VOLTAGE:
+			newData = USART_ReceiveData();
+			if(newData > 2000)
+				break;
+			voltageSet = newData;
+			transferToDAC(9,voltageSet/voltageSetMulti);
+			LCD_Cursor(0,3);
+			LCD_WriteFloat(voltageSet);
+			// Set delay to keep displaying the set voltage
+			// for some time
+			voltageSetDelay = numDelayCycles;
+			break;			
+		case USART_SEND_VOLTAGE:
+			USART_Transmit(voltageRead);
+			break;
+		case USART_SEND_SET_VOLTAGE:
+			USART_Transmit(voltageSet);
+			break;
+		case USART_RECEIVE_CURRENT:
+			newData = USART_ReceiveData();
+			if(newData > 100)
+				break;
+			currentSet = newData;
+			transferToDAC(10,currentSet/currentSetMulti);
+			LCD_Cursor(1,3);
+			LCD_WriteFloat(currentSet);
+			// Set delay to keep displaying the set voltage
+			// for some time
+			currentSetDelay = numDelayCycles;
+			break;			
+		case USART_SEND_CURRENT:
+			USART_Transmit(currentRead);
+			break;
+		case USART_SEND_SET_CURRENT:
+			USART_Transmit(currentSet);
+			break;
+		case USART_SEND_VIN:
+			USART_Transmit(vinRead);
+			break;
+		case USART_SEND_VPREREG:
+			USART_Transmit(preregRead);
+			break;
+		case USART_ENABLE_OUTPUT:
+			ENABLE_OUTPUT;
+			LCD_Cursor(0,14);
+			LCD_Write("ON");
+			break;
+		case USART_DISABLE_OUTPUT:
+			DISABLE_OUTPUT;
+			LCD_Cursor(0,14);
+			LCD_Write("  ");
+			break;
+		default:
+			break;
 		}
 	}
 }
