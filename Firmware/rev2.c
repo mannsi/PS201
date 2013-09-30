@@ -56,13 +56,15 @@ int main(void)
 
 	// Voltage and current read variables
 	uint16_t voltageRead = 0;
-	uint16_t coltagePreRead = 0;
+	uint16_t voltageAveraging = 0;
 	uint16_t currentRead = 0;
-	uint16_t currentPreRead = 0;
+	uint16_t currentAveraging = 0;
 	uint16_t preregRead = 0;
+	uint16_t preregAveraging = 0;
 	uint16_t vinRead = 0;
-	int numReadAverages = 50;
-	int readCounter = 0;
+	uint16_t vinAveraging = 0;
+	int numReadAverages = 60; // MAX 60!
+	int readCounter = numReadAverages;
 
 	// Voltage and current set variables
 	uint16_t voltageSet = 0;
@@ -71,9 +73,8 @@ int main(void)
 	// Delay variables, because we want to show the
 	// set varibles for some while before we show the 
 	// readback.
-	uint16_t voltageSetDelay = 0;
-	uint16_t currentSetDelay = 0;
-	uint16_t numDelayCycles = 3000;
+	uint16_t setDelay = 0;
+	uint16_t numDelayCycles = 50000;
 
 	// Calibration variables
 	float voltageRef = 498.8;	// The ref voltage times 100
@@ -91,6 +92,8 @@ int main(void)
 	USART_Initialize();
 
 	MENU_Home();
+	LCD_Cursor(0,13);
+	LCD_Write("OFF");
 	LCD_Cursor(0,3);
 	LCD_WriteFloat(voltageSet);
 	LCD_Cursor(1,3);
@@ -110,14 +113,14 @@ int main(void)
 			if(OUTPUT_IS_ENABLED)
 			{
 				DISABLE_OUTPUT;
-				LCD_Cursor(0,14);
-				LCD_Write("  ");
+				LCD_Cursor(0,13);
+				LCD_Write("OFF");
 			}
 			else
 			{
 				ENABLE_OUTPUT;
-				LCD_Cursor(0,14);
-				LCD_Write("ON");
+				LCD_Cursor(0,13);
+				LCD_Write(" ON");
 			}
 		}
 
@@ -181,9 +184,11 @@ int main(void)
 				transferToDAC(9,voltageSet/voltageSetMulti);
 				LCD_Cursor(0,3);
 				LCD_WriteFloat(voltageSet);
+				LCD_Cursor(1,3);
+				LCD_WriteFloat(currentSet);
 				// Set delay to keep displaying the set voltage
-				// for some time
-				voltageSetDelay = numDelayCycles;
+				// and current for some time
+				setDelay = numDelayCycles;
 				break;
 			case CURRENT:
 				if(dir == ENCODER_CW) 	currentSet += 1;
@@ -195,20 +200,20 @@ int main(void)
 					currentSet = 100;
 
 				transferToDAC(10,currentSet/currentSetMulti);
+				LCD_Cursor(0,3);
+				LCD_WriteFloat(voltageSet);
 				LCD_Cursor(1,3);
 				LCD_WriteFloat(currentSet);
-				currentSetDelay = numDelayCycles;
+				setDelay = numDelayCycles;
 				break;
 			default:
 				break;
 			}
 		}
 	
-		// Reduce set delays by one
-		if (voltageSetDelay > 0)
-			voltageSetDelay--;
-		if (currentSetDelay > 0)
-			currentSetDelay--;
+		// Reduce set delay by one
+		if (setDelay > 0)
+			setDelay--;
 
 		// When a new ADC reading is registered we display it
 		if(ADC_status & ADC_NEWREADING)
@@ -218,43 +223,58 @@ int main(void)
 			switch(ADC_status)
 			{
 			case ADC_VOLTAGE:
-				voltageRead = ADC_reading*voltageReadMulti;
+				voltageAveraging += ADC_reading;
 				ADC_status = ADC_CURRENT;
 				ADMUX &= 0xF0;
 				ADMUX |= CURRENT_MON;
-				if (voltageSetDelay == 0)
-				{
-					LCD_Cursor(0,3);
-					LCD_WriteFloat(voltageRead);
-				}
 				break;
 			case ADC_CURRENT:
-				currentRead = ADC_reading*currentReadMulti;
+				currentAveraging += ADC_reading;
 				ADC_status = ADC_PREREGULATOR;
 				ADMUX &= 0xF0;
 				ADMUX |= PREREG;
-				if (currentSetDelay == 0)
-				{
-					LCD_Cursor(1,3);
-					LCD_WriteFloat(currentRead);
-				}
 				break;
 			case ADC_PREREGULATOR:
-				preregRead = ADC_reading*voltageReadMulti;
+				preregAveraging += ADC_reading;
 				ADC_status = ADC_VIN;
 				ADMUX &= 0xF0;
 				ADMUX |= VIN_MON;
 				break;
 			case ADC_VIN:
-				vinRead = ADC_reading*voltageReadMulti;
+				vinAveraging += ADC_reading;
 				ADC_status = ADC_VOLTAGE;
 				ADMUX &= 0xF0;
 				ADMUX |= VOLTAGE_MON;
+				// Only decrease the read counter here!
+				readCounter--;
+				break;
 			default:
 				ADC_status = ADC_VOLTAGE;
 				ADMUX &= 0xF0;
 				ADMUX |= VOLTAGE_MON;
 				break;
+			}
+			// If we finish the averaging we rename the variables
+			// and write to display.
+			if (readCounter == 0)
+			{
+				readCounter = numReadAverages;
+
+				voltageRead = voltageAveraging/numReadAverages*voltageReadMulti;
+				voltageAveraging = 0;
+				currentRead = currentAveraging/numReadAverages*currentReadMulti;
+				currentAveraging = 0;
+				preregRead = preregAveraging/numReadAverages*voltageReadMulti;
+				preregAveraging = 0;
+				vinRead = vinAveraging/numReadAverages*voltageReadMulti;
+				vinAveraging = 0;
+				if(setDelay == 0)
+				{
+					LCD_Cursor(0,3);
+					LCD_WriteFloat(voltageRead);
+					LCD_Cursor(1,3);
+					LCD_WriteFloat(currentRead);
+				}
 			}
 			ADC_STARTCONVERSION;
 		}
@@ -277,9 +297,11 @@ int main(void)
 			transferToDAC(9,voltageSet/voltageSetMulti);
 			LCD_Cursor(0,3);
 			LCD_WriteFloat(voltageSet);
+			LCD_Cursor(1,3);
+			LCD_WriteFloat(currentSet);
 			// Set delay to keep displaying the set voltage
 			// for some time
-			voltageSetDelay = numDelayCycles;
+			setDelay = numDelayCycles;
 			break;			
 		case USART_SEND_VOLTAGE:
 			USART_Transmit(voltageRead);
@@ -293,11 +315,13 @@ int main(void)
 				break;
 			currentSet = newData;
 			transferToDAC(10,currentSet/currentSetMulti);
+			LCD_Cursor(0,3);
+			LCD_WriteFloat(voltageSet);
 			LCD_Cursor(1,3);
 			LCD_WriteFloat(currentSet);
 			// Set delay to keep displaying the set voltage
 			// for some time
-			currentSetDelay = numDelayCycles;
+			setDelay = numDelayCycles;
 			break;			
 		case USART_SEND_CURRENT:
 			USART_Transmit(currentRead);
@@ -313,13 +337,13 @@ int main(void)
 			break;
 		case USART_ENABLE_OUTPUT:
 			ENABLE_OUTPUT;
-			LCD_Cursor(0,14);
-			LCD_Write("ON");
+			LCD_Cursor(0,13);
+			LCD_Write(" ON");
 			break;
 		case USART_DISABLE_OUTPUT:
 			DISABLE_OUTPUT;
-			LCD_Cursor(0,14);
-			LCD_Write("  ");
+			LCD_Cursor(0,13);
+			LCD_Write("OFF");
 			break;
 		default:
 			break;
