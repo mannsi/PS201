@@ -27,7 +27,7 @@ time.sleep(50/1000)
 controller.setTargetVoltage(targetVoltage)
 
 while True:
-  print("Checking of voltage has reached 4.2 V")
+  print("Checking if voltage has reached 4.2 V")
   time.sleep(50/1000)
   realVoltage = controller.getRealVoltage()
   if (realVoltage - targetVoltage) < 0.1:

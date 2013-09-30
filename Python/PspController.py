@@ -8,9 +8,6 @@ class Controller():
     if shouldLog:
       logging.basicConfig(format='%(asctime)s %(message)s', filename='PSP200.log', level=loglevel)
 
-    self.connection = SerialCommunication.Connection(baudrate = 9600, timeout = 2, handshakeSignal = b'\xa0', programId = b'\xa1')
-    self.processLock = threading.Lock()
-
     #These values are meant for the device. 'Write' means the device outputs
     self.deviceWriteRealVoltage = b'\xd0'
     self.deviceWriteRealCurrent = b'\xd1'
@@ -21,6 +18,10 @@ class Controller():
     self.deviceWriteTargetCurrent = b'\xe1'
     self.deviceTurnOnOutput = b'\xc2'
     self.deviceTurnOffOutput = b'\xc3'
+    self.handshakeSignal = b'\xa0'
+    self.programId = b'\xa1'
+    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 2,handshakeSignal=self.handshakeSignal,programId=self.programId)
+    self.processLock = threading.Lock()
 
   def connect(self, usbPortNumber):
     with self.processLock:

@@ -41,3 +41,4 @@ with open('VoltageIncrement.txt', 'w') as f:
 
     voltage += voltageIncrement
     time.sleep(timeIncrement)
+controller.setOutputOnOff(False)

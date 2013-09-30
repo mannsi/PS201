@@ -15,6 +15,7 @@ preRegVoltageString = "PREREGVOLTAGE"
 targetCurrentString = "TARGETCURRENT"
 targetVoltageString = "TARGETVOLTAGE"
 outputOnOffString = "OUTPUTONOFF"
+scheduleDoneString = "SCHEDULEDONE"
 
 
 class ThreadHelper():
@@ -141,6 +142,7 @@ class ThreadHelper():
       elif timeType == "hour":
         nextFireTime += timedelta(hours=line.getDuration())
 
+    self.controller.setOutputOnOff(True)
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
 
   def addJobForLine(self, line):
@@ -152,6 +154,9 @@ class ThreadHelper():
     self.__setTargetVoltageWorker__(0)
     time.sleep(50 / 1000)
     self.__setTargetCurrentWorker__(0)
+    time.sleep(50 / 1000)
+    self.controller.setOutputOnOff(False)
+    self.queue.put(scheduleDoneString) # Notify the UI
 
   def stopSchedule(self):
     self.sched.shutdown()

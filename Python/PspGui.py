@@ -5,6 +5,13 @@ from tkinter.ttk import *
 import ThreadHelper
 import PspController
 import logging
+import tkinter.simpledialog
+from AboutDialog import *
+from RampDialog import *
+import tkBaseDialog
+from ScheduleLineFrame import *
+#from AutoScrollbarFrame import *
+
 """
 import matplotlib
 matplotlib.use('TkAgg')
@@ -12,7 +19,7 @@ from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 """
-mainWindowSize = '800x400'
+mainWindowSize = '700x400'
 mainWindowTitle = "PSP200 Controller"
 
 normalWidgetList = []
@@ -25,6 +32,34 @@ class Gui():
     self.guiRefreshRate = 100
     self.deviceRefreshRate = 1000
     self.setAvailableUsbPorts()
+    self.mainWindow = Tk()
+    self.mainWindow.title(mainWindowTitle)
+    self.mainWindow.geometry(mainWindowSize)
+    self.topPanel = TopPanel(self.mainWindow, availableUsbPorts = [x for x in self.avilableUsbPorts.keys()], selectedPort = self.getTheLatestUsedUsbPort())
+    self.topPanel.pack(fill=X)
+    self.tabControl = TabControl(self.mainWindow)
+    self.tabControl.pack(fill=BOTH, expand=1)
+    btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice(self.topPanel.usbPort.get()))
+    btnConnect.pack(side=RIGHT)
+    inverseWidgetList.append(btnConnect)
+    self.addMenuBar()
+
+
+  def addMenuBar(self):
+    menubar = Menu(self.mainWindow)
+
+    filemenu = Menu(menubar, tearoff=0)
+    filemenu.add_command(label="Exit", command=self.mainWindow.quit)
+    menubar.add_cascade(label="File", menu=filemenu)
+    editmenu = Menu(menubar, tearoff=0)
+    editmenu.add_command(label="About",command=self.aboutDialog)
+    #editmenu.add_separator()
+    menubar.add_cascade(label="Help", menu=editmenu)
+
+    self.mainWindow.config(menu=menubar)
+
+  def aboutDialog(self):
+    dialog = AboutDialog(self.mainWindow,title="About",showCancel=False)
 
   def connectToDevice(self, usbPort):
     self.periodicUiUpdate()
@@ -32,7 +67,24 @@ class Gui():
       usbPortNumber = self.avilableUsbPorts[usbPort]
     else:
       usbPortNumber = usbPort
+    self.saveTheLastUsedUsbPort(usbPortNumber)
     threadHelper.connect(usbPortNumber, self.onConnectToDevice)
+
+  def saveTheLastUsedUsbPort(self, usbPort):
+    with open('usbPort.txt', 'w') as f:
+      f.write(str(usbPort))
+
+  def getTheLatestUsedUsbPort(self):
+    try:
+      with open('usbPort.txt', 'r') as f:
+        lastUsbPortNumber = f.readline()
+        for k,v in self.avilableUsbPorts.items():
+          if str(v) == str(lastUsbPortNumber):
+            return k
+        else:
+          return None
+    except:
+      return None
 
   def setAvailableUsbPorts(self):
     self.avilableUsbPorts = controller.getAvailableUsbPorts()
@@ -58,6 +110,9 @@ class Gui():
 
   def preRegVoltageUpdate(self, preRegVoltage):
     self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
+
+  def scheduleDone(self):
+    self.tabControl.scheduleTab.stop()
 
   """
   Periodically checks the threadHelper queue for updates to the UI.
@@ -96,6 +151,8 @@ class Gui():
         elif action == ThreadHelper.preRegVoltageString:
           preRegVoltageValue = threadHelper.queue.get(0)
           self.preRegVoltageUpdate(preRegVoltageValue)
+        elif action == ThreadHelper.scheduleDoneString:
+          self.scheduleDone()
       except:
         pass
       finally:
@@ -127,24 +184,15 @@ class Gui():
       widget.configure(state=inverseState)
 
   def show(self):
-    self.mainWindow = Tk()
-    self.mainWindow.title(mainWindowTitle)
-    self.mainWindow.geometry(mainWindowSize)
-    self.topPanel = TopPanel(self.mainWindow, availableUsbPorts = self.avilableUsbPorts.keys())
-    self.topPanel.pack(fill=X)
-    self.tabControl = TabControl(self.mainWindow)
-    self.tabControl.pack(fill=BOTH, expand=1)
-    btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice(self.topPanel.usbPort.get()))
-    btnConnect.pack(side=RIGHT)
-    inverseWidgetList.append(btnConnect)
     self.mainWindow.mainloop()
 
 class TopPanel(Frame):
-  def __init__(self, parent, availableUsbPorts):
+  def __init__(self, parent, availableUsbPorts, selectedPort = None):
     Frame.__init__(self, parent)
     self.parent = parent
 
     topLinFrame = Frame(self)
+    self.selectedPort = selectedPort
     self.chkOutputOnVar = IntVar(value=0)
     self.chkOutputOn = Checkbutton(topLinFrame, text = "Output On", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
     self.chkOutputOn.pack(side=LEFT, anchor=N)
@@ -153,10 +201,14 @@ class TopPanel(Frame):
     self.usbPort_value = StringVar()
     self.usbPort = Combobox(topLinFrame, text="USB port: ", textvariable=self.usbPort_value)
     self.usbPort['values'] = ([x for x in availableUsbPorts])
-    self.usbPort.current(0)
+    if selectedPort:
+      self.usbPort.current(availableUsbPorts.index(selectedPort))
+    else:
+      self.usbPort.current(0)
     self.usbPort.pack(side=RIGHT, anchor=N)
     inverseWidgetList.append(self.usbPort)
     lblUsbSelectText = Label(topLinFrame, text="USB port: ").pack(side=RIGHT, anchor=N)
+    self.usbPort.bind("<Button-1>", self.comboBoxDropDown)
 
     statusPanel = Frame(topLinFrame)
     self.lblStatus = Label(statusPanel, text="Status: ").pack(side=LEFT)
@@ -167,7 +219,10 @@ class TopPanel(Frame):
 
     self.valuesFrame = ValuesFrame(self)
     self.valuesFrame.pack(pady=10)
-
+ 
+  def comboBoxDropDown(self,event): 
+    self.usbPort['values'] = [x for x in controller.getAvailableUsbPorts().keys()]
+    
   def outPutOnOff(self):
     chkValue = self.chkOutputOnVar.get()
     controller.setOutputOnOff(chkValue)
@@ -175,22 +230,17 @@ class TopPanel(Frame):
 class ValuesFrame(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
+    self.parent=parent
     fontName = "Verdana"
-    fontSize = 25
+    fontSize = 20
     #Voltage
     Label(self, text="V", font=(fontName, fontSize)).grid(row=0,column=0)
     self.voltageEntryVar = DoubleVar(None)
     self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar, state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.voltageEntry.grid(row=0,column=1,sticky=W)
     Label(self, text="(V)").grid(row=0,column=2,sticky=W)
-    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=0,column=3)
-    self.targetVoltageEntryVar = DoubleVar(None)
-    self.targetVoltageEntry = Entry(self, textvariable=self.targetVoltageEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
-    self.targetVoltageEntry.bind('<Return>', self.setTargetVoltage)
-    self.targetVoltageEntry.grid(row=0,column=4,sticky=W)
-    normalWidgetList.append(self.targetVoltageEntry)
-    self.btnSetTargetVoltage = Button(self, text = "Set", state=DISABLED, command=self.setTargetVoltage)
-    self.btnSetTargetVoltage.grid(row=0,column=5,sticky=N+S)
+    self.btnSetTargetVoltage = Button(self,text="Set",state=DISABLED,command=self.setTargetVoltage,width=4)
+    self.btnSetTargetVoltage.grid(row=0,column=3,sticky=N+S+E,pady=5)
     normalWidgetList.append(self.btnSetTargetVoltage)
     #Current
     Label(self, text="I", font=(fontName, fontSize)).grid(row=1,column=0)
@@ -198,34 +248,52 @@ class ValuesFrame(Frame):
     self.currentEntry = Entry(self, textvariable=self.currentEntryVar,state='readonly',font=(fontName, fontSize),width=6,justify=RIGHT)
     self.currentEntry.grid(row=1,column=1,sticky=W)
     Label(self, text="(mA)").grid(row=1,column=2,sticky=W)
-    Label(self, text=" Set value", font=(fontName, fontSize)).grid(row=1,column=3)
-    self.targetCurrentEntryVar = IntVar(None)
-    self.targetCurrentEntry = Entry(self, textvariable=self.targetCurrentEntryVar,font=(fontName, fontSize),width=6,justify=RIGHT,state=DISABLED)
-    self.targetCurrentEntry.bind('<Return>', self.setTargetCurrent)
-    self.targetCurrentEntry.grid(row=1,column=4,sticky=W)
-    normalWidgetList.append(self.targetCurrentEntry)
-    self.btnSetTargetCurrent = Button(self, text = "Set", state=DISABLED, command=self.setTargetCurrent)
-    self.btnSetTargetCurrent.grid(row=1,column=5,sticky=N+S)
+    self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
+    self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
     normalWidgetList.append(self.btnSetTargetCurrent)
 
   def setTargetCurrent(self,args=None):
-    threadHelper.setTargetCurrent(self.targetCurrentEntryVar.get())
+    targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current",parent=self)
+    if targetCurrent is not None:
+      threadHelper.setTargetCurrent(targetCurrent)
 
   def setTargetVoltage(self,args=None):
-    threadHelper.setTargetVoltage(self.targetVoltageEntryVar.get())
+    targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage",parent=self)
+    if targetVoltage is not None:
+      threadHelper.setTargetVoltage(targetVoltage)
 
 class TabControl(Notebook):
   def __init__(self, parent):
-    Notebook.__init__(self, parent, name='tab control 123')
+    self.parent = parent
+    Notebook.__init__(self, parent, name='tab control')
     self.add(StatusTab(self), text='Status')
     self.add(ScheduleTab(self), text='Schedule')
+    #self.add(ExamplesTab(self), text='Examples')
+
+class ExamplesTab(Frame):
+  def __init__(self, parent):
+    Frame.__init__(self,parent)
+    ex1 = Example(self,"Simple voltage increment", "A simple example that increments the voltage periodically and saves the results to file")
+    ex1.pack(pady=10)
+    ex2 = Example(self,"(Non)Destructive LED testing", "Here Frissi will have to both accept the example and give me a description to put here")
+    ex2.pack(pady=10)
+    ex3 = Example(self,"LiPo battery charging", "Here Frissi will have to both accept the example and give me a description to put here")
+    ex3.pack()
+
+# TODO add button and make less ugly
+class Example(Frame):
+  def __init__(self,parent,title,text):
+    Frame.__init__(self,parent)
+    Label(self, text=title).pack()
+    Label(self, text=text).pack()
+
 
 class StatusTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
     parent.statusTab = self
     fontName = "Verdana"
-    fontSize = 15
+    fontSize = 12
 
     Label(self, text="Target voltage:",font=(fontName, fontSize)).grid(row=0,column=0,sticky=E)
     self.voltageEntryVar = DoubleVar(None)
@@ -243,28 +311,32 @@ class StatusTab(Frame):
     self.preRegVoltageEntry.grid(row=2, column=1)
     Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
-  def setTargetCurrent(self):
-    threadHelper.setTargetCurrent(self.currentEntryVar.get())
-
-  def setTargetVoltage(self):
-    threadHelper.setTargetVoltage(self.voltageEntryVar.get())
-
 class ScheduleTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
-    self.innerFrame = Frame(self)
+    parent.scheduleTab = self
+    self.parent =parent
     self.addLinesFrame()
-    buttonFrame = Frame(self.innerFrame)
-    self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
-    self.btnStart.pack(side=LEFT)
+    buttonFrame = Frame(self)
+    self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
+    self.btnAdd.pack(side=LEFT)
+    self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.resetLines)
+    self.btnClearLines.pack(side=LEFT)
+
+    self.btnVoltageRamping = Button(buttonFrame, text = "Voltage ramping", command=self.voltageRamping)
+    self.btnVoltageRamping.pack(side=LEFT)
+    self.btnCurrentRamping = Button(buttonFrame, text = "Current ramping", command=self.currentRamping)
+    self.btnCurrentRamping.pack(side=LEFT)
+
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
-    self.btnStop.pack(side=LEFT)
-    buttonFrame.pack()
+    self.btnStop.pack(side=RIGHT)
+    self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
+    self.btnStart.pack(side=RIGHT)
+    buttonFrame.pack(fill='x')
     normalWidgetList.append(self.btnStart)
-    self.innerFrame.pack(side=LEFT, anchor=N)
 
   def start(self):
-    threadHelper.startSchedule(self.lines)
+    threadHelper.startSchedule(self.scheduleLineFrame.getLines())
     self.btnStop.configure(state = NORMAL)
     self.btnStart.configure(state = DISABLED)
 
@@ -273,74 +345,31 @@ class ScheduleTab(Frame):
     self.btnStart.configure(state = NORMAL)
     self.btnStop.configure(state = DISABLED)
 
-  def addLinesFrame(self):
-    linesFrameHub = Frame(self.innerFrame)
-    self.linesFrame = Frame(linesFrameHub)
-    Label(self.linesFrame, text="Voltage(V)").grid(row=0,column=0,sticky=W)
-    Label(self.linesFrame, text="Current(mA)").grid(row=0,column=1,sticky=W)
-    Label(self.linesFrame, text="Duration").grid(row=0,column=2, columnspan=2)
-    self.lines = []
-    self.rowNumber = 1
-    self.addLine()
-    self.linesFrame.pack()
-    self.btnAddLine = Button(linesFrameHub,text="+",width=3, command=self.addLine)
-    self.btnAddLine.pack(anchor=E)
-    linesFrameHub.pack()
-
   def addLine(self):
-    if self.rowNumber == 1:
-      line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine)
-    else:
-      prevLine = self.lines[self.rowNumber - 2]
-      line = ScheduleLine(self.linesFrame,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
+    self.scheduleLineFrame.addLine()
 
-    line.voltageEntry.grid(row=self.rowNumber,column=0)
-    line.currentEntry.grid(row=self.rowNumber,column=1)
-    line.timeSizeType.grid(row=self.rowNumber,column=2)
-    line.durationEntry.grid(row=self.rowNumber,column=3)
-    line.removeLineButton.grid(row=self.rowNumber,column=4)
-    self.rowNumber += 1
-    self.lines.append(line)
+  def addLinesFrame(self):
+    canvas = Canvas(self,height=100,highlightthickness=0)
+    self.scheduleLineFrame = ScheduleLineFrame(canvas)
+    #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
 
-  def removeLine(self, rowNumber, listOfWidgets):
-    for widget in listOfWidgets:
-      widget.grid_forget()
-    self.lines.pop(rowNumber-1)
-    self.rowNumber -= 1
+  def resetLines(self):
+    self.scheduleLineFrame.clearAllLines()
+    self.scheduleLineFrame.initializeView()
 
-class ScheduleLine():
-  def __init__(self, parent, rowNumber, removeLineFunc, voltage=0, current=0, timeType='sec', duration=0):
-    self.voltageEntryVar = DoubleVar(None)
-    self.voltageEntryVar.set(voltage)
-    self.voltageEntry = Entry(parent, textvariable=self.voltageEntryVar,width=10)
-    self.currentEntryVar = IntVar(None)
-    self.currentEntryVar.set(current)
-    self.currentEntry = Entry(parent, textvariable=self.currentEntryVar,width=10)
-    self.timeSizeType_value = StringVar()
-    self.timeSizeType = Combobox(parent, textvariable=self.timeSizeType_value,state='readonly',width=7)
-    self.timeSizeType['values'] = ('sec', 'min', 'hour')
-    if timeType=='sec':
-      self.timeSizeType.current(0)
-    elif timeType=='min':
-      self.timeSizeType.current(1)
-    elif timeType=='hour':
-      self.timeSizeType.current(2)
-    self.durationEntryVar = DoubleVar(None)
-    self.durationEntryVar.set(duration)
-    self.durationEntry = Entry(parent, textvariable=self.durationEntryVar,width=10)
-    self.removeLineButton = Button(parent,text="-",width=3, command= lambda:removeLineFunc(rowNumber,[self.voltageEntry,self.currentEntry,self.timeSizeType,self.durationEntry,self.removeLineButton]))
+  def voltageRamping(self):
+    dialog = RampDialog(self,title="Voltage ramp",type="VoltageRamp")
+    if dialog.okClicked:
+        self.scheduleLineFrame.clearAllLines()
+        for l in dialog.voltageRampLines:
+          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
-  def getVoltage(self):
-    return self.voltageEntryVar.get()
-
-  def getCurrent(self):
-    return self.currentEntryVar.get()
-
-  def getTimeType(self):
-    return self.timeSizeType_value.get()
-
-  def getDuration(self):
-    return self.durationEntryVar.get()
+  def currentRamping(self):
+    dialog = RampDialog(self,title="Current ramp",type = "CurrentRamp")
+    if dialog.okClicked:
+        self.scheduleLineFrame.clearAllLines()
+        for l in dialog.currentRampLines:
+          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
 if __name__ == "__main__":
   gui = Gui()
