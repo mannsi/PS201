@@ -12,13 +12,6 @@ import tkBaseDialog
 from ScheduleLineFrame import *
 #from AutoScrollbarFrame import *
 
-"""
-import matplotlib
-matplotlib.use('TkAgg')
-from numpy import arange, sin, pi
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
-"""
 mainWindowSize = '700x400'
 mainWindowTitle = "PSP200 Controller"
 
@@ -266,10 +259,20 @@ class TabControl(Notebook):
   def __init__(self, parent):
     self.parent = parent
     Notebook.__init__(self, parent, name='tab control')
-    self.add(StatusTab(self), text='Status')
-    self.add(ScheduleTab(self), text='Schedule')
+    
+    self.statusTab = StatusTab(self)
+    self.scheduleTab = ScheduleTab(self,self.resetScheduleTab)
+    
+    self.add(self.statusTab, text='Status')
+    self.add(self.scheduleTab, text='Schedule')
     #self.add(ExamplesTab(self), text='Examples')
-
+    
+  def resetScheduleTab(self): 
+      self.forget(self.scheduleTab) 
+      self.scheduleTab = ScheduleTab(self,self.resetScheduleTab)
+      self.add(self.scheduleTab, text='Schedule')
+      self.select(self.scheduleTab)
+    
 class ExamplesTab(Frame):
   def __init__(self, parent):
     Frame.__init__(self,parent)
@@ -312,10 +315,14 @@ class StatusTab(Frame):
     Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
 class ScheduleTab(Frame):
-  def __init__(self, parent):
+  def __init__(self, parent, resetTabM):
     Frame.__init__(self,parent)
     parent.scheduleTab = self
-    self.parent =parent
+    self.parent = parent
+    self.resetTabM = resetTabM
+    self.initalizeView()
+
+  def initalizeView(self):
     self.addLinesFrame()
     buttonFrame = Frame(self)
     self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
@@ -334,7 +341,7 @@ class ScheduleTab(Frame):
     self.btnStart.pack(side=RIGHT)
     buttonFrame.pack(fill='x')
     normalWidgetList.append(self.btnStart)
-
+    
   def start(self):
     threadHelper.startSchedule(self.scheduleLineFrame.getLines())
     self.btnStop.configure(state = NORMAL)
@@ -354,8 +361,7 @@ class ScheduleTab(Frame):
     #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
 
   def resetLines(self):
-    self.scheduleLineFrame.clearAllLines()
-    self.scheduleLineFrame.initializeView()
+    self.resetTabM()
 
   def voltageRamping(self):
     dialog = RampDialog(self,title="Voltage ramp",type="VoltageRamp")
