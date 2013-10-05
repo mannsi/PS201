@@ -246,14 +246,16 @@ class ValuesFrame(Frame):
     normalWidgetList.append(self.btnSetTargetCurrent)
 
   def setTargetCurrent(self,args=None):
-    targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current",parent=self)
+    targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current (0-1000mA)",parent=self)
     if targetCurrent is not None:
-      threadHelper.setTargetCurrent(targetCurrent)
-
+        if(targetCurrent <= 1000):
+            threadHelper.setTargetCurrent(targetCurrent)
+        
   def setTargetVoltage(self,args=None):
-    targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage",parent=self)
+    targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage (0.00 - 20.00 V)",parent=self)
     if targetVoltage is not None:
-      threadHelper.setTargetVoltage(targetVoltage)
+        if (targetVoltage > 0 and targetVoltage < 20):
+            threadHelper.setTargetVoltage(targetVoltage)
 
 class TabControl(Notebook):
   def __init__(self, parent):
@@ -343,13 +345,21 @@ class ScheduleTab(Frame):
     normalWidgetList.append(self.btnStart)
     
   def start(self):
-    threadHelper.startSchedule(self.scheduleLineFrame.getLines())
-    self.btnStop.configure(state = NORMAL)
-    self.btnStart.configure(state = DISABLED)
+    if (threadHelper.startSchedule(self.scheduleLineFrame.getLines())):
+        self.btnStop.configure(state = NORMAL)
+        self.btnStart.configure(state = DISABLED)
+        self.btnClearLines.configure(state = DISABLED)
+        self.btnAdd.configure(state = DISABLED)
+        self.btnVoltageRamping.configure(state = DISABLED)
+        self.btnCurrentRamping.configure(state = DISABLED)
 
   def stop(self):
     threadHelper.stopSchedule()
     self.btnStart.configure(state = NORMAL)
+    self.btnClearLines.configure(state = NORMAL)
+    self.btnAdd.configure(state = NORMAL)
+    self.btnVoltageRamping.configure(state = NORMAL)
+    self.btnCurrentRamping.configure(state = NORMAL)
     self.btnStop.configure(state = DISABLED)
 
   def addLine(self):

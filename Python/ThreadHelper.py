@@ -128,7 +128,12 @@ class ThreadHelper():
     self.sched = Scheduler()
     self.sched.start()
 
-    numLines = len(lines)
+    legalLines = []
+    for line in lines:
+        if line.getDuration() != 0:
+            legalLines.append(line)
+
+    numLines = len(legalLines)
     if numLines == 0:
       return
     nextFireTime = datetime.now() + timedelta(seconds=1)
@@ -144,6 +149,7 @@ class ThreadHelper():
 
     self.controller.setOutputOnOff(True)
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
+    return True
 
   def addJobForLine(self, line):
     self.__setTargetVoltageWorker__(line.getVoltage())
