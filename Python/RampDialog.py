@@ -45,8 +45,8 @@ class RampDialog(tkBaseDialog.Dialog):
     self.durationEntry = DecimalEntry(master,maxDecimals=1, maxValue = 1000, minValue = 0, minIncrement = 0.1,width=10)
     self.durationEntry.grid(row=3,column=2,sticky=E+W)
     Label(master,text="# steps").grid(row=4,column=0,sticky=E)
-    self.numStepsEntryVar = IntVar(None)
-    Entry(master, textvariable=self.numStepsEntryVar,width=10).grid(row=4,column=1,columnspan=2,sticky=E+W)
+    self.numStepsEntry = DecimalEntry(master, maxDecimals=0, maxValue = 1000, minValue = 0, minIncrement = 1,width=10)
+    self.numStepsEntry.grid(row=4,column=1,columnspan=2,sticky=E+W)
     self.okClicked = False
 
   def addVoltageRampGui(self, master):
@@ -84,7 +84,7 @@ class RampDialog(tkBaseDialog.Dialog):
     voltageRamp.startingVoltage = self.startingVoltageEntry.get()
     voltageRamp.endingVoltage = self.endingVoltageEntry.get()
     voltageRamp.duration = self.durationEntry.get()
-    voltageRamp.numSteps = self.numStepsEntryVar.get()
+    voltageRamp.numSteps = self.numStepsEntry.get()
     voltageRamp.timeType = self.timeType_value.get()
     self.voltageRampLines = self.createLinesFromVoltageRamp(voltageRamp)
     self.okClicked = True
@@ -95,7 +95,7 @@ class RampDialog(tkBaseDialog.Dialog):
     voltageRamp.startingCurrent = self.startingCurrentEntry.get()
     voltageRamp.endingCurrent = self.endingCurrentEntry.get()
     voltageRamp.duration = self.durationEntry.get()
-    voltageRamp.numSteps = self.numStepsEntryVar.get()
+    voltageRamp.numSteps = self.numStepsEntry.get()
     voltageRamp.timeType = self.timeType_value.get()
     self.currentRampLines = self.createLinesFromCurrentRamp(voltageRamp)
 
