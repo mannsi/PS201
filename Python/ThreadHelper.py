@@ -16,7 +16,7 @@ targetCurrentString = "TARGETCURRENT"
 targetVoltageString = "TARGETVOLTAGE"
 outputOnOffString = "OUTPUTONOFF"
 scheduleDoneString = "SCHEDULEDONE"
-
+scheduleNewLineString = "SCHEDULENEWLINE"
 
 class ThreadHelper():
   def __init__(self, controller):
@@ -149,6 +149,8 @@ class ThreadHelper():
     return True
 
   def addJobForLine(self, line):
+    self.queue.put(scheduleNewLineString)
+    self.queue.put(line.rowNumber)
     self.__setTargetVoltageWorker__(line.getVoltage())
     time.sleep(50 / 1000)
     self.__setTargetCurrentWorker__(line.getCurrent())

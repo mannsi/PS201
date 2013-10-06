@@ -13,6 +13,9 @@ class SequenceLine():
   def __init__(self, parent, rowNumber, removeLineFunc, voltage=0.0, current=0, timeType='sec', duration=0):
     self.rowNumber = rowNumber
     self.removeLineFunc = removeLineFunc
+    self.labelText = StringVar()
+    self.labelText.set("     ")
+    self.selectedLabel = Label(parent,textvariable = self.labelText)
     self.voltageEntry = DecimalEntry(parent,maxDecimals=2, maxValue = 20, minValue = 0, minIncrement = 0.01,width=10)
     self.voltageEntry.set(voltage)
     self.currentEntry = DecimalEntry(parent,maxDecimals=0, maxValue = 1000, minValue = 0, minIncrement = 1,width=10)
@@ -50,6 +53,6 @@ class SequenceLine():
     return self.durationEntry.get()
 
   def removeLine(self):
-    self.removeLineFunc(self.rowNumber,[self.voltageEntry,self.currentEntry,self.timeSizeType,self.durationEntry,self.removeLineButton])  
+    self.removeLineFunc(self.rowNumber,[self.voltageEntry,self.currentEntry,self.timeSizeType,self.durationEntry,self.removeLineButton, self.selectedLabel])  
 
   

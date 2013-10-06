@@ -105,6 +105,10 @@ class Gui():
 
   def sequenceDone(self):
     self.tabControl.sequenceTab.stop()
+    self.tabControl.sequenceTab.selectLine(-1)  
+    
+  def sequenceLineChanged(self, rowNumber):
+    self.tabControl.sequenceTab.selectLine(rowNumber)  
 
   """
   Periodically checks the threadHelper queue for updates to the UI.
@@ -145,6 +149,9 @@ class Gui():
           self.preRegVoltageUpdate(preRegVoltageValue)
         elif action == ThreadHelper.scheduleDoneString:
           self.sequenceDone()
+        elif action == ThreadHelper.scheduleNewLineString:
+          rowNumber = threadHelper.queue.get(0)
+          self.sequenceLineChanged(rowNumber)
       except:
         pass
       finally:
@@ -333,8 +340,6 @@ class SequenceTab(Frame):
 
     self.btnLinearRamping = Button(buttonFrame, text = "Linear ramping", command=self.linearRamping)
     self.btnLinearRamping.pack(side=LEFT)
-    #self.btnCurrentRamping = Button(buttonFrame, text = "Current ramping", command=self.currentRamping)
-    #self.btnCurrentRamping.pack(side=LEFT)
 
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
     self.btnStop.pack(side=RIGHT)
@@ -342,6 +347,9 @@ class SequenceTab(Frame):
     self.btnStart.pack(side=RIGHT)
     buttonFrame.pack(fill='x')
     normalWidgetList.append(self.btnStart)
+   
+  def selectLine(self, rowNumber):
+    self.sequenceLineFrame.selectLine(rowNumber)  
     
   def start(self):
     if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
@@ -350,7 +358,6 @@ class SequenceTab(Frame):
       self.btnClearLines.configure(state = DISABLED)
       self.btnAdd.configure(state = DISABLED)
       self.btnLinearRamping.configure(state = DISABLED)
-      self.btnCurrentRamping.configure(state = DISABLED)
 
   def stop(self):
     threadHelper.stopSchedule()
@@ -358,7 +365,6 @@ class SequenceTab(Frame):
     self.btnClearLines.configure(state = NORMAL)
     self.btnAdd.configure(state = NORMAL)
     self.btnLinearRamping.configure(state = NORMAL)
-    self.btnCurrentRamping.configure(state = NORMAL)
     self.btnStop.configure(state = DISABLED)
 
   def addLine(self):
