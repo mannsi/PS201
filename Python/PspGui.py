@@ -37,7 +37,6 @@ class Gui():
     inverseWidgetList.append(btnConnect)
     self.addMenuBar()
 
-
   def addMenuBar(self):
     menubar = Menu(self.mainWindow)
 
@@ -248,14 +247,14 @@ class ValuesFrame(Frame):
   def setTargetCurrent(self,args=None):
     targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current (0-1000mA)",parent=self)
     if targetCurrent is not None:
-        if(targetCurrent <= 1000):
-            threadHelper.setTargetCurrent(targetCurrent)
+      if(targetCurrent <= 1000):
+        threadHelper.setTargetCurrent(targetCurrent)
         
   def setTargetVoltage(self,args=None):
     targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage (0.00 - 20.00 V)",parent=self)
     if targetVoltage is not None:
-        if (targetVoltage > 0 and targetVoltage < 20):
-            threadHelper.setTargetVoltage(targetVoltage)
+      if (targetVoltage > 0 and targetVoltage < 20):
+          threadHelper.setTargetVoltage(targetVoltage)
 
 class TabControl(Notebook):
   def __init__(self, parent):
@@ -270,10 +269,10 @@ class TabControl(Notebook):
     #self.add(ExamplesTab(self), text='Examples')
     
   def resetSequenceTab(self): 
-      self.forget(self.sequenceTab) 
-      self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
-      self.add(self.sequenceTab, text='Sequence')
-      self.select(self.sequenceTab)
+    self.forget(self.sequenceTab) 
+    self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
+    self.add(self.sequenceTab, text='Sequence')
+    self.select(self.sequenceTab)
     
 class ExamplesTab(Frame):
   def __init__(self, parent):
@@ -332,10 +331,10 @@ class SequenceTab(Frame):
     self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.resetLines)
     self.btnClearLines.pack(side=LEFT)
 
-    self.btnVoltageRamping = Button(buttonFrame, text = "Voltage ramping", command=self.voltageRamping)
-    self.btnVoltageRamping.pack(side=LEFT)
-    self.btnCurrentRamping = Button(buttonFrame, text = "Current ramping", command=self.currentRamping)
-    self.btnCurrentRamping.pack(side=LEFT)
+    self.btnLinearRamping = Button(buttonFrame, text = "Linear ramping", command=self.linearRamping)
+    self.btnLinearRamping.pack(side=LEFT)
+    #self.btnCurrentRamping = Button(buttonFrame, text = "Current ramping", command=self.currentRamping)
+    #self.btnCurrentRamping.pack(side=LEFT)
 
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
     self.btnStop.pack(side=RIGHT)
@@ -346,19 +345,19 @@ class SequenceTab(Frame):
     
   def start(self):
     if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
-        self.btnStop.configure(state = NORMAL)
-        self.btnStart.configure(state = DISABLED)
-        self.btnClearLines.configure(state = DISABLED)
-        self.btnAdd.configure(state = DISABLED)
-        self.btnVoltageRamping.configure(state = DISABLED)
-        self.btnCurrentRamping.configure(state = DISABLED)
+      self.btnStop.configure(state = NORMAL)
+      self.btnStart.configure(state = DISABLED)
+      self.btnClearLines.configure(state = DISABLED)
+      self.btnAdd.configure(state = DISABLED)
+      self.btnLinearRamping.configure(state = DISABLED)
+      self.btnCurrentRamping.configure(state = DISABLED)
 
   def stop(self):
     threadHelper.stopSchedule()
     self.btnStart.configure(state = NORMAL)
     self.btnClearLines.configure(state = NORMAL)
     self.btnAdd.configure(state = NORMAL)
-    self.btnVoltageRamping.configure(state = NORMAL)
+    self.btnLinearRamping.configure(state = NORMAL)
     self.btnCurrentRamping.configure(state = NORMAL)
     self.btnStop.configure(state = DISABLED)
 
@@ -373,17 +372,11 @@ class SequenceTab(Frame):
   def resetLines(self):
     self.resetTabM()
 
-  def voltageRamping(self):
-    dialog = RampDialog(self,title="Voltage ramp",type="VoltageRamp")
+  def linearRamping(self):
+    dialog = RampDialog(self,title="Voltage ramp")
     if dialog.okClicked:
-        for l in dialog.voltageRampLines:
-          self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
-
-  def currentRamping(self):
-    dialog = RampDialog(self,title="Current ramp",type = "CurrentRamp")
-    if dialog.okClicked:
-        for l in dialog.currentRampLines:
-          self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+      for l in dialog.voltageRampLines:
+        self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
 if __name__ == "__main__":
   gui = Gui()

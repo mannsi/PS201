@@ -88,7 +88,6 @@ class ThreadHelper():
     except Exception as e:
       self.__connectionLost__("update target voltage worker")
 
-  #TODO
   def __updateOutputOnOffWorker__(self):
     try:
       shouldBeOn = self.controller.getOutputOnOff()
@@ -130,9 +129,8 @@ class ThreadHelper():
 
     legalLines = []
     for line in lines:
-        if line.getDuration() != 0:
-            legalLines.append(line)
-
+      if line.getDuration() != 0:
+        legalLines.append(line)
     numLines = len(legalLines)
     if numLines == 0:
       return
@@ -146,7 +144,6 @@ class ThreadHelper():
         nextFireTime += timedelta(minutes=line.getDuration())
       elif timeType == "hour":
         nextFireTime += timedelta(hours=line.getDuration())
-
     self.controller.setOutputOnOff(True)
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
     return True

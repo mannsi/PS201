@@ -31,17 +31,13 @@ class SequenceLineFrame(Frame):
   def checkIfAddScrollbar(self):
     if not self.scrollbarActive and not self.initalizingView:
       widgetsHeight = self.getWidgetsHeight()
-      #print("Widgets ",widgetsHeight)
       totalHeight = self.canvas.winfo_height()
-      #print("Total ",totalHeight)
       return widgetsHeight > totalHeight
 
   def checkIfRemoveScrollbar(self):
     if self.scrollbarActive:
       widgetsHeight = self.getWidgetsHeight()
-      #print("Widgets ",widgetsHeight)
       totalHeight = self.canvas.winfo_height()
-      #print("Total ",totalHeight)
       return widgetsHeight <= totalHeight
 
   def addScrollbar(self):
@@ -76,7 +72,6 @@ class SequenceLineFrame(Frame):
     else:
       prevLine = self.lines[self.rowNumber - 1]
       line = SequenceLine(self,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
-
     self.gridNumber += 1
     line.voltageEntry.grid(row=self.gridNumber,column=0)
     line.currentEntry.grid(row=self.gridNumber,column=1)
@@ -93,7 +88,7 @@ class SequenceLineFrame(Frame):
     for widget in widgetsToRemove:
       widget.grid_remove()      
     for i in range(rowNumber + 1, len(self.lines)):
-        self.lines[i].rowNumber -= 1   
+      self.lines[i].rowNumber -= 1   
     self.lines.pop(rowNumber)
     self.rowNumber -= 1
     self.canvas.update_idletasks()
