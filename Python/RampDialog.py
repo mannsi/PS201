@@ -2,15 +2,7 @@ from tkinter import *
 from tkinter.ttk import *
 import tkBaseDialog
 from ExtendedEntry import DecimalEntry
-
-
-# Move this someplace else
-class ScheduleLineStruct():
-  def __init__(self):
-    self.voltage = 0
-    self.current = 0
-    self.duration = 0
-    self.timeType = 'sec'
+from SequenceLine import SequenceLineStruct
 
 class VoltageRamp():
   def __init__(self):
@@ -108,7 +100,7 @@ class RampDialog(tkBaseDialog.Dialog):
     voltageIncrement = float(voltageRamp.endingVoltage - voltageRamp.startingVoltage)/(voltageRamp.numSteps - 1)
     currentVoltage = voltageRamp.startingVoltage
     for i in range(voltageRamp.numSteps):
-      line = ScheduleLineStruct()
+      line = SequenceLineStruct()
       line.current = voltageRamp.current
       line.voltage = currentVoltage
       line.duration = timeIncrement
@@ -126,7 +118,7 @@ class RampDialog(tkBaseDialog.Dialog):
     currentIncrement = float(currentRamp.endingCurrent - currentRamp.startingCurrent)/(currentRamp.numSteps - 1)
     current = currentRamp.startingCurrent
     for i in range(currentRamp.numSteps):
-      line = ScheduleLineStruct()
+      line = SequenceLineStruct()
       line.voltage = currentRamp.voltage
       line.current = current
       line.duration = timeIncrement

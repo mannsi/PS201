@@ -1,21 +1,29 @@
 from tkinter import *
 from tkinter.ttk import *
-from ScheduleLine import ScheduleLine
+from SequenceLine import SequenceLine
 
-class ScheduleLineFrame(Frame):
+class SequenceLineFrame(Frame):
   def __init__(self,parent):
     Frame.__init__(self,parent)
     self.canvas = parent
     self.canvas.pack(fill="both",expand=True)
-    self.canvas.create_window((0,0), window=self, anchor="nw",tags ="self")
+    self.canvas.create_window((0,0), window=self, anchor="nw",tags ="self")   
+    self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)   
+    self.canvas.bind_all("<Button-4>", self._on_mousewheel)   
+    self.canvas.bind_all("<Button-5>", self._on_mousewheel)   
     self.bind("<Configure>", self.OnFrameConfigure)
     self.scrollbarActive = False
     self.initializeView()
 
+  def _on_mousewheel(self, event):
+    if self.scrollbarActive:
+      self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
   def initializeView(self):
     self.initalizingView = True
+    self.gridNumber = 0
     self.lines = []
-    self.rowNumber = 1
+    self.rowNumber = 0
     self.addHeaderLine()
     self.addLine()
     self.initalizingView = False
@@ -62,38 +70,31 @@ class ScheduleLineFrame(Frame):
 
   def addLine(self,voltage=None,current=None,timeType=None,duration=None):
     if voltage is not None and current is not None and timeType is not None and duration is not None:
-      line = ScheduleLine(self,self.rowNumber,self.removeLine,voltage=voltage,current=current,timeType=timeType,duration=duration)
-    elif self.rowNumber == 1:
-      line = ScheduleLine(self,self.rowNumber,self.removeLine)
+      line = SequenceLine(self,self.rowNumber,self.removeLine,voltage=voltage,current=current,timeType=timeType,duration=duration)
+    elif self.rowNumber == 0:
+      line = SequenceLine(self,self.rowNumber,self.removeLine)
     else:
-      counter = 1
-      prevLine = self.lines[self.rowNumber - 2]
-      while prevLine is None and (self.rowNumber - 1) > 0:
-        counter += 1
-        prevLine = self.lines[self.rowNumber - counter]
-      if prevLine:
-        line = ScheduleLine(self,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
-      else:
-        line = ScheduleLine(self,self.rowNumber,self.removeLine)
-    line.voltageEntry.grid(row=self.rowNumber,column=0)
-    line.currentEntry.grid(row=self.rowNumber,column=1)
-    line.timeSizeType.grid(row=self.rowNumber,column=2)
-    line.durationEntry.grid(row=self.rowNumber,column=3)
-    line.removeLineButton.grid(row=self.rowNumber,column=4)
-    if len(self.lines) > self.rowNumber:
-      self.lines[self.rowNumber-1] = line
-    else:
-      self.lines.append(line)
+      prevLine = self.lines[self.rowNumber - 1]
+      line = SequenceLine(self,self.rowNumber,self.removeLine,voltage=prevLine.getVoltage(),current=prevLine.getCurrent(),timeType=prevLine.getTimeType(),duration=prevLine.getDuration())
+
+    self.gridNumber += 1
+    line.voltageEntry.grid(row=self.gridNumber,column=0)
+    line.currentEntry.grid(row=self.gridNumber,column=1)
+    line.timeSizeType.grid(row=self.gridNumber,column=2)
+    line.durationEntry.grid(row=self.gridNumber,column=3)
+    line.removeLineButton.grid(row=self.gridNumber,column=4)
+    self.lines.append(line)
     self.rowNumber += 1
     self.canvas.update_idletasks()
     if self.checkIfAddScrollbar():
       self.addScrollbar()
 
-
   def removeLine(self, rowNumber, widgetsToRemove):
     for widget in widgetsToRemove:
-      widget.grid_forget()
-    self.lines[rowNumber - 1] = None
+      widget.grid_remove()      
+    for i in range(rowNumber + 1, len(self.lines)):
+        self.lines[i].rowNumber -= 1   
+    self.lines.pop(rowNumber)
     self.rowNumber -= 1
     self.canvas.update_idletasks()
     if self.checkIfRemoveScrollbar():
@@ -108,33 +109,4 @@ class ScheduleLineFrame(Frame):
     return [x for x in self.lines if x]
 
   def OnFrameConfigure(self, event):
-    '''Reset the scroll region to encompass the inner frame'''
     self.canvas.configure(scrollregion=(0,0,0,self.getWidgetsHeight()))
-    #self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-    #print(self.canvas.bbox("all"))
-
-
-"""
-def AddLine():
-  scheduleLineFrame.addLine()
-
-def RemoveScrollbar():
-  scheduleLineFrame.vsb.pack_forget()
-
-def AddScrollbar():
-  scheduleLineFrame.addScrollbar()
-
-root = Tk()
-mainWindowSize = '600x300'
-root.geometry(mainWindowSize)
-canvas = Canvas(root,background="green",height=100)
-scheduleLineFrame = ScheduleLineFrame(canvas)
-#scheduleLineFrame.pack()
-#scheduleLineFrame.addLine("bla","blabla")
-
-Button(root,text="Add line",command=AddLine).pack(anchor=S+E)
-Button(root,text="Remove scrollbar",command=RemoveScrollbar).pack(anchor=S+E)
-Button(root,text="Add scrollbar",command=AddScrollbar).pack(anchor=S+E)
-
-root.mainloop()
-"""

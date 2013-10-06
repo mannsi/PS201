@@ -9,11 +9,11 @@ import tkinter.simpledialog
 from AboutDialog import *
 from RampDialog import *
 import tkBaseDialog
-from ScheduleLineFrame import *
+from SequenceLineFrame import *
 #from AutoScrollbarFrame import *
 
 mainWindowSize = '700x400'
-mainWindowTitle = "PSP200 Controller"
+mainWindowTitle = "PS201 Controller"
 
 normalWidgetList = []
 inverseWidgetList = []
@@ -104,8 +104,8 @@ class Gui():
   def preRegVoltageUpdate(self, preRegVoltage):
     self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
 
-  def scheduleDone(self):
-    self.tabControl.scheduleTab.stop()
+  def sequenceDone(self):
+    self.tabControl.sequenceTab.stop()
 
   """
   Periodically checks the threadHelper queue for updates to the UI.
@@ -145,7 +145,7 @@ class Gui():
           preRegVoltageValue = threadHelper.queue.get(0)
           self.preRegVoltageUpdate(preRegVoltageValue)
         elif action == ThreadHelper.scheduleDoneString:
-          self.scheduleDone()
+          self.sequenceDone()
       except:
         pass
       finally:
@@ -263,17 +263,17 @@ class TabControl(Notebook):
     Notebook.__init__(self, parent, name='tab control')
     
     self.statusTab = StatusTab(self)
-    self.scheduleTab = ScheduleTab(self,self.resetScheduleTab)
+    self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
     
     self.add(self.statusTab, text='Status')
-    self.add(self.scheduleTab, text='Schedule')
+    self.add(self.sequenceTab, text='Sequence')
     #self.add(ExamplesTab(self), text='Examples')
     
-  def resetScheduleTab(self): 
-      self.forget(self.scheduleTab) 
-      self.scheduleTab = ScheduleTab(self,self.resetScheduleTab)
-      self.add(self.scheduleTab, text='Schedule')
-      self.select(self.scheduleTab)
+  def resetSequenceTab(self): 
+      self.forget(self.sequenceTab) 
+      self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
+      self.add(self.sequenceTab, text='Sequence')
+      self.select(self.sequenceTab)
     
 class ExamplesTab(Frame):
   def __init__(self, parent):
@@ -316,10 +316,10 @@ class StatusTab(Frame):
     self.preRegVoltageEntry.grid(row=2, column=1)
     Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
-class ScheduleTab(Frame):
+class SequenceTab(Frame):
   def __init__(self, parent, resetTabM):
     Frame.__init__(self,parent)
-    parent.scheduleTab = self
+    parent.sequenceTab = self
     self.parent = parent
     self.resetTabM = resetTabM
     self.initalizeView()
@@ -345,7 +345,7 @@ class ScheduleTab(Frame):
     normalWidgetList.append(self.btnStart)
     
   def start(self):
-    if (threadHelper.startSchedule(self.scheduleLineFrame.getLines())):
+    if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
         self.btnStop.configure(state = NORMAL)
         self.btnStart.configure(state = DISABLED)
         self.btnClearLines.configure(state = DISABLED)
@@ -363,11 +363,11 @@ class ScheduleTab(Frame):
     self.btnStop.configure(state = DISABLED)
 
   def addLine(self):
-    self.scheduleLineFrame.addLine()
+    self.sequenceLineFrame.addLine()
 
   def addLinesFrame(self):
     canvas = Canvas(self,height=100,highlightthickness=0)
-    self.scheduleLineFrame = ScheduleLineFrame(canvas)
+    self.sequenceLineFrame = SequenceLineFrame(canvas)
     #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
 
   def resetLines(self):
@@ -377,13 +377,13 @@ class ScheduleTab(Frame):
     dialog = RampDialog(self,title="Voltage ramp",type="VoltageRamp")
     if dialog.okClicked:
         for l in dialog.voltageRampLines:
-          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+          self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
   def currentRamping(self):
     dialog = RampDialog(self,title="Current ramp",type = "CurrentRamp")
     if dialog.okClicked:
         for l in dialog.currentRampLines:
-          self.scheduleLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+          self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
 if __name__ == "__main__":
   gui = Gui()
