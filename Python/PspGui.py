@@ -363,7 +363,8 @@ class SequenceTab(Frame):
           if dialog.filePath is not "":
             threadHelper.startSchedule(self.sequenceLineFrame.getLines(),logWhenValuesChange=True,filePath=dialog.filePath)
         elif dialog.logEveryXSeconds:
-          threadHelper.startSchedule(self.sequenceLineFrame.getLines(),useLoggingTimeInterval=True,loggingTimeInterval=dialog.timeInterval,filePath=dialog.filePath)
+          if dialog.timeInterval:
+            threadHelper.startSchedule(self.sequenceLineFrame.getLines(),useLoggingTimeInterval=True,loggingTimeInterval=dialog.timeInterval,filePath=dialog.filePath)
     else:
       if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
         self.btnStop.configure(state = NORMAL)
