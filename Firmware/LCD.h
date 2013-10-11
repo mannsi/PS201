@@ -20,7 +20,8 @@ void LCD_Write(unsigned char* data);
 void LCD_WriteFloat(uint16_t num);
 void LCD_Cursor(unsigned char row, unsigned char column);
 void LCD_Clear(void);
-
+void LCD_HighLight(void);
+void LCD_NoHighLight(void);
 
 static void LCD_Command(unsigned char a);
 static void LCD_Data(unsigned char a);

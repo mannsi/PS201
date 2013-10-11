@@ -63,12 +63,21 @@ int main(void)
 	uint16_t preregAveraging = 0;
 	uint16_t vinRead = 0;
 	uint16_t vinAveraging = 0;
-	int numReadAverages = 60; // MAX 60!
+	unsigned char cVoltageRead [10];
+	mapVoltage(voltageRead,cVoltageRead);
+	unsigned char cCurrentRead [10];
+	mapCurrent(currentRead,cCurrentRead);
+	int numReadAverages = 5; // MAX 60!
 	int readCounter = numReadAverages;
 
 	// Voltage and current set variables
 	uint16_t voltageSet = 0;
 	uint16_t currentSet = 0;
+	unsigned char cVoltageSet [10];
+	mapVoltage(voltageSet,cVoltageSet);
+	unsigned char cCurrentSet [10];
+	mapCurrent(currentSet,cCurrentSet);
+
 
 	// Delay variables, because we want to show the
 	// set varibles for some while before we show the 
@@ -91,13 +100,8 @@ int main(void)
 	// Start the USB interface
 	USART_Initialize();
 
-	MENU_Home();
-	LCD_Cursor(0,13);
-	LCD_Write("OFF");
-	LCD_Cursor(0,3);
-	LCD_WriteFloat(voltageSet);
-	LCD_Cursor(1,3);
-	LCD_WriteFloat(currentSet);
+	MENU_Home(cVoltageSet,cCurrentSet);
+	LCD_HighLight();
 
 	/************************
 	*						*
@@ -113,14 +117,12 @@ int main(void)
 			if(OUTPUT_IS_ENABLED)
 			{
 				DISABLE_OUTPUT;
-				LCD_Cursor(0,13);
-				LCD_Write("OFF");
+				MENU_Home(cVoltageRead,cCurrentRead);
 			}
 			else
 			{
 				ENABLE_OUTPUT;
-				LCD_Cursor(0,13);
-				LCD_Write(" ON");
+				MENU_Home(cVoltageRead,cCurrentRead);
 			}
 		}
 
@@ -129,11 +131,7 @@ int main(void)
 		{
 			// Go into backlight setting
 			MENU_Backlight();
-			MENU_Home();
-			LCD_Cursor(0,3);
-			LCD_WriteFloat(voltageSet);
-			LCD_Cursor(1,3);
-			LCD_WriteFloat(currentSet);
+			MENU_Home(cVoltageRead,cCurrentRead);
 		}
 
 		// IF Sw4 is pressed, toggle the encoder
@@ -143,24 +141,15 @@ int main(void)
 			{
 			case VOLTAGE:
 				encoderControls = CURRENT;
-				LCD_Cursor(0,2);
-				LCD_Write(" ");
-				LCD_Cursor(1,2);
-				LCD_Write("~");
+				MENU_Home(cVoltageRead,cCurrentRead);
 				break;
 			case CURRENT:
 				encoderControls = VOLTAGE;
-				LCD_Cursor(0,2);
-				LCD_Write("~");
-				LCD_Cursor(1,2);
-				LCD_Write(" ");
+				MENU_Home(cVoltageRead,cCurrentRead);
 				break;
 			default:
 				encoderControls = VOLTAGE;
-				LCD_Cursor(0,2);
-				LCD_Write("~");
-				LCD_Cursor(1,2);
-				LCD_Write(" ");
+				MENU_Home(cVoltageRead,cCurrentRead);
 				break;
 			}
 		}
@@ -182,10 +171,8 @@ int main(void)
 					voltageSet = 2000;
 
 				transferToDAC(9,voltageSet/voltageSetMulti);
-				LCD_Cursor(0,3);
-				LCD_WriteFloat(voltageSet);
-				LCD_Cursor(1,3);
-				LCD_WriteFloat(currentSet);
+				mapVoltage(voltageSet,cVoltageSet);
+				MENU_Home(cVoltageSet,cCurrentSet);
 				// Set delay to keep displaying the set voltage
 				// and current for some time
 				setDelay = numDelayCycles;
@@ -200,10 +187,8 @@ int main(void)
 					currentSet = 100;
 
 				transferToDAC(10,currentSet/currentSetMulti);
-				LCD_Cursor(0,3);
-				LCD_WriteFloat(voltageSet);
-				LCD_Cursor(1,3);
-				LCD_WriteFloat(currentSet);
+				mapCurrent(currentSet,cCurrentSet);
+				MENU_Home(cVoltageSet,cCurrentSet);
 				setDelay = numDelayCycles;
 				break;
 			default:
@@ -260,20 +245,21 @@ int main(void)
 			{
 				readCounter = numReadAverages;
 
+				uint16_t oldVoltageRead = voltageRead;
 				voltageRead = voltageAveraging/numReadAverages*voltageReadMulti;
+				mapVoltage(voltageRead,cVoltageRead);
 				voltageAveraging = 0;
+				uint16_t oldCurrentRead = currentRead;
 				currentRead = currentAveraging/numReadAverages*currentReadMulti;
+				mapCurrent(currentRead,cCurrentRead);
 				currentAveraging = 0;
 				preregRead = preregAveraging/numReadAverages*voltageReadMulti;
 				preregAveraging = 0;
 				vinRead = vinAveraging/numReadAverages*voltageReadMulti;
 				vinAveraging = 0;
-				if(setDelay == 0)
+				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead)
 				{
-					LCD_Cursor(0,3);
-					LCD_WriteFloat(voltageRead);
-					LCD_Cursor(1,3);
-					LCD_WriteFloat(currentRead);
+					MENU_Home(cVoltageRead,cCurrentRead);
 				}
 			}
 			ADC_STARTCONVERSION;
@@ -295,13 +281,7 @@ int main(void)
 				break;
 			voltageSet = newData;
 			transferToDAC(9,voltageSet/voltageSetMulti);
-			LCD_Cursor(0,3);
-			LCD_WriteFloat(voltageSet);
-			LCD_Cursor(1,3);
-			LCD_WriteFloat(currentSet);
-			// Set delay to keep displaying the set voltage
-			// for some time
-			setDelay = numDelayCycles;
+			mapVoltage(voltageSet,cVoltageSet);
 			break;			
 		case USART_SEND_VOLTAGE:
 			USART_Transmit(voltageRead);
@@ -315,13 +295,7 @@ int main(void)
 				break;
 			currentSet = newData;
 			transferToDAC(10,currentSet/currentSetMulti);
-			LCD_Cursor(0,3);
-			LCD_WriteFloat(voltageSet);
-			LCD_Cursor(1,3);
-			LCD_WriteFloat(currentSet);
-			// Set delay to keep displaying the set voltage
-			// for some time
-			setDelay = numDelayCycles;
+			mapCurrent(currentSet,cCurrentSet);
 			break;			
 		case USART_SEND_CURRENT:
 			USART_Transmit(currentRead);
@@ -337,13 +311,11 @@ int main(void)
 			break;
 		case USART_ENABLE_OUTPUT:
 			ENABLE_OUTPUT;
-			LCD_Cursor(0,13);
-			LCD_Write(" ON");
+			MENU_Home(cVoltageRead,cCurrentRead);
 			break;
 		case USART_DISABLE_OUTPUT:
 			DISABLE_OUTPUT;
-			LCD_Cursor(0,13);
-			LCD_Write("OFF");
+			MENU_Home(cVoltageRead,cCurrentRead);
 			break;
 		default:
 			break;
@@ -375,14 +347,33 @@ void transferToDAC(unsigned char CTRL,uint16_t a){
   	DESELECT_DAC;
 }
 
-void MENU_Home(void)
+// store the numbers in chars
+void mapVoltage(uint16_t volt, unsigned char *b)
+{
+	int wholeNum = volt/100;
+	uint16_t fraction = volt - wholeNum*100;
+	
+	sprintf(b,"%2i.%02i",wholeNum,fraction);
+}
+
+void mapCurrent(uint16_t cur, unsigned char *b)
+{
+	sprintf(b,"%4i0",cur);
+}
+
+
+void MENU_Home(unsigned char* voltage,unsigned char* current)
 {
 	// Write normal home screen
 	LCD_Clear();
 	LCD_Cursor(0,0);
 	LCD_Write("V: ");
+	LCD_Write(voltage);
+	LCD_Write(" V");
 	LCD_Cursor(1,0);
 	LCD_Write("I: ");
+	LCD_Write(current);
+	LCD_Write(" mA");
 
 	// Determine the last selected encoder function
 	switch(encoderControls)
@@ -404,13 +395,13 @@ void MENU_Home(void)
 
 	if(OUTPUT_IS_ENABLED)
 	{
-		LCD_Cursor(0,14);
+		LCD_Cursor(0,13);
 		LCD_Write("ON");
 	}
 	else
 	{
-		LCD_Cursor(0,14);
-		LCD_Write("  ");
+		LCD_Cursor(0,13);
+		LCD_Write("OFF");
 	}
 
 }

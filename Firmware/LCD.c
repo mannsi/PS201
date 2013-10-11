@@ -122,6 +122,21 @@ void LCD_Cursor(unsigned char row, unsigned char column)
 	}
 }
 
+// to highlight the current cursor position
+void LCD_HighLight()
+{
+	LCD_Command(0);
+	LCD_Command(0xE);
+}
+
+// to turn off highlight 
+void LCD_NoHighLight()
+{
+	LCD_Command(0);
+	LCD_Command(0xC);
+}
+
+
 // to clear the display
 void LCD_Clear()
 {

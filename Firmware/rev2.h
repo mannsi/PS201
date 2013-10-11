@@ -3,6 +3,7 @@
 
 #include<avr/io.h>
 #include<avr/interrupt.h>
+#include<stdio.h>
 #include "LCD.h"
 #include "SW.h"
 #include "ADC.h"
@@ -21,7 +22,9 @@
 
 int main(void);
 void transferToDAC(unsigned char CTRL,uint16_t a);
-void MENU_Home(void);
+void mapVoltage(uint16_t volt, unsigned char* b);
+void mapCurrent(uint16_t cur, unsigned char* b);
+void MENU_Home(unsigned char* V,unsigned char* mA);
 void MENU_Backlight(void);
 
 extern uint8_t backlight;
