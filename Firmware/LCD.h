@@ -2,7 +2,6 @@
 #define LCD_H
 
 #include<avr/io.h>
-#include<stdio.h>
 
 #ifndef F_CPU
 #define F_CPU 16000000
@@ -17,7 +16,6 @@
 
 void LCD_Initialize(void);
 void LCD_Write(unsigned char* data);
-void LCD_WriteFloat(uint16_t num);
 void LCD_Cursor(unsigned char row, unsigned char column);
 void LCD_Clear(void);
 void LCD_HighLight(void);

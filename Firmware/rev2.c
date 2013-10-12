@@ -65,6 +65,10 @@ int main(void)
 	uint16_t vinAveraging = 0;
 	unsigned char cVoltageRead [10];
 	mapVoltage(voltageRead,cVoltageRead);
+	unsigned char cVinRead [10];
+	mapVoltage(vinRead, cVinRead);
+	unsigned char cPreregRead [10];
+	mapVoltage(preregRead, cPreregRead);
 	unsigned char cCurrentRead [10];
 	mapCurrent(currentRead,cCurrentRead);
 	int numReadAverages = 5; // MAX 60!
@@ -204,14 +208,19 @@ int main(void)
 		if(ADC_status & ADC_NEWREADING)
 		{
 			ADC_status &= ~ADC_NEWREADING;
+			uint16_t adc;
 
 			switch(ADC_status)
 			{
 			case ADC_VOLTAGE:
-				voltageAveraging += ADC_reading;
+				adc = ADC_reading/10;
+				voltageAveraging += adc;
 				ADC_status = ADC_CURRENT;
 				ADMUX &= 0xF0;
 				ADMUX |= CURRENT_MON;
+				// DEBUG
+				//USART_Transmit(adc);
+				// *DEBUG
 				break;
 			case ADC_CURRENT:
 				currentAveraging += ADC_reading;
@@ -254,8 +263,10 @@ int main(void)
 				mapCurrent(currentRead,cCurrentRead);
 				currentAveraging = 0;
 				preregRead = preregAveraging/numReadAverages*voltageReadMulti;
+				mapVoltage(preregRead,cPreregRead);
 				preregAveraging = 0;
 				vinRead = vinAveraging/numReadAverages*voltageReadMulti;
+				mapVoltage(vinRead,cVinRead);
 				vinAveraging = 0;
 				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead)
 				{
@@ -284,10 +295,10 @@ int main(void)
 			mapVoltage(voltageSet,cVoltageSet);
 			break;			
 		case USART_SEND_VOLTAGE:
-			USART_Transmit(voltageRead);
+			USART_Transmit(cVoltageRead);
 			break;
 		case USART_SEND_SET_VOLTAGE:
-			USART_Transmit(voltageSet);
+			USART_Transmit(cVoltageSet);
 			break;
 		case USART_RECEIVE_CURRENT:
 			newData = USART_ReceiveData();
@@ -298,16 +309,16 @@ int main(void)
 			mapCurrent(currentSet,cCurrentSet);
 			break;			
 		case USART_SEND_CURRENT:
-			USART_Transmit(currentRead);
+			USART_Transmit(cCurrentRead);
 			break;
 		case USART_SEND_SET_CURRENT:
-			USART_Transmit(currentSet);
+			USART_Transmit(cCurrentSet);
 			break;
 		case USART_SEND_VIN:
-			USART_Transmit(vinRead);
+			USART_Transmit(cVinRead);
 			break;
 		case USART_SEND_VPREREG:
-			USART_Transmit(preregRead);
+			USART_Transmit(cPreregRead);
 			break;
 		case USART_ENABLE_OUTPUT:
 			ENABLE_OUTPUT;

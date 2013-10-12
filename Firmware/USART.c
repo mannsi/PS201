@@ -20,17 +20,11 @@ void USART_TransmitChar(unsigned char data)
 	UDR = data;
 }
 
-void USART_Transmit(uint16_t num)
+void USART_Transmit(unsigned char * b)
 {
-	int wholeNum = num/100;
-	uint16_t fraction = num - wholeNum*100;
-	
-	unsigned char b [10];
-	sprintf(b,"%2i.%02i\n",wholeNum,fraction);
-
 	unsigned char i;
 
-	for(i=0;i<20;i++)
+	for(i=0;i<10;i++)
 	{
 		if(!b[i]) break;
 		USART_TransmitChar(b[i]);

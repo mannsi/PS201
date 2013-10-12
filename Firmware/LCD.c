@@ -95,18 +95,6 @@ void LCD_Write(unsigned char* data)
 	}
 }
 
-// To write a float to the LCD, we only keep three digits
-// after the decimal point
-void LCD_WriteFloat(uint16_t num)
-{
-	int wholeNum = num/100;
-	uint16_t fraction = num - wholeNum*100;
-	
-	unsigned char b [10];
-	sprintf(b,"%2i.%02i",wholeNum,fraction);
-	LCD_Write(b);
-}
-
 // To position the cursor
 void LCD_Cursor(unsigned char row, unsigned char column)
 {
