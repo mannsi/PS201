@@ -123,7 +123,7 @@ class ThreadHelper():
     threading.Thread(target=self.__updatePreRegVoltageWorker__).start()
     #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
 
-  def startSchedule(self, lines):
+  def startSchedule(self,lines,logWhenValuesChange=False,filePath=None,useLoggingTimeInterval=False,loggingTimeInterval=0):
     self.sched = Scheduler()
     self.sched.start()
 
@@ -136,7 +136,7 @@ class ThreadHelper():
       return
     nextFireTime = datetime.now() + timedelta(seconds=1)
     for line in lines:
-      self.sched.add_date_job(func = self.addJobForLine, date=nextFireTime, args=[line])
+      self.sched.add_date_job(func = self.addJobForLine, date=nextFireTime, args=[line, logWhenValuesChange, filePath])
       timeType = line.getTimeType()
       if timeType == "sec":
         nextFireTime += timedelta(seconds=line.getDuration())
@@ -146,14 +146,21 @@ class ThreadHelper():
         nextFireTime += timedelta(hours=line.getDuration())
     self.controller.setOutputOnOff(True)
     self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
+    
+    if useLoggingTimeInterval:
+      self.startTimeIntervalLogging(loggingTimeInterval,filePath)
+    
     return True
 
-  def addJobForLine(self, line):
+  def addJobForLine(self, line, logToDataFile, filePath):
     self.queue.put(scheduleNewLineString)
     self.queue.put(line.rowNumber)
     self.__setTargetVoltageWorker__(line.getVoltage())
     time.sleep(50 / 1000)
     self.__setTargetCurrentWorker__(line.getCurrent())
+        
+    if logToDataFile:
+      self.logValuesToFile(filePath)
 
   def initializeDevice(self):
     self.__setTargetVoltageWorker__(0)
@@ -165,4 +172,28 @@ class ThreadHelper():
 
   def stopSchedule(self):
     self.sched.shutdown()
-
+    try:
+      self.intervalLoggingSched.shutdown()
+    except:
+      pass
+      
+  def startTimeIntervalLogging(self, loggingTimeInterval, filePath):
+    time.sleep(1) # Sleep for one sec to account for the 1 sec time delay in jobs
+    self.intervalLoggingSched = Scheduler()
+    self.intervalLoggingSched.start()
+    self.intervalLoggingSched.add_interval_job(self.logValuesToFile, seconds=loggingTimeInterval, args=[filePath])
+    
+    
+  def logValuesToFile(self,filePath):
+    time.sleep(50 / 1000)
+    realVoltage = self.controller.getRealVoltage()
+    time.sleep(50 / 1000)
+    realCurrent = self.controller.getRealCurrent()
+    with open(filePath, "a") as myfile:
+        fileString = str(datetime.now()) 
+        fileString += "\t"  
+        fileString += str(realVoltage)
+        fileString += "\t"  
+        fileString += str(realCurrent)
+        fileString += "\n"
+        myfile.write(fileString)

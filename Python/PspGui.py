@@ -7,7 +7,7 @@ import PspController
 import logging
 import tkinter.simpledialog
 from AboutDialog import *
-from RampDialog import *
+from Dialogs import RampDialog, DataLoggingDialog
 import tkBaseDialog
 from SequenceLineFrame import *
 #from AutoScrollbarFrame import *
@@ -340,24 +340,38 @@ class SequenceTab(Frame):
 
     self.btnLinearRamping = Button(buttonFrame, text = "Linear ramping", command=self.linearRamping)
     self.btnLinearRamping.pack(side=LEFT)
+    
+    self.logToFileVar = IntVar(value=0)
+    self.logToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
+    self.logToFile.pack(side=LEFT)
 
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
     self.btnStop.pack(side=RIGHT)
     self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
     self.btnStart.pack(side=RIGHT)
     buttonFrame.pack(fill='x')
-    normalWidgetList.append(self.btnStart)
+    normalWidgetList.append(self.btnStart) 
    
   def selectLine(self, rowNumber):
     self.sequenceLineFrame.selectLine(rowNumber)  
     
   def start(self):
-    if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
-      self.btnStop.configure(state = NORMAL)
-      self.btnStart.configure(state = DISABLED)
-      self.btnClearLines.configure(state = DISABLED)
-      self.btnAdd.configure(state = DISABLED)
-      self.btnLinearRamping.configure(state = DISABLED)
+    if self.logToFileVar.get():
+      dialog = DataLoggingDialog(self,title="Log to file")
+      if dialog.okClicked:
+        if dialog.logWhenValuesChange:
+          if dialog.filePath is not "":
+            threadHelper.startSchedule(self.sequenceLineFrame.getLines(),logWhenValuesChange=True,filePath=dialog.filePath)
+        elif dialog.logEveryXSeconds:
+          if dialog.timeInterval:
+            threadHelper.startSchedule(self.sequenceLineFrame.getLines(),useLoggingTimeInterval=True,loggingTimeInterval=dialog.timeInterval,filePath=dialog.filePath)
+    else:
+      if (threadHelper.startSchedule(self.sequenceLineFrame.getLines())):
+        self.btnStop.configure(state = NORMAL)
+        self.btnStart.configure(state = DISABLED)
+        self.btnClearLines.configure(state = DISABLED)
+        self.btnAdd.configure(state = DISABLED)
+        self.btnLinearRamping.configure(state = DISABLED)
 
   def stop(self):
     threadHelper.stopSchedule()
