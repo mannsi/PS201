@@ -67,39 +67,40 @@ int main(void)
 	mapVoltage(voltageRead,cVoltageRead);
 	unsigned char cVinRead [10];
 	mapVoltage(vinRead, cVinRead);
-	unsigned char cPreregRead [10];
+	unsigned char cPreregRead [20];
 	mapVoltage(preregRead, cPreregRead);
-	unsigned char cCurrentRead [10];
+	unsigned char cCurrentRead [20];
 	mapCurrent(currentRead,cCurrentRead);
-	int numReadAverages = 5; // MAX 60!
+	int numReadAverages = 1; // MAX 60!
 	int readCounter = numReadAverages;
 
 	// Voltage and current set variables
 	uint16_t voltageSet = 0;
 	uint16_t currentSet = 0;
-	unsigned char cVoltageSet [10];
+	unsigned char cVoltageSet [20];
 	mapVoltage(voltageSet,cVoltageSet);
-	unsigned char cCurrentSet [10];
+	unsigned char cCurrentSet [20];
 	mapCurrent(currentSet,cCurrentSet);
 
 
-	// Delay variables, because we want to show the
-	// set varibles for some while before we show the 
-	// readback.
-	uint16_t setDelay = 0;
-	uint16_t numDelayCycles = 50000;
+	// Delay variables, between read cycles. We do not
+	// want to be constantly running the ADC.
+	uint16_t readDelay = 10000;
+	uint16_t setDelay = 50000;
+	uint16_t delay = readDelay;
+
 
 	// Calibration variables
-	float voltageRef = 498.8;	// The ref voltage times 100
+	float voltageRef = 49.88;	// The ref voltage times 10
 	float voltageSetMulti = 4.7*voltageRef/1024;	// gain*ref/numBits
 	float voltageReadMulti = 5.7*voltageRef/1024;
-	float currentSetMulti = 1/0.33/11*voltageRef/1024;
-	float currentReadMulti = 1/0.33/11*voltageRef/1024;
+	float currentSetMulti = 10/0.33/11*voltageRef/1024;
+	float currentReadMulti = 10/0.33/11*voltageRef/1024;
 
 	// Start the ADC
 	ADC_initialize();
-	ADC_STARTCONVERSION;
-	sei();
+	//ADC_STARTCONVERSION;
+	//sei();
 
 	// Start the USB interface
 	USART_Initialize();
@@ -166,20 +167,20 @@ int main(void)
 			switch(encoderControls)
 			{		
 			case VOLTAGE:
-				if(dir == ENCODER_CW)	voltageSet += 2;
-				else 					voltageSet -= 2;
+				if(dir == ENCODER_CW)	voltageSet += 1;
+				else 					voltageSet -= 1;
 
 				if(voltageSet > 60000)
 					voltageSet = 0;
-				else if(voltageSet > 2000)
-					voltageSet = 2000;
+				else if(voltageSet > 200)
+					voltageSet = 200;
 
 				transferToDAC(9,voltageSet/voltageSetMulti);
 				mapVoltage(voltageSet,cVoltageSet);
 				MENU_Home(cVoltageSet,cCurrentSet);
 				// Set delay to keep displaying the set voltage
 				// and current for some time
-				setDelay = numDelayCycles;
+				delay = setDelay;
 				break;
 			case CURRENT:
 				if(dir == ENCODER_CW) 	currentSet += 1;
@@ -193,34 +194,41 @@ int main(void)
 				transferToDAC(10,currentSet/currentSetMulti);
 				mapCurrent(currentSet,cCurrentSet);
 				MENU_Home(cVoltageSet,cCurrentSet);
-				setDelay = numDelayCycles;
+				delay = setDelay;
 				break;
 			default:
 				break;
 			}
 		}
 	
-		// Reduce set delay by one
-		if (setDelay > 0)
-			setDelay--;
+		// if delay is zero we start a ADC conversion cycle
+		// (if it is not reading) 
+		// otherwise we reduce the delay variable
+		if (delay == 0)
+		{
+			if(!(ADC_status & ADC_ISREADING))
+			{
+				ADC_status |= ADC_ISREADING;
+				ADC_STARTCONVERSION;
+				sei();
+			}
+		}
+		else
+			delay--;
 
 		// When a new ADC reading is registered we display it
 		if(ADC_status & ADC_NEWREADING)
 		{
+			cli();
+			ADC_status &= ~ADC_ISREADING;
 			ADC_status &= ~ADC_NEWREADING;
-			uint16_t adc;
-
 			switch(ADC_status)
 			{
 			case ADC_VOLTAGE:
-				adc = ADC_reading/10;
-				voltageAveraging += adc;
+				voltageAveraging += ADC_reading;
 				ADC_status = ADC_CURRENT;
 				ADMUX &= 0xF0;
 				ADMUX |= CURRENT_MON;
-				// DEBUG
-				//USART_Transmit(adc);
-				// *DEBUG
 				break;
 			case ADC_CURRENT:
 				currentAveraging += ADC_reading;
@@ -252,6 +260,7 @@ int main(void)
 			// and write to display.
 			if (readCounter == 0)
 			{
+				delay = readDelay;
 				readCounter = numReadAverages;
 
 				uint16_t oldVoltageRead = voltageRead;
@@ -273,7 +282,6 @@ int main(void)
 					MENU_Home(cVoltageRead,cCurrentRead);
 				}
 			}
-			ADC_STARTCONVERSION;
 		}
 
 
@@ -361,15 +369,15 @@ void transferToDAC(unsigned char CTRL,uint16_t a){
 // store the numbers in chars
 void mapVoltage(uint16_t volt, unsigned char *b)
 {
-	int wholeNum = volt/100;
-	uint16_t fraction = volt - wholeNum*100;
+	int wholeNum = volt/10;
+	uint16_t fraction = volt - wholeNum*10;
 	
-	sprintf(b,"%2i.%02i",wholeNum,fraction);
+	sprintf(b,"%3i.%01i",wholeNum,fraction);
 }
 
 void mapCurrent(uint16_t cur, unsigned char *b)
 {
-	sprintf(b,"%4i0",cur);
+	sprintf(b,"%3i0",cur);
 }
 
 

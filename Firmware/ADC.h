@@ -12,6 +12,7 @@
 
 // For the ADC status variable we define:
 #define ADC_NEWREADING 		(1<<6)
+#define ADC_ISREADING		(1<<5)
 #define ADC_VOLTAGE 		1
 #define ADC_CURRENT 		(1<<1)
 #define ADC_PREREGULATOR 	(1<<2)
