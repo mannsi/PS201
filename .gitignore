@@ -213,3 +213,12 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+# My ignored extensions
+.o
+.hex
+.lst
+.ee.hex
+.out
+.out.map
+
