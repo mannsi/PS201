@@ -25,7 +25,7 @@
 void USART_Initialize(void);
 void USART_TransmitChar(unsigned char data);
 void USART_Transmit(unsigned char * b);
-unsigned char USART_ReceiveCommand();
-uint16_t USART_RecieveData();
+unsigned char USART_ReceiveCommand(void);
+uint16_t USART_ReceiveData(void);
 
 #endif

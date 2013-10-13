@@ -6,7 +6,7 @@ void USART_Initialize(void)
 	UBRRH = (unsigned char)(MYUBRR>>8);
 	UBRRL = (unsigned char) MYUBRR;
 
-	// Enable reciever and transmitter
+	// Enable receiver and transmitter
 	UCSRB = (1 << RXEN) | (1 << TXEN);
 	// Set frame format: 8data, 2stop bit
 	UCSRC = (1<<URSEL) | (1<<USBS) | (3<<UCSZ0);
@@ -31,7 +31,7 @@ void USART_Transmit(unsigned char * b)
 	}
 }
 
-unsigned char USART_RecieveCommand()
+unsigned char USART_ReceiveCommand()
 {
 	if(UCSRA & 1 << RXC)
 	{

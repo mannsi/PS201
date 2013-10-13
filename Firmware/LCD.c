@@ -133,6 +133,123 @@ void LCD_Clear()
 	_delay_ms(1);
 }
 
+void LCD_ShowStartScreen()
+{
+	LCD_Cursor(0,4);
+	LCD_Write("Digital");
+	LCD_Cursor(1,6);
+	LCD_Write("PSU");
+}
+
+void LCD_WriteValues(unsigned char* voltage,unsigned char* current)
+{
+	// Write normal home screen
+	LCD_Clear();
+	LCD_Cursor(0,0);
+	LCD_Write("V: ");
+	LCD_Write(voltage);
+	LCD_Write(" V");
+	LCD_Cursor(1,0);
+	LCD_Write("I: ");
+	LCD_Write(current);
+	LCD_Write(" mA");
+
+	// Determine the last selected encoder function
+	switch(encoderControls)
+	{
+		case VOLTAGE:
+			LCD_Cursor(0,2);
+			LCD_Write("~");
+			break;
+		case CURRENT:
+			LCD_Cursor(1,2);
+			LCD_Write("~");
+			break;
+		default:
+			encoderControls = VOLTAGE;
+			LCD_Cursor(0,2);
+			LCD_Write("~");
+			break;
+	}
+
+	if(OUTPUT_IS_ENABLED)
+	{
+		LCD_Cursor(0,13);
+		LCD_Write("ON");
+	}
+	else
+	{
+		LCD_Cursor(0,13);
+		LCD_Write("OFF");
+	}
+
+}
+
+uint8_t LCD_SetBacklight(uint8_t backlightIntensity)
+{
+	// Write small backlight screen
+	LCD_Clear();
+	LCD_Cursor(0,3);
+	LCD_Write("Backlight");
+	LCD_Cursor(1,0);
+	LCD_Write("[              ]");
+	LCD_Cursor(1,1);
+	uint8_t i = backlightIntensity;
+	for(i; i>0; i--)
+	{
+		LCD_Write("=");
+	}
+	LCD_Write(">");
+	while(!SW_Check1() && !SW_Check2() && !SW_Check3() && !SW_Check4())
+	{
+		unsigned char dir = SW_CheckEncoder();
+		if(dir)
+		{
+			if(dir == ENCODER_CW) 	
+			{
+				backlightIntensity += 1;
+			} 
+			else
+			{
+				backlightIntensity -= 1;
+			}
+			if(backlightIntensity > 20)
+			{
+				backlightIntensity = 0;
+			}
+			else if(backlightIntensity > 13)
+			{
+				backlightIntensity = 13;
+			}
+			else
+			{
+				OCR1B = 19*backlightIntensity;
+				LCD_Cursor(1,0);
+				LCD_Write("[              ]");
+				LCD_Cursor(1,1);
+				for(i = backlightIntensity; i>0; i--)
+				{
+					LCD_Write("=");
+				}
+				LCD_Write(">");
+			}
+		}
+	}
+	return backlightIntensity;
+}
+
+void LCD_SwitchOutput()
+{
+	if(OUTPUT_IS_ENABLED)
+	{
+		DISABLE_OUTPUT;
+	}
+	else
+	{
+		ENABLE_OUTPUT;
+	}
+}
+
 // This is exactly like the above function but now
 // we make sure the fifth bit is allways LOW to indicate
 // that the display is receiving instruction. Also we only
