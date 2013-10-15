@@ -8,6 +8,8 @@
 
 #include "rev2.h"
 
+int setValuesHaveChanged = 0;
+
 uint8_t backlightIntensity = 10;
 uint16_t voltageRead = 0;
 uint16_t voltageAveraging = 0;
@@ -52,6 +54,7 @@ int main(void)
 	USART_Initialize();
 	
 	LCD_ShowStartScreen();
+	
 	_delay_ms(1000);
 	LCD_Clear();
 	LCD_WriteValues(voltageSetArray,currentSetArray);
@@ -131,6 +134,7 @@ int main(void)
 					// Set delay to keep displaying the set voltage
 					// and current for some time
 					delay = setDelay;
+					setValuesHaveChanged = 1;
 					break;
 				case CURRENT:
 					if(encoderValue == ENCODER_CW) 	
@@ -155,6 +159,7 @@ int main(void)
 					mapCurrent(currentSet,currentSetArray);
 					LCD_WriteValues(voltageSetArray,currentSetArray);
 					delay = setDelay;
+					setValuesHaveChanged = 1;
 					break;
 			}
 		}
@@ -190,7 +195,7 @@ int main(void)
 					ADMUX &= 0xF0;
 					ADMUX |= CURRENT_MON;
 					break;
-				case ADC_CURRENT:
+				case ADC_CURRENT:		
 					currentAveraging += ADC_reading;
 					ADC_status = ADC_PREREGULATOR;
 					ADMUX &= 0xF0;
@@ -202,7 +207,7 @@ int main(void)
 					ADMUX &= 0xF0;
 					ADMUX |= VIN_MON;
 					break;
-				case ADC_VIN:
+				case ADC_VIN:		
 					vinAveraging += ADC_reading;
 					ADC_status = ADC_VOLTAGE;
 					ADMUX &= 0xF0;
@@ -214,10 +219,9 @@ int main(void)
 					ADMUX |= VOLTAGE_MON;
 					break;
 			}
-			// If we finish the averaging we rename the variables
-			// and write to display.
+
 			if (ADC_status == ADC_VIN)
-			{
+			{	
 				uint16_t oldVoltageRead = voltageRead;
 				uint16_t oldCurrentRead = currentRead;
 				voltageRead = voltageAveraging*voltageReadMulti;
@@ -229,9 +233,10 @@ int main(void)
 				vinRead = vinAveraging*voltageReadMulti;
 				mapVoltage(vinRead,vinReadArray);
 				
-				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead)
+				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead || setValuesHaveChanged == 1)
 				{
 					LCD_WriteValues(voltageReadArray,currentReadArray);
+					setValuesHaveChanged = 0;
 				}
 				
 				delay = readDelay;
@@ -294,6 +299,16 @@ int main(void)
 		}
 	}
 }
+
+void writeDebug(char *debugMessage)
+{
+	int i;
+	LCD_Clear();
+	LCD_Cursor(0,0);
+	LCD_Write(debugMessage);
+	_delay_ms(1000);
+}
+
 
 // For the DAC (LTC1661) we must give one 16bit word 
 // first four bits are control code, the next eight 
