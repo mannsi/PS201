@@ -24,9 +24,9 @@ uint16_t currentSet = 0;
 
 // Delay variables, between read cycles. We do not
 // want to be constantly running the ADC.
-uint16_t readDelay;
-uint16_t setDelay;
-uint16_t delay;
+uint16_t readDelay = 10000;
+uint16_t setDelay = 50000;
+uint16_t delay = 10000;
 
 // Calibration variables
 float voltageRef;	// The ref voltage times 10
@@ -35,29 +35,17 @@ float voltageReadMulti;
 float currentSetMulti;
 float currentReadMulti;
 
-unsigned char voltageReadArray [10];
-unsigned char vinReadArray [10];
-unsigned char preregReadArray [10];
-unsigned char currentReadArray [10];
-unsigned char voltageSetArray [10];
-unsigned char currentSetArray [10];
-
 int main(void)
 {
 	initRegistries();	
-	initDelays();
 	initCalibration();
-	initMappingValues();
 
 	LCD_Initialize();
 	ADC_initialize();
 	USART_Initialize();
 	
 	LCD_ShowStartScreen();
-	
 	_delay_ms(1000);
-	LCD_Clear();
-	//LCD_WriteValues(voltageSetArray,currentSetArray);
 	writeToLCD(voltageSet,currentSet);
 	LCD_HighLight();
 
@@ -73,7 +61,7 @@ int main(void)
 		if (SW_Check1())
 		{
 			LCD_SwitchOutput();
-			LCD_WriteValues(voltageReadArray,currentReadArray);
+			writeToLCD(voltageRead,currentRead);
 		}
 
 		// If Sw2 is pressed, let the encoder control the backlight
@@ -81,7 +69,7 @@ int main(void)
 		{
 			// Go into backlight setting
 			backlightIntensity = LCD_SetBacklight(backlightIntensity);
-			LCD_WriteValues(voltageReadArray,currentReadArray);
+			writeToLCD(voltageRead,currentRead);
 		}
 
 		// If Sw4 is pressed, toggle the encoder
@@ -91,15 +79,15 @@ int main(void)
 			{
 				case VOLTAGE:
 					encoderControls = CURRENT;
-					LCD_WriteValues(voltageReadArray,currentReadArray);
+					writeToLCD(voltageRead,currentRead);
 					break;
 				case CURRENT:
 					encoderControls = VOLTAGE;
-					LCD_WriteValues(voltageReadArray,currentReadArray);
+					writeToLCD(voltageRead,currentRead);
 					break;
 				default:
 					encoderControls = VOLTAGE;
-					LCD_WriteValues(voltageReadArray,currentReadArray);
+					writeToLCD(voltageRead,currentRead);
 					break;
 			}
 		}
@@ -130,8 +118,7 @@ int main(void)
 					}
 
 					transferToDAC(9,voltageSet/voltageSetMulti);
-					mapVoltage(voltageSet,voltageSetArray);
-					LCD_WriteValues(voltageSetArray,currentSetArray);
+					writeToLCD(voltageSet,currentSet);
 					// Set delay to keep displaying the set voltage
 					// and current for some time
 					delay = setDelay;
@@ -157,8 +144,7 @@ int main(void)
 					}
 
 					transferToDAC(10,currentSet/currentSetMulti);
-					mapCurrent(currentSet,currentSetArray);
-					LCD_WriteValues(voltageSetArray,currentSetArray);
+					writeToLCD(voltageSet,currentSet);
 					delay = setDelay;
 					setValuesHaveChanged = 1;
 					break;
@@ -225,18 +211,14 @@ int main(void)
 			{	
 				uint16_t oldVoltageRead = voltageRead;
 				uint16_t oldCurrentRead = currentRead;
-				voltageRead = voltageAveraging*voltageReadMulti;
-				mapVoltage(voltageRead,voltageReadArray);							
+				voltageRead = voltageAveraging*voltageReadMulti;			
 				currentRead = currentAveraging*currentReadMulti;
-				mapCurrent(currentRead,currentReadArray);				
 				preregRead = preregAveraging*voltageReadMulti;
-				mapVoltage(preregRead,preregReadArray);		
 				vinRead = vinAveraging*voltageReadMulti;
-				mapVoltage(vinRead,vinReadArray);
 				
 				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead || setValuesHaveChanged == 1)
 				{
-					LCD_WriteValues(voltageReadArray,currentReadArray);
+					writeToLCD(voltageRead,currentRead);
 					setValuesHaveChanged = 0;
 				}
 				
@@ -264,40 +246,38 @@ int main(void)
 				if(newData > 2000) break;
 				voltageSet = newData;
 				transferToDAC(9,voltageSet/voltageSetMulti);
-				mapVoltage(voltageSet,voltageSetArray);
 				break;			
 			case USART_SEND_VOLTAGE:
-				USART_Transmit(voltageReadArray);
+				writeVoltageToUsb(voltageRead);
 				break;
 			case USART_SEND_SET_VOLTAGE:
-				USART_Transmit(voltageSetArray);
+				writeVoltageToUsb(voltageSet);
 				break;
 			case USART_RECEIVE_CURRENT:
 				newData = USART_ReceiveData();
 				if(newData > 100) break;
 				currentSet = newData;
 				transferToDAC(10,currentSet/currentSetMulti);
-				mapCurrent(currentSet,currentSetArray);
 				break;			
 			case USART_SEND_CURRENT:
-				USART_Transmit(currentReadArray);
+				writeCurrentToUsb(currentRead);
 				break;
 			case USART_SEND_SET_CURRENT:
-				USART_Transmit(currentSetArray);
+				writeCurrentToUsb(currentSet);
 				break;
 			case USART_SEND_VIN:
-				USART_Transmit(vinReadArray);
+				writeVoltageToUsb(vinRead);
 				break;
 			case USART_SEND_VPREREG:
-				USART_Transmit(preregReadArray);
+				writeVoltageToUsb(preregRead);
 				break;
 			case USART_ENABLE_OUTPUT:
 				ENABLE_OUTPUT;
-				LCD_WriteValues(voltageReadArray,currentReadArray);
+				writeToLCD(voltageRead,currentRead);
 				break;
 			case USART_DISABLE_OUTPUT:
 				DISABLE_OUTPUT;
-				LCD_WriteValues(voltageReadArray,currentReadArray);
+				writeToLCD(voltageRead,currentRead);
 				break;
 			case USART_IS_OUTPUT_ON:
 				if (OUTPUT_IS_ENABLED)
@@ -359,6 +339,20 @@ void writeToLCD(uint16_t voltage, uint16_t current)
 	LCD_WriteValues(voltageArray,currentArray);
 }
 
+void writeVoltageToUsb(uint16_t voltage)
+{
+	unsigned char voltageArray [10];
+	mapVoltage(voltage, voltageArray);
+	USART_Transmit(voltageArray);
+}
+
+void writeCurrentToUsb(uint16_t current)
+{
+	unsigned char currentArray [10];
+	mapCurrent(current, currentArray);	
+	USART_Transmit(currentArray);
+}
+
 // store the numbers in chars
 void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
 {
@@ -374,11 +368,6 @@ void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
 	voltageArray[2] = voltage < 10 ? '0' : (char) ( ((int) '0') + (voltage%100) / (10) );
 	voltageArray[3] = '.';
 	voltageArray[4] = (char) ( ((int) '0') + (voltage%10));
-	
-	//int wholeNum = voltage/10;
-	//uint16_t fraction = voltage - wholeNum*10;
-	
-	//sprintf(voltageArray,"%3i.%01i",wholeNum,fraction);
 }
 
 void mapCurrent(uint16_t current, unsigned char *currentArray)
@@ -393,8 +382,6 @@ void mapCurrent(uint16_t current, unsigned char *currentArray)
 	currentArray[1] = current < 10 ? ' ' : (char) ( ((int) '0') + (current%100) / (10) );
 	currentArray[2] = (char) ( ((int) '0') + current%10 );
 	currentArray[3] = '0';
-	
-	//sprintf(currentArray,"%3i0",current);
 }
 
 static void initRegistries()
@@ -433,15 +420,6 @@ static void initRegistries()
 	TCCR1B = (1 << CS10);						// START no prescaler
 }
 
-static void initDelays()
-{
-	// Delay variables, between read cycles. We do not
-	// want to be constantly running the ADC.
-	readDelay = 10000;
-	setDelay = 50000;
-	delay = readDelay;
-}
-
 static void initCalibration()
 {
 	// Calibration variables
@@ -451,17 +429,3 @@ static void initCalibration()
 	currentSetMulti = 10/0.33/11*voltageRef/1024;
 	currentReadMulti = 10/0.33/11*voltageRef/1024;
 }
-
-static void initMappingValues()
-{
-	// Voltage and current read variables
-	mapVoltage(voltageRead,voltageReadArray);
-	mapVoltage(vinRead, vinReadArray);
-	mapVoltage(preregRead, preregReadArray);
-	mapCurrent(currentRead,currentReadArray);
-	
-	// Voltage and current set variables	
-	mapVoltage(voltageSet,voltageSetArray);	
-	mapCurrent(currentSet,currentSetArray);
-}
-

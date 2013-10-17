@@ -14,12 +14,13 @@
 
 int main(void);
 void transferToDAC(unsigned char CTRL,uint16_t a);
+void writeToLCD(uint16_t voltage, uint16_t current);
 void mapVoltage(uint16_t volt, unsigned char* b);
 void mapCurrent(uint16_t cur, unsigned char* b);
+void writeVoltageToUsb(uint16_t voltage);
+void writeCurrentToUsb(uint16_t current);
 
 static void initRegistries(void);
-static void initDelays(void);
 static void initCalibration(void);
-static void initMappingValues(void);
 
 #endif
