@@ -37,10 +37,10 @@ float currentReadMulti;
 
 unsigned char voltageReadArray [10];
 unsigned char vinReadArray [10];
-unsigned char preregReadArray [20];
-unsigned char currentReadArray [20];
-unsigned char voltageSetArray [20];
-unsigned char currentSetArray [20];
+unsigned char preregReadArray [10];
+unsigned char currentReadArray [10];
+unsigned char voltageSetArray [10];
+unsigned char currentSetArray [10];
 
 int main(void)
 {
@@ -57,7 +57,8 @@ int main(void)
 	
 	_delay_ms(1000);
 	LCD_Clear();
-	LCD_WriteValues(voltageSetArray,currentSetArray);
+	//LCD_WriteValues(voltageSetArray,currentSetArray);
+	writeToLCD(voltageSet,currentSet);
 	LCD_HighLight();
 
 	/************************
@@ -250,11 +251,13 @@ int main(void)
 		// Listen for USB command
 		unsigned char command = USART_ReceiveCommand();
 		uint16_t newData;
+		char isOutputOn;
 
 		switch(command)
 		{
 			case USART_SEND_HANDSHAKE:
 				USART_TransmitChar(USART_HANDSHAKE);
+				USART_TransmitChar('\n');
 				break;
 			case USART_RECEIVE_VOLTAGE:
 				newData = USART_ReceiveData();
@@ -296,6 +299,19 @@ int main(void)
 				DISABLE_OUTPUT;
 				LCD_WriteValues(voltageReadArray,currentReadArray);
 				break;
+			case USART_IS_OUTPUT_ON:
+				if (OUTPUT_IS_ENABLED)
+				{
+					isOutputOn = '1';
+				}
+				else
+				{
+					isOutputOn = '0';
+				}
+				
+			    USART_TransmitChar(isOutputOn);
+				USART_TransmitChar('\n');
+			    break;
 		}
 	}
 }
@@ -334,18 +350,51 @@ void transferToDAC(unsigned char CTRL,uint16_t dacData){
   	DESELECT_DAC;
 }
 
+void writeToLCD(uint16_t voltage, uint16_t current)
+{
+	unsigned char voltageArray [10];
+	unsigned char currentArray [10];
+	mapVoltage(voltage, voltageArray);
+	mapCurrent(current, currentArray);
+	LCD_WriteValues(voltageArray,currentArray);
+}
+
 // store the numbers in chars
 void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
 {
-	int wholeNum = voltage/10;
-	uint16_t fraction = voltage - wholeNum*10;
+	int i;
+	// Clear the buffer of the array
+	for (i = 0; i < 10; i++)
+	{
+		voltageArray[i] = 0;
+	}
 	
-	sprintf(voltageArray,"%3i.%01i",wholeNum,fraction);
+	voltageArray[0] = voltage < 1000 ? ' ' : (char) ( ((int) '0') + voltage / 1000 );
+	voltageArray[1] = voltage < 100 ? ' ' : (char) ( ((int) '0') + (voltage%1000) / (100) );
+	voltageArray[2] = voltage < 10 ? '0' : (char) ( ((int) '0') + (voltage%100) / (10) );
+	voltageArray[3] = '.';
+	voltageArray[4] = (char) ( ((int) '0') + (voltage%10));
+	
+	//int wholeNum = voltage/10;
+	//uint16_t fraction = voltage - wholeNum*10;
+	
+	//sprintf(voltageArray,"%3i.%01i",wholeNum,fraction);
 }
 
 void mapCurrent(uint16_t current, unsigned char *currentArray)
 {
-	sprintf(currentArray,"%3i0",current);
+	int i;
+	// Clear the buffer of the array
+	for (i = 0; i < 10; i++)
+	{
+		currentArray[i] = 0;
+	}
+	currentArray[0] = current < 100 ? ' ' : (char) ( ((int) '0') + current / 100 );
+	currentArray[1] = current < 10 ? ' ' : (char) ( ((int) '0') + (current%100) / (10) );
+	currentArray[2] = (char) ( ((int) '0') + current%10 );
+	currentArray[3] = '0';
+	
+	//sprintf(currentArray,"%3i0",current);
 }
 
 static void initRegistries()

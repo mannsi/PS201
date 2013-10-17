@@ -90,6 +90,7 @@ class ThreadHelper():
 
   def __updateOutputOnOffWorker__(self):
     try:
+      pass
       shouldBeOn = self.controller.getOutputOnOff()
       self.queue.put(outputOnOffString)
       self.queue.put(shouldBeOn)
@@ -121,7 +122,7 @@ class ThreadHelper():
     threading.Thread(target=self.__updateTargetCurrentWorker__).start()
     threading.Thread(target=self.__updateTargetVoltageWorker__).start()
     threading.Thread(target=self.__updatePreRegVoltageWorker__).start()
-    #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
+    threading.Thread(target=self.__updateOutputOnOffWorker__).start()
 
   def startSchedule(self,lines,logWhenValuesChange=False,filePath=None,useLoggingTimeInterval=False,loggingTimeInterval=0):
     self.sched = Scheduler()

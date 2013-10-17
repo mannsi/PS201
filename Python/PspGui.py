@@ -114,7 +114,7 @@ class Gui():
   Periodically checks the threadHelper queue for updates to the UI.
   """
   def periodicUiUpdate(self):
-    if threadHelper.queue.qsize():
+    while threadHelper.queue.qsize():
       try:
         action = threadHelper.queue.get(0)
         if action == ThreadHelper.connectString:
@@ -122,13 +122,12 @@ class Gui():
           self.topPanel.lblStatusValueVar.set(connectStatus)
           if connectStatus == ThreadHelper.connectedString:
             self.connectedStateChanged(True)
-          elif connectStatus == noDeviceFoundstr:
+          elif connectStatus == ThreadHelper.noDeviceFoundstr:
             # When this state is reached I must stop listening more for this state since many thread will return this state
             # I also have to stop the current threads until the connectedString is returned
             print("periodic update UI no device found. Queue size ", threadHelper.queue.qsize())
             self.connected = False
-            self.connectedStateChanged(False)
-
+            self.connectedStateChanged(False)  
         elif action == ThreadHelper.realCurrentString:
           realCurrentValue = threadHelper.queue.get(0)
           self.realCurrentUpdate(realCurrentValue)
@@ -155,6 +154,7 @@ class Gui():
       except:
         pass
       finally:
+        #threadHelper.queue.queue.clear()
         self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
     else:
       self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)

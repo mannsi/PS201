@@ -18,9 +18,10 @@ class Controller():
     self.deviceWriteTargetCurrent = b'\xe1'
     self.deviceTurnOnOutput = b'\xc2'
     self.deviceTurnOffOutput = b'\xc3'
+    self.deviceIsOutputOn = b'\xc4'
     self.handshakeSignal = b'\xa0'
     self.programId = b'\xa1'
-    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 0.1,handshakeSignal=self.handshakeSignal,programId=self.programId)
+    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 2,handshakeSignal=self.handshakeSignal,programId=self.programId)
     self.processLock = threading.Lock()
 
   def connect(self, usbPortNumber):
@@ -56,11 +57,9 @@ class Controller():
       value = int(float(self.connection.getValue(self.deviceWriteTargetCurrent)))
     return value
 
-  # TODO
   def getOutputOnOff(self):
     with self.processLock:
-      value = True
-      #value = self.connection.getValue(self.deviceWriteTargetCurrent)
+      value = self.connection.getValue(self.deviceIsOutputOn)
     return value
 
   def setTargetVoltage(self, targetVoltage):

@@ -20,15 +20,16 @@ void USART_TransmitChar(unsigned char data)
 	UDR = data;
 }
 
-void USART_Transmit(unsigned char * b)
+void USART_Transmit(unsigned char * data)
 {
 	unsigned char i;
 
 	for(i=0;i<100;i++)
 	{
-		if(!b[i]) break;
-		USART_TransmitChar(b[i]);
+		if(!data[i]) break;
+		USART_TransmitChar(data[i]);
 	}
+	USART_TransmitChar('\n');
 }
 
 unsigned char USART_ReceiveCommand()

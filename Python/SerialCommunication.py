@@ -43,7 +43,7 @@ class Connection():
     while True:
         try:
           connection.write(self.handshakeSignal)
-          readValue = connection.readline()
+          readValue = connection.readline().strip()
           if readValue:
             if readValue == self.programId:
               return True

@@ -3,7 +3,6 @@
 
 #include<avr/io.h>
 #include<avr/interrupt.h>
-#include<stdio.h>
 #include "LCD.h"
 #include "SW.h"
 #include "ADC.h"
@@ -19,8 +18,8 @@ void mapVoltage(uint16_t volt, unsigned char* b);
 void mapCurrent(uint16_t cur, unsigned char* b);
 
 static void initRegistries(void);
-static void initDelays();
-static void initCalibration();
+static void initDelays(void);
+static void initCalibration(void);
 static void initMappingValues(void);
 
 #endif
