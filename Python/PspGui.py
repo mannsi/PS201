@@ -23,7 +23,7 @@ threadHelper = ThreadHelper.ThreadHelper(controller)
 class Gui():
   def __init__(self):
     self.guiRefreshRate = 100
-    self.deviceRefreshRate = 1000
+    self.deviceRefreshRate = 200
     self.setAvailableUsbPorts()
     self.mainWindow = Tk()
     self.mainWindow.title(mainWindowTitle)

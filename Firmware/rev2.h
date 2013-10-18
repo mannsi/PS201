@@ -13,12 +13,12 @@
 #define DESELECT_DAC PORTD |= (1 << PD7)
 
 int main(void);
-void transferToDAC(unsigned char CTRL,uint16_t a);
-void writeToLCD(uint16_t voltage, uint16_t current);
-void mapVoltage(uint16_t volt, unsigned char* b);
-void mapCurrent(uint16_t cur, unsigned char* b);
-void writeVoltageToUsb(uint16_t voltage);
-void writeCurrentToUsb(uint16_t current);
+void transferToDAC(unsigned char CTRL,int a);
+void writeToLCD(int voltage, int current);
+void mapVoltage(int volt, unsigned char* b);
+void mapCurrent(int cur, unsigned char* b);
+void writeVoltageToUsb(int voltage);
+void writeCurrentToUsb(int current);
 
 static void initRegistries(void);
 static void initCalibration(void);

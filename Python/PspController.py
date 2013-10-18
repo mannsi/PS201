@@ -21,6 +21,9 @@ class Controller():
     self.deviceIsOutputOn = b'\xc4'
     self.handshakeSignal = b'\xa0'
     self.programId = b'\xa1'
+    
+    self.deviceWriteAll = b'\xa5'
+    
     self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 2,handshakeSignal=self.handshakeSignal,programId=self.programId)
     self.processLock = threading.Lock()
 
@@ -69,6 +72,11 @@ class Controller():
   def setTargetCurrent(self, targetCurrent):
     with self.processLock:
       self.connection.setValue(self.deviceReadTargetCurrent, struct.pack(">H",int(targetCurrent/10)))
+      
+  def getAllValues(self):
+    with self.processLock:
+      value = self.connection.getValue(self.deviceWriteAll)
+    return value    
 
   def setOutputOnOff(self, shouldBeOn):
     if shouldBeOn:

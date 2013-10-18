@@ -90,18 +90,44 @@ class ThreadHelper():
 
   def __updateOutputOnOffWorker__(self):
     try:
-      pass
       shouldBeOn = self.controller.getOutputOnOff()
       self.queue.put(outputOnOffString)
       self.queue.put(shouldBeOn)
     except Exception as e:
       self.__connectionLost__("update output on off worker")
+      
+  def __updateAllValuesWorker__(self):
+    try:
+      allValues = self.controller.getAllValues()
+      listOfValues = allValues.split(";")
+      
+      self.queue.put(realVoltageString)
+      self.queue.put(listOfValues[0])
+      
+      self.queue.put(realCurrentString)
+      self.queue.put(listOfValues[1])
+      
+      self.queue.put(targetVoltageString)
+      self.queue.put(listOfValues[2])
+      
+      self.queue.put(targetCurrentString)
+      self.queue.put(listOfValues[3])
+      
+      self.queue.put(preRegVoltageString)
+      self.queue.put(listOfValues[4])
+      
+      self.queue.put(outputOnOffString)
+      self.queue.put(listOfValues[5])
+      #self.queue.put(outputOnOffString)
+      #self.queue.put(shouldBeOn)
+    except Exception as e:
+      self.__connectionLost__("update output on off worker")    
 
   def __connectionLost__(self, source):
     logging.debug("Lost connection in %s", source)
     self.queue.put(connectString)
     self.queue.put(noDeviceFoundstr)
-    print("connection lost worker")
+    print("connection lost worker. Connection lost in ", source)
 
   def connect(self, usbPortNumber,  postProcessingFunction = None):
     self.__connectWorkerPostFunc__ = postProcessingFunction
@@ -117,12 +143,14 @@ class ThreadHelper():
     threading.Thread(target=self.__setTargetCurrentWorker__, args = [current]).start()
 
   def updateCurrentAndVoltage(self):
-    threading.Thread(target=self.__updateRealCurrentWorker__).start()
-    threading.Thread(target=self.__updateRealVoltageWorker__).start()
-    threading.Thread(target=self.__updateTargetCurrentWorker__).start()
-    threading.Thread(target=self.__updateTargetVoltageWorker__).start()
-    threading.Thread(target=self.__updatePreRegVoltageWorker__).start()
-    threading.Thread(target=self.__updateOutputOnOffWorker__).start()
+    #threading.Thread(target=self.__updateRealCurrentWorker__).start()
+    #threading.Thread(target=self.__updateRealVoltageWorker__).start()
+    #threading.Thread(target=self.__updateTargetCurrentWorker__).start()
+    #threading.Thread(target=self.__updateTargetVoltageWorker__).start()
+    #threading.Thread(target=self.__updatePreRegVoltageWorker__).start()
+    #threading.Thread(target=self.__updateOutputOnOffWorker__).start()
+    threading.Thread(target=self.__updateAllValuesWorker__).start()
+    
 
   def startSchedule(self,lines,logWhenValuesChange=False,filePath=None,useLoggingTimeInterval=False,loggingTimeInterval=0):
     self.sched = Scheduler()

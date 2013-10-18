@@ -22,7 +22,7 @@
 
 void ADC_Initialize(void);
 
-extern uint16_t ADC_reading;
+extern int ADC_reading;
 extern unsigned char ADC_status;
 
 #endif

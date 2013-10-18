@@ -185,7 +185,7 @@ void LCD_WriteValues(unsigned char* voltage,unsigned char* current)
 
 }
 
-uint8_t LCD_SetBacklight(uint8_t backlightIntensity)
+int LCD_SetBacklight(int backlightIntensity)
 {
 	// Write small backlight screen
 	LCD_Clear();
@@ -194,7 +194,7 @@ uint8_t LCD_SetBacklight(uint8_t backlightIntensity)
 	LCD_Cursor(1,0);
 	LCD_Write("[              ]");
 	LCD_Cursor(1,1);
-	uint8_t i = backlightIntensity;
+	int i = backlightIntensity;
 	for(i; i>0; i--)
 	{
 		LCD_Write("=");

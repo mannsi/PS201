@@ -8,25 +8,25 @@
 
 #include "rev2.h"
 
-int setValuesHaveChanged = 0;
-
-uint8_t backlightIntensity = 10;
-uint16_t voltageRead = 0;
-uint16_t voltageAveraging = 0;
-uint16_t currentRead = 0;
-uint16_t currentAveraging = 0;
-uint16_t preregRead = 0;
-uint16_t preregAveraging = 0;
-uint16_t vinRead = 0;
-uint16_t vinAveraging = 0;
-uint16_t voltageSet = 0;
-uint16_t currentSet = 0;
+int forceUpdate = 0;
+int firstRun = 1;
+int backlightIntensity = 10;
+int voltageRead = 0;
+int voltageAveraging = 0;
+int currentRead = 0;
+int currentAveraging = 0;
+int preregRead = 0;
+int preregAveraging = 0;
+int vinRead = 0;
+int vinAveraging = 0;
+int voltageSet = 0;
+int currentSet = 0;
 
 // Delay variables, between read cycles. We do not
 // want to be constantly running the ADC.
-uint16_t readDelay = 10000;
-uint16_t setDelay = 50000;
-uint16_t delay = 10000;
+int readDelay = 10000;
+int setDelay = 50000;
+int delay = 10000;
 
 // Calibration variables
 float voltageRef;	// The ref voltage times 10
@@ -61,7 +61,7 @@ int main(void)
 		if (SW_Check1())
 		{
 			LCD_SwitchOutput();
-			writeToLCD(voltageRead,currentRead);
+			forceUpdate = 1;
 		}
 
 		// If Sw2 is pressed, let the encoder control the backlight
@@ -69,7 +69,7 @@ int main(void)
 		{
 			// Go into backlight setting
 			backlightIntensity = LCD_SetBacklight(backlightIntensity);
-			writeToLCD(voltageRead,currentRead);
+			forceUpdate = 1;
 		}
 
 		// If Sw4 is pressed, toggle the encoder
@@ -105,7 +105,14 @@ int main(void)
 					}
 					else 					
 					{
-						voltageSet -= 1;
+						if (voltageSet != 0)
+						{
+							voltageSet -= 1;
+						}
+						else
+						{
+							break;
+						}
 					}
 
 					if(voltageSet > 60000)
@@ -122,7 +129,7 @@ int main(void)
 					// Set delay to keep displaying the set voltage
 					// and current for some time
 					delay = setDelay;
-					setValuesHaveChanged = 1;
+					forceUpdate = 1;
 					break;
 				case CURRENT:
 					if(encoderValue == ENCODER_CW) 	
@@ -131,7 +138,14 @@ int main(void)
 					}
 					else					
 					{
-						currentSet--;
+						if (currentSet != 0)
+						{
+							currentSet--;
+						}
+						else
+						{
+							break;
+						}
 					}
 
 					if(currentSet > 60000)
@@ -146,7 +160,7 @@ int main(void)
 					transferToDAC(10,currentSet/currentSetMulti);
 					writeToLCD(voltageSet,currentSet);
 					delay = setDelay;
-					setValuesHaveChanged = 1;
+					forceUpdate = 1;
 					break;
 			}
 		}
@@ -209,17 +223,17 @@ int main(void)
 
 			if (ADC_status == ADC_VIN)
 			{	
-				uint16_t oldVoltageRead = voltageRead;
-				uint16_t oldCurrentRead = currentRead;
+				int oldVoltageRead = voltageRead;
+				int oldCurrentRead = currentRead;
 				voltageRead = voltageAveraging*voltageReadMulti;			
 				currentRead = currentAveraging*currentReadMulti;
 				preregRead = preregAveraging*voltageReadMulti;
 				vinRead = vinAveraging*voltageReadMulti;
 				
-				if(voltageRead != oldVoltageRead || currentRead != oldCurrentRead || setValuesHaveChanged == 1)
+				if((voltageRead != oldVoltageRead || currentRead != oldCurrentRead || forceUpdate == 1) && firstRun != 1)
 				{
 					writeToLCD(voltageRead,currentRead);
-					setValuesHaveChanged = 0;
+					forceUpdate = 0;
 				}
 				
 				delay = readDelay;
@@ -227,16 +241,28 @@ int main(void)
 				currentAveraging = 0;
 				preregAveraging = 0;
 				vinAveraging = 0;
+				firstRun = 0;
 			}
 		}
 
 		// Listen for USB command
 		unsigned char command = USART_ReceiveCommand();
-		uint16_t newData;
+		int newData;
 		char isOutputOn;
 
 		switch(command)
 		{
+			case USART_WRITEALL:
+				if (OUTPUT_IS_ENABLED)
+				{
+					isOutputOn = '1';
+				}
+				else
+				{
+					isOutputOn = '0';
+				}
+				writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, isOutputOn);
+				break;
 			case USART_SEND_HANDSHAKE:
 				USART_TransmitChar(USART_HANDSHAKE);
 				USART_TransmitChar('\n');
@@ -305,11 +331,10 @@ void writeDebug(char *debugMessage)
 	_delay_ms(1000);
 }
 
-
 // For the DAC (LTC1661) we must give one 16bit word 
 // first four bits are control code, the next eight 
 // are the actual data and the last two are ignored.
-void transferToDAC(unsigned char CTRL,uint16_t dacData){
+void transferToDAC(unsigned char CTRL,int dacData){
   	// Make sure a is a ten bit word
   	dacData &= 0x03FF;
 	// Then shift up by two bits, the DAC does not
@@ -330,7 +355,7 @@ void transferToDAC(unsigned char CTRL,uint16_t dacData){
   	DESELECT_DAC;
 }
 
-void writeToLCD(uint16_t voltage, uint16_t current)
+void writeToLCD(int voltage, int current)
 {
 	unsigned char voltageArray [10];
 	unsigned char currentArray [10];
@@ -339,30 +364,82 @@ void writeToLCD(uint16_t voltage, uint16_t current)
 	LCD_WriteValues(voltageArray,currentArray);
 }
 
-void writeVoltageToUsb(uint16_t voltage)
+void writeVoltageToUsb(int voltage)
 {
 	unsigned char voltageArray [10];
 	mapVoltage(voltage, voltageArray);
 	USART_Transmit(voltageArray);
 }
 
-void writeCurrentToUsb(uint16_t current)
+void writeCurrentToUsb(int current)
 {
 	unsigned char currentArray [10];
 	mapCurrent(current, currentArray);	
 	USART_Transmit(currentArray);
 }
 
-// store the numbers in chars
-void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
+void writeToUsb(int voltage, int current, int voltageSet, int currentSet, int preregVoltage, unsigned char outputOn)
+{
+	unsigned char voltageArray [10];
+	unsigned char currentArray [10];
+	unsigned char voltageSetArray [10];
+	unsigned char currentSetArray [10];
+	unsigned char voltagePreregArray [10];
+	unsigned char combinedArray [55];
+	
+	mapVoltage(voltage, voltageArray);
+	mapCurrent(current, currentArray);
+	mapVoltage(voltageSet, voltageSetArray);
+	mapCurrent(currentSet, currentSetArray);
+	mapVoltage(preregVoltage, voltagePreregArray);
+	joinArrays(voltageArray, currentArray, voltageSetArray, currentSetArray, voltagePreregArray , outputOn, combinedArray);
+	USART_Transmit(combinedArray);
+}
+
+void joinArrays(
+	unsigned char *voltageArray, 
+	unsigned char *currentArray, 
+	unsigned char *voltageSetArray, 
+	unsigned char *currentSetArray,
+	unsigned char *voltagePreregArray, 
+	unsigned char outputOn,
+	unsigned char *combinedArray)
+{
+	clearArray(combinedArray,55);
+	
+	int newArraySize = appendArray(combinedArray, 0, voltageArray, 10);
+	combinedArray[newArraySize] = ';';
+	newArraySize = appendArray(combinedArray, newArraySize + 1, currentArray, 10);
+	combinedArray[newArraySize] = ';';
+	newArraySize = appendArray(combinedArray, newArraySize + 1, voltageSetArray, 10);
+	combinedArray[newArraySize] = ';';
+	newArraySize = appendArray(combinedArray, newArraySize + 1, currentSetArray, 10);
+	combinedArray[newArraySize] = ';';
+	newArraySize = appendArray(combinedArray, newArraySize + 1, voltagePreregArray, 10);
+	combinedArray[newArraySize] = ';';
+	combinedArray[newArraySize+1] = outputOn;
+}
+
+int appendArray(unsigned char *targetArray, int arraySize, unsigned char *appendingArray, int appendingArrayMaxSize)
 {
 	int i;
-	// Clear the buffer of the array
-	for (i = 0; i < 10; i++)
+	unsigned char tempChar;
+	for(i = 0; i< appendingArrayMaxSize; i++)
 	{
-		voltageArray[i] = 0;
+		tempChar = appendingArray[i];
+		if(tempChar == 0)
+		{
+			break;
+		}
+		targetArray[i + arraySize] = tempChar;
 	}
 	
+	return i + arraySize;
+}
+
+void mapVoltage(int voltage, unsigned char *voltageArray)
+{
+	clearArray(voltageArray, 10);	
 	voltageArray[0] = voltage < 1000 ? ' ' : (char) ( ((int) '0') + voltage / 1000 );
 	voltageArray[1] = voltage < 100 ? ' ' : (char) ( ((int) '0') + (voltage%1000) / (100) );
 	voltageArray[2] = voltage < 10 ? '0' : (char) ( ((int) '0') + (voltage%100) / (10) );
@@ -370,18 +447,22 @@ void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
 	voltageArray[4] = (char) ( ((int) '0') + (voltage%10));
 }
 
-void mapCurrent(uint16_t current, unsigned char *currentArray)
+void mapCurrent(int current, unsigned char *currentArray)
 {
-	int i;
-	// Clear the buffer of the array
-	for (i = 0; i < 10; i++)
-	{
-		currentArray[i] = 0;
-	}
+	clearArray(currentArray, 10);
 	currentArray[0] = current < 100 ? ' ' : (char) ( ((int) '0') + current / 100 );
 	currentArray[1] = current < 10 ? ' ' : (char) ( ((int) '0') + (current%100) / (10) );
 	currentArray[2] = (char) ( ((int) '0') + current%10 );
 	currentArray[3] = '0';
+}
+
+void clearArray(unsigned char *array, int size)
+{
+	int i;
+	for (i = 0; i < size; i++)
+	{
+		array[i] = 0;
+	}
 }
 
 static void initRegistries()

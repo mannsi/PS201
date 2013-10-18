@@ -43,9 +43,9 @@ unsigned char USART_ReceiveCommand()
 	return 0;
 }
 
-uint16_t USART_ReceiveData()
+int USART_ReceiveData()
 {
-	uint16_t out;
+	int out;
 	// DANGEROUS! we wait for data
 	while( !(UCSRA & (1<<RXC)));
 	out = UDR<<8;

@@ -47,55 +47,7 @@ const unsigned char rotaryTable[6][4] = {
 	{ 0x20,	5,	2,	2	},	// CCW from 11
 };
 
-// Encoder function takes the value to increment and 
-// the increment amount. it returns 1 if something is
-// done, otherwise 
-/*
-unsigned char SW_CheckEncoder(uint16_t *value, uint8_t increment)
-{
-	if(ENCODERPINA_IS_CLOSED && (switchState & ENCODERPINA_WAS_OPEN))
-	{
-		// debounce
-		_delay_ms(3);
-		if(ENCODERPINA_IS_CLOSED)
-		{
-			if(ENCODERPINB_IS_CLOSED)
-			{
-				(*value) -= increment;
-				switchState &= ~ENCODERPINB_WAS_OPEN;
-			} 
-			else
-			{
-				(*value) += increment;
-				(switchState) |= ENCODERPINB_WAS_OPEN;
-			}
-			switchState &= ~ENCODERPINA_WAS_OPEN;
-			return 1;
-		}
-	}
-	if(ENCODERPINA_IS_OPEN && !(switchState & ENCODERPINA_WAS_OPEN))
-	{
-		// debounce
-		_delay_ms(3);
-		if(ENCODERPINA_IS_OPEN)
-		{
-			if(ENCODERPINB_IS_CLOSED)
-			{
-				(*value) += increment;
-				(switchState) &= ~ENCODERPINB_WAS_OPEN;
-			} 
-			else
-			{
-				(*value) -= increment;
-				(switchState) |= ENCODERPINB_WAS_OPEN;
-			}
-			switchState |= ENCODERPINA_WAS_OPEN;
-			return 1;
-		}
-	}
 
-	return 0;
-}*/
 unsigned char SW_CheckEncoder()
 {
 	SW_encoderState = rotaryTable[SW_encoderState & 0x0f][ENCODER];

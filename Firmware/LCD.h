@@ -28,7 +28,7 @@ void LCD_HighLight(void);
 void LCD_NoHighLight(void);
 void LCD_ShowStartScreen(void);
 void LCD_WriteValues(unsigned char* voltage,unsigned char* current);
-uint8_t LCD_SetBacklight(uint8_t backlightIntensity);
+int LCD_SetBacklight(int backlightIntensity);
 void LCD_SwitchOutput(void);
 
 static void LCD_Command(unsigned char a);

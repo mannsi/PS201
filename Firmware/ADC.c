@@ -1,7 +1,7 @@
 #include "ADC.h"
 
 // define the raw ADC read variables
-uint16_t ADC_reading = 0;
+int ADC_reading = 0;
 unsigned char ADC_status = 0;
 
 // Setup for the ADC channels

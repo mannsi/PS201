@@ -22,11 +22,12 @@
 #define USART_SEND_SET_CURRENT	(0xE1)
 #define USART_SEND_HANDSHAKE	(0xA0)
 #define USART_HANDSHAKE			(0xA1)
+#define USART_WRITEALL			(0xA5)
 
 void USART_Initialize(void);
 void USART_TransmitChar(unsigned char data);
 void USART_Transmit(unsigned char * b);
 unsigned char USART_ReceiveCommand(void);
-uint16_t USART_ReceiveData(void);
+int USART_ReceiveData(void);
 
 #endif
