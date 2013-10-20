@@ -215,10 +215,10 @@ pip-log.txt
 .mr.developer.cfg
 
 # My ignored extensions
-.o
-.hex
-.lst
-.ee.hex
-.out
-.out.map
+*.o
+*.hex
+*.lst
+*.ee.hex
+*.out
+*.out.map
 

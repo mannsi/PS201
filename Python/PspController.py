@@ -21,10 +21,10 @@ class Controller():
     self.deviceIsOutputOn = b'\xc4'
     self.handshakeSignal = b'\xa0'
     self.programId = b'\xa1'
-    
     self.deviceWriteAll = b'\xa5'
+    self.deviceReadAll = b'\xa6'
     
-    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 2,handshakeSignal=self.handshakeSignal,programId=self.programId)
+    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 0.1,handshakeSignal=self.handshakeSignal,programId=self.programId)
     self.processLock = threading.Lock()
 
   def connect(self, usbPortNumber):
@@ -35,6 +35,12 @@ class Controller():
   def getAvailableUsbPorts(self):
     return self.connection.getAvailableUsbPorts()
 
+  def getDeviceUsbPort(self, availableUsbPorts):
+    for usbPort in availableUsbPorts.values():
+      if self.connection.deviceOnThisPort(usbPort):
+        return usbPort
+    return None
+    
   def getRealVoltage(self):
     with self.processLock:
       value = float(self.connection.getValue(self.deviceWriteRealVoltage))

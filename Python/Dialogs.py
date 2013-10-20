@@ -83,9 +83,6 @@ class RampDialog(tkBaseDialog.Dialog):
       current += currentIncrement
     return lines
 
-
-# TODO Add the interval input
-
 class DataLoggingDialog(tkBaseDialog.Dialog):
   def body(self, master):   
     self.createGui(master)

@@ -30,6 +30,7 @@ class ThreadHelper():
     self.queue.put(connectString)
     if connectionSuccessful:
       self.queue.put(connectedString)
+      self.queue.put(usbPortNumber)
       if self.__connectWorkerPostFunc__:
         self.__connectWorkerPostFunc__()
     else:
@@ -99,27 +100,19 @@ class ThreadHelper():
   def __updateAllValuesWorker__(self):
     try:
       allValues = self.controller.getAllValues()
-      listOfValues = allValues.split(";")
-      
+      listOfValues = allValues.split(";")      
       self.queue.put(realVoltageString)
-      self.queue.put(listOfValues[0])
-      
+      self.queue.put(listOfValues[0])      
       self.queue.put(realCurrentString)
-      self.queue.put(listOfValues[1])
-      
+      self.queue.put(listOfValues[1])      
       self.queue.put(targetVoltageString)
-      self.queue.put(listOfValues[2])
-      
+      self.queue.put(listOfValues[2])     
       self.queue.put(targetCurrentString)
-      self.queue.put(listOfValues[3])
-      
+      self.queue.put(listOfValues[3])     
       self.queue.put(preRegVoltageString)
-      self.queue.put(listOfValues[4])
-      
+      self.queue.put(listOfValues[4])    
       self.queue.put(outputOnOffString)
       self.queue.put(listOfValues[5])
-      #self.queue.put(outputOnOffString)
-      #self.queue.put(shouldBeOn)
     except Exception as e:
       self.__connectionLost__("update output on off worker")    
 
@@ -141,7 +134,7 @@ class ThreadHelper():
 
   def setTargetCurrent(self, current):
     threading.Thread(target=self.__setTargetCurrentWorker__, args = [current]).start()
-
+    
   def updateCurrentAndVoltage(self):
     #threading.Thread(target=self.__updateRealCurrentWorker__).start()
     #threading.Thread(target=self.__updateRealVoltageWorker__).start()
@@ -152,7 +145,14 @@ class ThreadHelper():
     threading.Thread(target=self.__updateAllValuesWorker__).start()
     
 
-  def startSchedule(self,lines,logWhenValuesChange=False,filePath=None,useLoggingTimeInterval=False,loggingTimeInterval=0):
+  def startSchedule(self,lines,
+                    startingTargetVoltage,
+                    startingTargetCurrent, 
+                    startingOutputOn,
+                    logWhenValuesChange=False,
+                    filePath=None,
+                    useLoggingTimeInterval=False,
+                    loggingTimeInterval=0):
     self.sched = Scheduler()
     self.sched.start()
 
@@ -174,7 +174,7 @@ class ThreadHelper():
       elif timeType == "hour":
         nextFireTime += timedelta(hours=line.getDuration())
     self.controller.setOutputOnOff(True)
-    self.sched.add_date_job(func = self.initializeDevice, date=nextFireTime)
+    self.sched.add_date_job(func = self.resetDevice, date=nextFireTime, args=[startingTargetVoltage, startingTargetCurrent, startingOutputOn])
     
     if useLoggingTimeInterval:
       self.startTimeIntervalLogging(loggingTimeInterval,filePath)
@@ -191,12 +191,12 @@ class ThreadHelper():
     if logToDataFile:
       self.logValuesToFile(filePath)
 
-  def initializeDevice(self):
-    self.__setTargetVoltageWorker__(0)
+  def resetDevice(self, startingTargetVoltage, startingTargetCurrent, startingOutputOn):
+    self.__setTargetVoltageWorker__(startingTargetVoltage)
     time.sleep(50 / 1000)
-    self.__setTargetCurrentWorker__(0)
+    self.__setTargetCurrentWorker__(startingTargetCurrent)
     time.sleep(50 / 1000)
-    self.controller.setOutputOnOff(False)
+    self.controller.setOutputOnOff(startingOutputOn)
     self.queue.put(scheduleDoneString) # Notify the UI
 
   def stopSchedule(self):

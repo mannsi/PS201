@@ -54,4 +54,3 @@ int USART_ReceiveData()
 	
 	return out;
 }
-

@@ -3,6 +3,7 @@ import sys
 import logging
 import platform
 import glob
+from datetime import datetime
 
 class Connection():
   def __init__(self, baudrate, timeout, handshakeSignal, programId):
@@ -17,8 +18,8 @@ class Connection():
     if self.portNumber is not None:
       try:
         logging.info("Connecting to device on port %s" % self.portNumber)
-        connection = serial.Serial(self.portNumber, self.baudRate, timeout = self.timeout)
-        correctPort = self.__deviceOnThisPort__(self.portNumber, connection)
+        connection = serial.Serial('COM4', self.baudRate, timeout = self.timeout)
+        correctPort = self.deviceOnThisPort(self.portNumber, connection)
         if correctPort:
           return (self.portNumber, connection)
         else:
@@ -31,7 +32,7 @@ class Connection():
         try:
           connection = serial.Serial(portNumber, self.baudRate, timeout = self.timeout)
           logging.info("Checking for device on port %s" % portNumber)
-          correctPort = self.__deviceOnThisPort__(portNumber, connection)
+          correctPort = self.deviceOnThisPort(portNumber,connection)
           if correctPort:
             return (portNumber, connection)
           connection.close()
@@ -39,30 +40,35 @@ class Connection():
             pass
       raise Exception("No device found on any port")
 
-  def __deviceOnThisPort__(self, portNumber, connection):
-    while True:
-        try:
-          connection.write(self.handshakeSignal)
-          readValue = connection.readline().strip()
-          if readValue:
-            if readValue == self.programId:
-              return True
-            else:
-              return False
+  def deviceOnThisPort(self, portNumber, connection):
+      try:
+        connection.write(self.handshakeSignal)
+        readValueDebug = connection.readline()
+        readValue = readValueDebug.strip()
+        if readValue:
+          if readValue == self.programId:
+            return True
           else:
             return False
-        except:
+        else:
           return False
+      except:
+        return False
 
   def getAvailableUsbPorts(self):
+    defaultPort = None
     system_name = platform.system()
-    available = dict()
+    available = []
     if system_name == "Windows":
       # Scan for available ports.
       for portNumber in range(256):
         try:
-          con = serial.Serial(portNumber, self.baudRate, timeout = self.timeout)
-          available[con.portstr] = portNumber
+          con = serial.Serial(portNumber, self.baudRate, timeout = 0.01)
+          #print(datetime.now().time())
+          available.append(con.portstr)
+          if self.deviceOnThisPort(con.portstr,con):
+            defaultPort = con.portstr
+          #print(datetime.now().time())
           con.close()
         except serial.SerialException:
           pass
@@ -70,13 +76,13 @@ class Connection():
       # Mac
       usbList = glob.glob('/dev/tty*') + glob.glob('/dev/cu*')
       for usbPort in usbList:
-        available[usbPort] = usbPort
+        available.append(usbPort)
     else:
       # Assume Linux or something else
       usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
       for usbPort in usbList:
-        available[usbPort] = usbPort
-    return available
+        available.append(usbPort)
+    return (available, defaultPort)
 
   def connect(self, usbPortNumber):
     if not self.connected:

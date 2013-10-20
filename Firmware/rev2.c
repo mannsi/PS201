@@ -93,13 +93,13 @@ int main(void)
 		}
 		
 		// Rotary encoder
-		unsigned char encoderValue = SW_CheckEncoder();
-		if(encoderValue)
+		unsigned char encoderTurnDirection = SW_CheckEncoder();
+		if(encoderTurnDirection)
 		{
 			switch(encoderControls)
 			{		
 				case VOLTAGE:
-					if(encoderValue == ENCODER_CW)	
+					if(encoderTurnDirection == ENCODER_CW)	
 					{
 						voltageSet += 1;
 					}
@@ -132,7 +132,7 @@ int main(void)
 					forceUpdate = 1;
 					break;
 				case CURRENT:
-					if(encoderValue == ENCODER_CW) 	
+					if(encoderTurnDirection == ENCODER_CW) 	
 					{
 						currentSet++;
 					}
@@ -248,6 +248,7 @@ int main(void)
 		// Listen for USB command
 		unsigned char command = USART_ReceiveCommand();
 		int newData;
+		int newData2;
 		char isOutputOn;
 
 		switch(command)
@@ -324,7 +325,6 @@ int main(void)
 
 void writeDebug(char *debugMessage)
 {
-	int i;
 	LCD_Clear();
 	LCD_Cursor(0,0);
 	LCD_Write(debugMessage);
