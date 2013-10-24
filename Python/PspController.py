@@ -31,6 +31,10 @@ class Controller():
     with self.processLock:
       connectionSuccessful = self.connection.connect(usbPortNumber)
     return connectionSuccessful
+  
+  def disconnect(self):
+    with self.processLock:
+      self.connection.disconnect()
 
   def getAvailableUsbPorts(self):
     return self.connection.getAvailableUsbPorts()

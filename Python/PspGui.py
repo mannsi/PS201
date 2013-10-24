@@ -50,7 +50,7 @@ class Gui():
     
     toolsMenu = Menu(menubar, tearoff=0)
     menubar.add_cascade(label="Tools", menu=toolsMenu)
-    self.submenu = Menu(toolsMenu,tearoff=0, postcommand = self.buildUsbPortMenu)
+    self.submenu = Menu(toolsMenu,tearoff=0)
     self.buildUsbPortMenu()
     toolsMenu.add_cascade(label='Usb port', menu=self.submenu, underline=0)
     
@@ -72,6 +72,9 @@ class Gui():
       self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPort)
       if defaultUsbPort == port:
         self.selectedUsbPort.set(port)
+        
+    self.submenu.add_separator()    
+    self.submenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
 
   def aboutDialog(self):
     dialog = AboutDialog(self.mainWindow,title="About",showCancel=False)
@@ -108,8 +111,8 @@ class Gui():
     self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
 
   def sequenceDone(self):
-    self.tabControl.sequenceTab.stop()
     self.tabControl.sequenceTab.selectLine(-1)  
+    self.tabControl.sequenceTab.scheduleStopped()
     
   def sequenceLineChanged(self, rowNumber):
     self.tabControl.sequenceTab.selectLine(rowNumber)  
@@ -363,12 +366,14 @@ class SequenceTab(Frame):
 
   def stop(self):
     threadHelper.stopSchedule()
+       
+  def scheduleStopped(self):  
     self.btnStart.configure(state = NORMAL)
     self.btnClearLines.configure(state = NORMAL)
     self.btnAdd.configure(state = NORMAL)
     self.btnLinearRamping.configure(state = NORMAL)
     self.btnStop.configure(state = DISABLED)
-
+    
   def addLine(self):
     self.sequenceLineFrame.addLine()
 

@@ -18,8 +18,8 @@ class Connection():
     if self.portNumber is not None:
       try:
         logging.info("Connecting to device on port %s" % self.portNumber)
-        connection = serial.Serial('COM4', self.baudRate, timeout = self.timeout)
-        correctPort = self.deviceOnThisPort(self.portNumber, connection)
+        connection = serial.Serial(self.portNumber, self.baudRate, timeout = self.timeout)
+        correctPort = self.deviceOnThisPort(connection)
         if correctPort:
           return (self.portNumber, connection)
         else:
@@ -32,7 +32,7 @@ class Connection():
         try:
           connection = serial.Serial(portNumber, self.baudRate, timeout = self.timeout)
           logging.info("Checking for device on port %s" % portNumber)
-          correctPort = self.deviceOnThisPort(portNumber,connection)
+          correctPort = self.deviceOnThisPort(connection)
           if correctPort:
             return (portNumber, connection)
           connection.close()
@@ -40,11 +40,10 @@ class Connection():
             pass
       raise Exception("No device found on any port")
 
-  def deviceOnThisPort(self, portNumber, connection):
+  def deviceOnThisPort(self, connection):
       try:
         connection.write(self.handshakeSignal)
-        readValueDebug = connection.readline()
-        readValue = readValueDebug.strip()
+        readValue = connection.readline().strip()
         if readValue:
           if readValue == self.programId:
             return True
@@ -66,7 +65,7 @@ class Connection():
           con = serial.Serial(portNumber, self.baudRate, timeout = 0.01)
           #print(datetime.now().time())
           available.append(con.portstr)
-          if self.deviceOnThisPort(con.portstr,con):
+          if self.deviceOnThisPort(con):
             defaultPort = con.portstr
           #print(datetime.now().time())
           con.close()
@@ -101,17 +100,21 @@ class Connection():
 
   def disconnect(self):
     self.connection.close()
+    self.connected = False
 
   def getValue(self, command):
     try:
       value = self.__getValue__(self.connection,command)
       return value
     except Exception as e:
-      self.connection.close()
-      self.connected = False
+      self.disconnect()
+      logging.error("ERROR when getting command ", command, " from device")
       raise Exception()
 
   def __getValue__(self, serialConnection, command):
+    while not self.deviceOnThisPort(serialConnection):
+      print("blabla")
+      logging.debug("Waiting for a confirmation that device is ready")
     logging.debug("Sending command to device. Command: %s" % command)
     serialConnection.write(command)
     value = serialConnection.readline()
@@ -123,8 +126,8 @@ class Connection():
     try:
       self.__setValue__(self.connection, command, value)
     except Exception as e:
-      self.connection.close()
-      self.connected = False
+      self.disconnect()
+      logging.error("ERROR when sending command ", command , " to device with value ", value )
       raise Exception()
 
   def __setValue__(self, serialConnection, command, value):

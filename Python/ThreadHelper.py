@@ -185,21 +185,23 @@ class ThreadHelper():
     self.queue.put(scheduleNewLineString)
     self.queue.put(line.rowNumber)
     self.__setTargetVoltageWorker__(line.getVoltage())
-    time.sleep(50 / 1000)
+    #time.sleep(50 / 1000)
     self.__setTargetCurrentWorker__(line.getCurrent())
         
     if logToDataFile:
+      time.sleep(100 / 1000)
       self.logValuesToFile(filePath)
 
   def resetDevice(self, startingTargetVoltage, startingTargetCurrent, startingOutputOn):
     self.__setTargetVoltageWorker__(startingTargetVoltage)
-    time.sleep(50 / 1000)
+    #time.sleep(50 / 1000)
     self.__setTargetCurrentWorker__(startingTargetCurrent)
-    time.sleep(50 / 1000)
+    #time.sleep(50 / 1000)
     self.controller.setOutputOnOff(startingOutputOn)
-    self.queue.put(scheduleDoneString) # Notify the UI
+    self.stopSchedule()
 
   def stopSchedule(self):
+    self.queue.put(scheduleDoneString) # Notify the UI
     self.sched.shutdown()
     try:
       self.intervalLoggingSched.shutdown()
@@ -214,9 +216,9 @@ class ThreadHelper():
     
     
   def logValuesToFile(self,filePath):
-    time.sleep(50 / 1000)
+    #time.sleep(50 / 1000)
     realVoltage = self.controller.getRealVoltage()
-    time.sleep(50 / 1000)
+    #time.sleep(50 / 1000)
     realCurrent = self.controller.getRealCurrent()
     with open(filePath, "a") as myfile:
         fileString = str(datetime.now()) 

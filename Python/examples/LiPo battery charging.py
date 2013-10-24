@@ -9,7 +9,7 @@ from datetime import datetime
 
 targetVoltage = 4.2
 current = 500 #mA
-usbPortNumber = 3
+usbPortNumber = 'COM4'
 controller = PspController.Controller()
 connected = controller.connect(usbPortNumber)
 
@@ -20,18 +20,20 @@ else:
   exit()
 
 print("Script running")
-controller.setTargetCurrent(current)
-time.sleep(50/1000)
-controller.setOutputOnOff(True)
-time.sleep(50/1000)
+
+#controller.setTargetCurrent(current)
+#time.sleep(50/1000)
+#controller.setOutputOnOff(True)
+#time.sleep(50/1000)
 controller.setTargetVoltage(targetVoltage)
 
 while True:
   print("Checking if voltage has reached 4.2 V")
-  time.sleep(50/1000)
+  #time.sleep(50/1000)
   realVoltage = controller.getRealVoltage()
   if (realVoltage - targetVoltage) < 0.1:
     print("Yebb, turn off output")
     controller.setOutputOnOff(False)
     break
-
+  
+controller.disconnect()
