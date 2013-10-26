@@ -216,15 +216,20 @@ class ThreadHelper():
     
     
   def logValuesToFile(self,filePath):
+    allValues = self.controller.getAllValues()
+    listOfValues = allValues.split(";")      
+    realVoltage = listOfValues[0]
+    realCurrent = listOfValues[1]
+    
     #time.sleep(50 / 1000)
-    realVoltage = self.controller.getRealVoltage()
+    #realVoltage = self.controller.getRealVoltage()
     #time.sleep(50 / 1000)
-    realCurrent = self.controller.getRealCurrent()
+    #realCurrent = self.controller.getRealCurrent()
     with open(filePath, "a") as myfile:
         fileString = str(datetime.now()) 
         fileString += "\t"  
-        fileString += str(realVoltage)
+        fileString += realVoltage
         fileString += "\t"  
-        fileString += str(realCurrent)
+        fileString += realCurrent
         fileString += "\n"
         myfile.write(fileString)

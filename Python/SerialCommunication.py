@@ -131,6 +131,9 @@ class Connection():
       raise Exception()
 
   def __setValue__(self, serialConnection, command, value):
+    while not self.deviceOnThisPort(serialConnection):
+      print("blabla")
+      logging.debug("Waiting for a confirmation that device is ready")
     loggingString = "Sending command to device. Command:%s" % command
     if value:
       loggingString += ". value:%s" % value
