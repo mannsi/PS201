@@ -124,7 +124,7 @@ class Gui():
   """
   def periodicUiUpdate(self):
     while threadHelper.queue.qsize():
-      print(threadHelper.queue.qsize())
+      #print(threadHelper.queue.qsize())
       try:
         action = threadHelper.queue.get(0)
         if action == ThreadHelper.connectString:
