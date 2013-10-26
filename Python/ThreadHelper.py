@@ -164,7 +164,7 @@ class ThreadHelper():
     if numLines == 0:
       return
     nextFireTime = datetime.now() + timedelta(seconds=1)
-    for line in lines:
+    for line in legalLines:
       self.sched.add_date_job(func = self.addJobForLine, date=nextFireTime, args=[line, logWhenValuesChange, filePath])
       timeType = line.getTimeType()
       if timeType == "sec":
@@ -189,7 +189,7 @@ class ThreadHelper():
     self.__setTargetCurrentWorker__(line.getCurrent())
         
     if logToDataFile:
-      time.sleep(100 / 1000)
+      #time.sleep(100 / 1000)
       self.logValuesToFile(filePath)
 
   def resetDevice(self, startingTargetVoltage, startingTargetCurrent, startingOutputOn):
@@ -228,8 +228,8 @@ class ThreadHelper():
     with open(filePath, "a") as myfile:
         fileString = str(datetime.now()) 
         fileString += "\t"  
-        fileString += realVoltage
+        fileString += str(realVoltage)
         fileString += "\t"  
-        fileString += realCurrent
+        fileString += str(realCurrent)
         fileString += "\n"
         myfile.write(fileString)

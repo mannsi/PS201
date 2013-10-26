@@ -10,6 +10,7 @@
 
 int forceUpdate = 0;
 int firstRun = 1;
+int readyToReceiveCommand = 1;
 int backlightIntensity = 10;
 int voltageRead = 0;
 int voltageAveraging = 0;
@@ -242,83 +243,87 @@ int main(void)
 				preregAveraging = 0;
 				vinAveraging = 0;
 				firstRun = 0;
+				readyToReceiveCommand = 1;
 			}
 		}
 
-		// Listen for USB command
-		unsigned char command = USART_ReceiveCommand();
-		int newData;
-		int newData2;
-		char isOutputOn;
-
-		switch(command)
+		if (readyToReceiveCommand == 1)
 		{
-			case USART_WRITEALL:
-				if (OUTPUT_IS_ENABLED)
-				{
-					isOutputOn = '1';
-				}
-				else
-				{
-					isOutputOn = '0';
-				}
-				writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, isOutputOn);
-				break;
-			case USART_SEND_HANDSHAKE:
-				USART_TransmitChar(USART_HANDSHAKE);
-				USART_TransmitChar('\n');
-				break;
-			case USART_RECEIVE_VOLTAGE:
-				newData = USART_ReceiveData();
-				if(newData > 2000) break;
-				voltageSet = newData;
-				transferToDAC(9,voltageSet/voltageSetMulti);
-				break;			
-			case USART_SEND_VOLTAGE:
-				writeVoltageToUsb(voltageRead);
-				break;
-			case USART_SEND_SET_VOLTAGE:
-				writeVoltageToUsb(voltageSet);
-				break;
-			case USART_RECEIVE_CURRENT:
-				newData = USART_ReceiveData();
-				if(newData > 100) break;
-				currentSet = newData;
-				transferToDAC(10,currentSet/currentSetMulti);
-				break;			
-			case USART_SEND_CURRENT:
-				writeCurrentToUsb(currentRead);
-				break;
-			case USART_SEND_SET_CURRENT:
-				writeCurrentToUsb(currentSet);
-				break;
-			case USART_SEND_VIN:
-				writeVoltageToUsb(vinRead);
-				break;
-			case USART_SEND_VPREREG:
-				writeVoltageToUsb(preregRead);
-				break;
-			case USART_ENABLE_OUTPUT:
-				ENABLE_OUTPUT;
-				writeToLCD(voltageRead,currentRead);
-				break;
-			case USART_DISABLE_OUTPUT:
-				DISABLE_OUTPUT;
-				writeToLCD(voltageRead,currentRead);
-				break;
-			case USART_IS_OUTPUT_ON:
-				if (OUTPUT_IS_ENABLED)
-				{
-					isOutputOn = '1';
-				}
-				else
-				{
-					isOutputOn = '0';
-				}
-				
-			    USART_TransmitChar(isOutputOn);
-				USART_TransmitChar('\n');
-			    break;
+			// Listen for USB command
+			unsigned char command = USART_ReceiveCommand();
+			int newData;
+			int newData2;
+			char isOutputOn;
+
+			switch(command)
+			{
+				case USART_WRITEALL:
+					if (OUTPUT_IS_ENABLED)
+					{
+						isOutputOn = '1';
+					}
+					else
+					{
+						isOutputOn = '0';
+					}
+					writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, isOutputOn);
+					break;
+				case USART_SEND_HANDSHAKE:
+					USART_TransmitChar(USART_HANDSHAKE);
+					USART_TransmitChar('\n');
+					break;
+				case USART_RECEIVE_VOLTAGE:
+					newData = USART_ReceiveData();
+					if(newData > 2000) break;
+					voltageSet = newData;
+					transferToDAC(9,voltageSet/voltageSetMulti);
+					break;			
+				case USART_SEND_VOLTAGE:
+					writeVoltageToUsb(voltageRead);
+					break;
+				case USART_SEND_SET_VOLTAGE:
+					writeVoltageToUsb(voltageSet);
+					break;
+				case USART_RECEIVE_CURRENT:
+					newData = USART_ReceiveData();
+					if(newData > 100) break;
+					currentSet = newData;
+					transferToDAC(10,currentSet/currentSetMulti);
+					break;			
+				case USART_SEND_CURRENT:
+					writeCurrentToUsb(currentRead);
+					break;
+				case USART_SEND_SET_CURRENT:
+					writeCurrentToUsb(currentSet);
+					break;
+				case USART_SEND_VIN:
+					writeVoltageToUsb(vinRead);
+					break;
+				case USART_SEND_VPREREG:
+					writeVoltageToUsb(preregRead);
+					break;
+				case USART_ENABLE_OUTPUT:
+					ENABLE_OUTPUT;
+					writeToLCD(voltageRead,currentRead);
+					break;
+				case USART_DISABLE_OUTPUT:
+					DISABLE_OUTPUT;
+					writeToLCD(voltageRead,currentRead);
+					break;
+				case USART_IS_OUTPUT_ON:
+					if (OUTPUT_IS_ENABLED)
+					{
+						isOutputOn = '1';
+					}
+					else
+					{
+						isOutputOn = '0';
+					}
+					
+					USART_TransmitChar(isOutputOn);
+					USART_TransmitChar('\n');
+					break;
+			}
 		}
 	}
 }
@@ -335,6 +340,7 @@ void writeDebug(char *debugMessage)
 // first four bits are control code, the next eight 
 // are the actual data and the last two are ignored.
 void transferToDAC(unsigned char CTRL,int dacData){
+	readyToReceiveCommand = 0;
   	// Make sure a is a ten bit word
   	dacData &= 0x03FF;
 	// Then shift up by two bits, the DAC does not

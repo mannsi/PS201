@@ -112,9 +112,9 @@ class Connection():
       raise Exception()
 
   def __getValue__(self, serialConnection, command):
-    while not self.deviceOnThisPort(serialConnection):
-      print("blabla")
-      logging.debug("Waiting for a confirmation that device is ready")
+    #while not self.deviceOnThisPort(serialConnection):
+    #  print("blabla")
+    #  logging.debug("Waiting for a confirmation that device is ready")
     logging.debug("Sending command to device. Command: %s" % command)
     serialConnection.write(command)
     value = serialConnection.readline()
@@ -131,9 +131,9 @@ class Connection():
       raise Exception()
 
   def __setValue__(self, serialConnection, command, value):
-    while not self.deviceOnThisPort(serialConnection):
-      print("blabla")
-      logging.debug("Waiting for a confirmation that device is ready")
+    #while not self.deviceOnThisPort(serialConnection):
+    #  print("blabla")
+    #  logging.debug("Waiting for a confirmation that device is ready")
     loggingString = "Sending command to device. Command:%s" % command
     if value:
       loggingString += ". value:%s" % value

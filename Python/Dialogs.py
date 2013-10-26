@@ -20,6 +20,7 @@ class RampDialog(tkBaseDialog.Dialog):
   def body(self, master):   
     self.addRampGui(master)
     self.okClicked = False
+    return self.startingCurrentEntry
 
   def addRampGui(self, master):
     Label(master,text="Starting current").grid(row=0,column=0,sticky=E)
@@ -89,6 +90,7 @@ class DataLoggingDialog(tkBaseDialog.Dialog):
     self.okClicked = False
     self.logWhenValuesChange = False
     self.logEveryXSeconds = False
+    return self.filePathEntry
 
   def createGui(self, master):
     Label(master,text="File name").grid(row=0,column=0)

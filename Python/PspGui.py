@@ -24,6 +24,7 @@ targetCurrent = 0
 outputOn = False
 connectedPort = ''
 selectedUsbPort = ''
+connected = False
 
 class Gui():
   def __init__(self):
@@ -84,7 +85,8 @@ class Gui():
     threadHelper.connect(usbPort, self.onConnectToDevice)
     
   def onConnectToDevice(self):
-    self.connected = True
+    global connected
+    connected = True
     self.periodicValuesUpdate()
 
   def targetVoltageUpdate(self, newTargetVoltage):
@@ -122,6 +124,7 @@ class Gui():
   """
   def periodicUiUpdate(self):
     while threadHelper.queue.qsize():
+      print(threadHelper.queue.qsize())
       try:
         action = threadHelper.queue.get(0)
         if action == ThreadHelper.connectString:
@@ -135,7 +138,8 @@ class Gui():
             # When this state is reached I must stop listening more for this state since many thread will return this state
             # I also have to stop the current threads until the connectedString is returned
             print("periodic update UI no device found. Queue size ", threadHelper.queue.qsize())
-            self.connected = False
+            global connected
+            connected = False
             self.connectedStateChanged(False)  
         elif action == ThreadHelper.realCurrentString:
           realCurrentValue = threadHelper.queue.get(0)
@@ -172,7 +176,7 @@ class Gui():
   stored in the threaHelper queue and fetched by another function
   """
   def periodicValuesUpdate(self):
-    if self.connected:
+    if connected:
         threadHelper.updateCurrentAndVoltage()
         self.mainWindow.after(self.deviceRefreshRate, self.periodicValuesUpdate)
 
@@ -265,14 +269,14 @@ class TabControl(Notebook):
     Notebook.__init__(self, parent, name='tab control')
     
     self.statusTab = StatusTab(self)
-    self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
+    self.sequenceTab = SequenceTab(self,self.resetSequenceTab, False)
     
     self.add(self.statusTab, text='Status')
     self.add(self.sequenceTab, text='Sequence')
     
-  def resetSequenceTab(self): 
+  def resetSequenceTab(self, connected): 
     self.forget(self.sequenceTab) 
-    self.sequenceTab = SequenceTab(self,self.resetSequenceTab)
+    self.sequenceTab = SequenceTab(self,self.resetSequenceTab, connected)
     self.add(self.sequenceTab, text='Sequence')
     self.select(self.sequenceTab)
 
@@ -299,13 +303,13 @@ class StatusTab(Frame):
     Label(self, text="(V):").grid(row=2,column=2,sticky=W)
 
 class SequenceTab(Frame):
-  def __init__(self, parent, resetTabM):
+  def __init__(self, parent, resetTabM, connected):
     Frame.__init__(self,parent)
     self.parent = parent
     self.resetTabM = resetTabM
-    self.initalizeView()
+    self.initalizeView(connected)
 
-  def initalizeView(self):
+  def initalizeView(self, connected):
     self.addLinesFrame()
     buttonFrame = Frame(self)
     self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
@@ -320,9 +324,13 @@ class SequenceTab(Frame):
     self.logToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
     self.logToFile.pack(side=LEFT)
 
+    if connected:
+      startButtonState = NORMAL
+    else:
+      startButtonState = DISABLED
     self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
     self.btnStop.pack(side=RIGHT)
-    self.btnStart = Button(buttonFrame, text = "Start", state=DISABLED, command=self.start)
+    self.btnStart = Button(buttonFrame, text = "Start", state=startButtonState, command=self.start)
     self.btnStart.pack(side=RIGHT)
     buttonFrame.pack(fill='x')
     normalWidgetList.append(self.btnStart) 
@@ -383,7 +391,7 @@ class SequenceTab(Frame):
     #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
 
   def resetLines(self):
-    self.resetTabM()
+    self.resetTabM(connected)
 
   def linearRamping(self):
     dialog = RampDialog(self,title="Voltage ramp")
