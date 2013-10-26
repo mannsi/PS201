@@ -21,6 +21,8 @@ controller = PspController.Controller(shouldLog = True, loglevel = logging.DEBUG
 threadHelper = ThreadHelper.ThreadHelper(controller)
 targetVoltage = 0
 targetCurrent = 0
+realVoltage = 0
+realCurrent = 0
 outputOn = False
 connectedPort = ''
 selectedUsbPort = ''
@@ -99,11 +101,17 @@ class Gui():
     targetCurrent = int(newTargetCurrent)
     self.tabControl.statusTab.currentEntryVar.set(newTargetCurrent)
 
-  def realVoltageUpdate(self, realVoltage):
-    self.topPanel.valuesFrame.voltageEntryVar.set(realVoltage)
+  def realVoltageUpdate(self, newRealVoltage):
+    global realVoltage
+    if newRealVoltage != realVoltage:
+      realVoltage = newRealVoltage
+      self.topPanel.valuesFrame.voltageEntryVar.set(newRealVoltage)
 
-  def realCurrentUpdate(self, realCurrent):
-    self.topPanel.valuesFrame.currentEntryVar.set(realCurrent)
+  def realCurrentUpdate(self, newRealCurrent):
+    global realCurrent
+    if newRealCurrent != realCurrent:
+      realCurrent = newRealCurrent
+      self.topPanel.valuesFrame.currentEntryVar.set(newRealCurrent)
 
   def outPutOnOffUpdate(self, newOutputOn):
     outputOn = newOutputOn

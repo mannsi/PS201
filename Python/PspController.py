@@ -24,7 +24,7 @@ class Controller():
     self.deviceWriteAll = b'\xa5'
     self.deviceReadAll = b'\xa6'
     
-    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 2,handshakeSignal=self.handshakeSignal,programId=self.programId)
+    self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 0.1,handshakeSignal=self.handshakeSignal,programId=self.programId)
     self.processLock = threading.Lock()
 
   def connect(self, usbPortNumber):
