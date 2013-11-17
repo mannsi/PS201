@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-import PspController
+import PsController
 import logging
 import tkinter.simpledialog
 from AboutDialog import *
@@ -13,7 +13,7 @@ mainWindowTitle = "PS201 Controller"
 
 normalWidgetList = []
 inverseWidgetList = []
-controller = PspController.Controller(shouldLog = True, loglevel = logging.DEBUG)
+controller = PsController.Controller(shouldLog = True, loglevel = logging.DEBUG)
 targetVoltage = 0
 targetCurrent = 0
 realVoltage = 0
@@ -123,42 +123,42 @@ class PsFrame():
         while controller.queue.qsize():
             try:
                 action = controller.queue.get(0)
-                if action == PspController.connectString:
+                if action == PsController.connectString:
                     global connected
                     global connectedPort
                     connectStatus = controller.queue.get(0)
                     self.topPanel.lblStatusValueVar.set(connectStatus)
-                    if connectStatus == PspController.connectedString:
+                    if connectStatus == PsController.connectedString:
                         connected = True
                         controller.startAutoUpdate(interval = 1)
                         connectedPort = controller.queue.get(0)
                         self.connectedStateChanged(True)
-                    elif connectStatus == PspController.noDeviceFoundstr:
+                    elif connectStatus == PsController.noDeviceFoundstr:
                         # When this state is reached I must stop listening more for this state since many thread will return this state
                         # I also have to stop the current threads until the connectedString is returned
                         connected = False
                         self.connectedStateChanged(False)  
-                elif action == PspController.realCurrentString:
+                elif action == PsController.realCurrentString:
                     realCurrentValue = controller.queue.get(0)
                     self.realCurrentUpdate(realCurrentValue)
-                elif action == PspController.realVoltageString:
+                elif action == PsController.realVoltageString:
                     realVoltageValue = controller.queue.get(0)
                     self.realVoltageUpdate(realVoltageValue)
-                elif action == PspController.targetCurrentString:
+                elif action == PsController.targetCurrentString:
                     targetCurrentValue = controller.queue.get(0)
                     self.targetCurrentUpdate(targetCurrentValue)
-                elif action == PspController.targetVoltageString:
+                elif action == PsController.targetVoltageString:
                     targetVoltageValue = controller.queue.get(0)
                     self.targetVoltageUpdate(targetVoltageValue)
-                elif action == PspController.outputOnOffString:
+                elif action == PsController.outputOnOffString:
                     outputOnOff = controller.queue.get(0)
                     self.outPutOnOffUpdate(outputOnOff)
-                elif action == PspController.preRegVoltageString:
+                elif action == PsController.preRegVoltageString:
                     preRegVoltageValue = controller.queue.get(0)
                     self.preRegVoltageUpdate(preRegVoltageValue)
-                elif action == PspController.scheduleDoneString:
+                elif action == PsController.scheduleDoneString:
                     self.sequenceDone()
-                elif action == PspController.scheduleNewLineString:
+                elif action == PsController.scheduleNewLineString:
                     rowNumber = controller.queue.get(0)
                     self.sequenceLineChanged(rowNumber)
             except:
