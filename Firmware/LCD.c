@@ -1,5 +1,7 @@
 #include "LCD.h"
 
+int showOutputOn = 1;
+
 // Set up the display in 4 bit mode and ready for writing to
 void LCD_Initialize(void)
 {	
@@ -172,17 +174,7 @@ void LCD_WriteValues(unsigned char* voltage,unsigned char* current)
 			break;
 	}
 
-	if(OUTPUT_IS_ENABLED)
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("ON");
-	}
-	else
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("OFF");
-	}
-
+	showOutputOnOff();
 }
 
 int LCD_SetBacklight(int backlightIntensity)
@@ -238,18 +230,6 @@ int LCD_SetBacklight(int backlightIntensity)
 	return backlightIntensity;
 }
 
-void LCD_SwitchOutput()
-{
-	if(OUTPUT_IS_ENABLED)
-	{
-		DISABLE_OUTPUT;
-	}
-	else
-	{
-		ENABLE_OUTPUT;
-	}
-}
-
 // This is exactly like the above function but now
 // we make sure the fifth bit is allways LOW to indicate
 // that the display is receiving instruction. Also we only
@@ -271,3 +251,28 @@ static void LCD_Command(unsigned char a)
 	_delay_ms(1);
 	DISABLE_DISPLAY;
 }
+
+void showOutputOnOff()
+{
+	if(showOutputOn)
+	{
+		LCD_Cursor(0,13);
+		LCD_Write("ON");
+	}
+	else
+	{
+		LCD_Cursor(0,13);
+		LCD_Write("OFF");
+	}
+}
+
+void LCD_SetOutputOn()
+{
+	showOutputOn = 1;
+}
+
+void LCD_SetOutputOff()
+{
+	showOutputOn = 0;
+}
+

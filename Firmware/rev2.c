@@ -11,6 +11,7 @@
 int forceUpdate = 0;
 int firstRun = 1;
 int readyToReceiveCommand = 1;
+int outputIsOn = 1;
 int backlightIntensity = 10;
 int voltageRead = 0;
 int voltageAveraging = 0;
@@ -47,6 +48,7 @@ int main(void)
 	
 	LCD_ShowStartScreen();
 	_delay_ms(1000);
+	
 	writeToLCD(voltageSet,currentSet);
 	LCD_HighLight();
 
@@ -61,7 +63,7 @@ int main(void)
 		// If Sw1 is pressed, toggle the output
 		if (SW_Check1())
 		{
-			LCD_SwitchOutput();
+			switchOutput();
 			forceUpdate = 1;
 		}
 
@@ -95,7 +97,7 @@ int main(void)
 		
 		// Rotary encoder
 		unsigned char encoderTurnDirection = SW_CheckEncoder();
-		if(encoderTurnDirection)
+		if(encoderTurnDirection && outputIsOn)
 		{
 			switch(encoderControls)
 			{		
@@ -258,7 +260,7 @@ int main(void)
 			switch(command)
 			{
 				case USART_WRITEALL:
-					if (OUTPUT_IS_ENABLED)
+					if (outputIsOn)
 					{
 						isOutputOn = '1';
 					}
@@ -303,15 +305,15 @@ int main(void)
 					writeVoltageToUsb(preregRead);
 					break;
 				case USART_ENABLE_OUTPUT:
-					ENABLE_OUTPUT;
+					enableOutput();
 					writeToLCD(voltageRead,currentRead);
 					break;
 				case USART_DISABLE_OUTPUT:
-					DISABLE_OUTPUT;
+					disableOutput();
 					writeToLCD(voltageRead,currentRead);
 					break;
 				case USART_IS_OUTPUT_ON:
-					if (OUTPUT_IS_ENABLED)
+					if (outputIsOn)
 					{
 						isOutputOn = '1';
 					}
@@ -471,6 +473,34 @@ void clearArray(unsigned char *array, int size)
 	}
 }
 
+void switchOutput()
+{
+	if(outputIsOn)
+	{
+		disableOutput();
+	}
+	else
+	{
+		enableOutput();
+	}
+}
+
+void enableOutput()
+{
+	outputIsOn = 1;
+	LCD_SetOutputOn();
+	transferToDAC(9,voltageSet/voltageSetMulti);
+	transferToDAC(10,currentSet/currentSetMulti);
+}
+
+void disableOutput()
+{
+	outputIsOn = 0;
+	LCD_SetOutputOff();
+	transferToDAC(9,0); // Voltage
+	transferToDAC(10,0); // Current
+}
+
 static void initRegistries()
 {
 	DDRB = 0;
@@ -486,7 +516,8 @@ static void initRegistries()
 
 	// Output relay
 	DDRB |= 1 << PB0;	// Output enable
-	DISABLE_OUTPUT;
+	PORTB |= 1 << PB0; // TODO. THIS ENABLES THE OUTPUT, I AM NOT SURE WHY. Frissi will have to look at it. This is the old command that was tied to ENABLE_OUTPUT
+	//disableOutput();
 
 	// SPI interface to DAC and DISPLAY
 	DDRB |= 1 << PB3;	// SPI MOSI
