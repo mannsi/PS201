@@ -109,5 +109,5 @@ class Connection():
     def __setValue__(self, serialConnection, command, value): 
         with self.processLock:
             serialConnection.write(command)
-            if value:
+            if value is not None:
                 serialConnection.write(value)
