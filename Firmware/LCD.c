@@ -269,10 +269,12 @@ void showOutputOnOff()
 void LCD_SetOutputOn()
 {
 	showOutputOn = 1;
+	showOutputOnOff();
 }
 
 void LCD_SetOutputOff()
 {
 	showOutputOn = 0;
+	showOutputOnOff();
 }
 

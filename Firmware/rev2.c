@@ -82,22 +82,19 @@ int main(void)
 			{
 				case VOLTAGE:
 					encoderControls = CURRENT;
-					writeToLCD(voltageRead,currentRead);
 					break;
 				case CURRENT:
 					encoderControls = VOLTAGE;
-					writeToLCD(voltageRead,currentRead);
 					break;
 				default:
 					encoderControls = VOLTAGE;
-					writeToLCD(voltageRead,currentRead);
 					break;
 			}
 		}
 		
 		// Rotary encoder
 		unsigned char encoderTurnDirection = SW_CheckEncoder();
-		if(encoderTurnDirection && outputIsOn)
+		if(encoderTurnDirection)
 		{
 			switch(encoderControls)
 			{		
@@ -127,7 +124,10 @@ int main(void)
 						voltageSet = 200;
 					}
 
-					transferToDAC(9,voltageSet/voltageSetMulti);
+					if (outputIsOn)
+					{
+						transferToDAC(9, voltageSet / voltageSetMulti);
+					}
 					writeToLCD(voltageSet,currentSet);
 					// Set delay to keep displaying the set voltage
 					// and current for some time
@@ -160,7 +160,10 @@ int main(void)
 						currentSet = 100;
 					}
 
-					transferToDAC(10,currentSet/currentSetMulti);
+					if (outputIsOn)
+					{
+						transferToDAC(10, currentSet / currentSetMulti);
+					}
 					writeToLCD(voltageSet,currentSet);
 					delay = setDelay;
 					forceUpdate = 1;
@@ -233,7 +236,7 @@ int main(void)
 				preregRead = preregAveraging*voltageReadMulti;
 				vinRead = vinAveraging*voltageReadMulti;
 				
-				if((voltageRead != oldVoltageRead || currentRead != oldCurrentRead || forceUpdate == 1) && firstRun != 1)
+				if ((voltageRead != oldVoltageRead || currentRead != oldCurrentRead || forceUpdate) && !firstRun && outputIsOn)
 				{
 					writeToLCD(voltageRead,currentRead);
 					forceUpdate = 0;
@@ -249,26 +252,26 @@ int main(void)
 			}
 		}
 
-		if (readyToReceiveCommand == 1)
+		if (readyToReceiveCommand)
 		{
 			// Listen for USB command
 			unsigned char command = USART_ReceiveCommand();
 			int newData;
 			int newData2;
-			char isOutputOn;
+			char outputChar;
 
 			switch(command)
 			{
 				case USART_WRITEALL:
 					if (outputIsOn)
 					{
-						isOutputOn = '1';
+						outputChar = '1';
 					}
 					else
 					{
-						isOutputOn = '0';
+						outputChar = '0';
 					}
-					writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, isOutputOn);
+					writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, outputChar);
 					break;
 				case USART_SEND_HANDSHAKE:
 					USART_TransmitChar(USART_HANDSHAKE);
@@ -278,7 +281,11 @@ int main(void)
 					newData = USART_ReceiveData();
 					if(newData > 2000) break;
 					voltageSet = newData;
-					transferToDAC(9,voltageSet/voltageSetMulti);
+					writeToLCD(voltageSet, currentSet);
+					if (outputIsOn)
+					{
+						transferToDAC(9, voltageSet / voltageSetMulti);
+					}
 					break;			
 				case USART_SEND_VOLTAGE:
 					writeVoltageToUsb(voltageRead);
@@ -290,7 +297,11 @@ int main(void)
 					newData = USART_ReceiveData();
 					if(newData > 100) break;
 					currentSet = newData;
-					transferToDAC(10,currentSet/currentSetMulti);
+					writeToLCD(voltageSet, currentSet);
+					if (outputIsOn)
+					{
+						transferToDAC(10, currentSet / currentSetMulti);
+					}
 					break;			
 				case USART_SEND_CURRENT:
 					writeCurrentToUsb(currentRead);
@@ -306,23 +317,21 @@ int main(void)
 					break;
 				case USART_ENABLE_OUTPUT:
 					enableOutput();
-					writeToLCD(voltageRead,currentRead);
 					break;
 				case USART_DISABLE_OUTPUT:
 					disableOutput();
-					writeToLCD(voltageRead,currentRead);
 					break;
 				case USART_IS_OUTPUT_ON:
 					if (outputIsOn)
 					{
-						isOutputOn = '1';
+						outputChar = '1';
 					}
 					else
 					{
-						isOutputOn = '0';
+						outputChar = '0';
 					}
 					
-					USART_TransmitChar(isOutputOn);
+					USART_TransmitChar(outputChar);
 					USART_TransmitChar('\n');
 					break;
 			}
@@ -435,7 +444,7 @@ int appendArray(unsigned char *targetArray, int arraySize, unsigned char *append
 	for(i = 0; i< appendingArrayMaxSize; i++)
 	{
 		tempChar = appendingArray[i];
-		if(tempChar == 0)
+		if(!tempChar)
 		{
 			break;
 		}
