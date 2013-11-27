@@ -252,20 +252,6 @@ static void LCD_Command(unsigned char a)
 	DISABLE_DISPLAY;
 }
 
-void showOutputOnOff()
-{
-	if(showOutputOn)
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("ON");
-	}
-	else
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("OFF");
-	}
-}
-
 void LCD_SetOutputOn()
 {
 	showOutputOn = 1;
@@ -276,5 +262,19 @@ void LCD_SetOutputOff()
 {
 	showOutputOn = 0;
 	showOutputOnOff();
+}
+
+static void showOutputOnOff()
+{
+	if (showOutputOn)
+	{
+		LCD_Cursor(0, 13);
+		LCD_Write("ON ");
+	}
+	else
+	{
+		LCD_Cursor(0, 13);
+		LCD_Write("OFF");
+	}
 }
 

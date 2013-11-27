@@ -27,7 +27,7 @@ int LCD_SetBacklight(int backlightIntensity);
 void LCD_SetOutputOn(void);
 void LCD_SetOutputOff(void);
 
-
+static void showOutputOnOff(void);
 static void LCD_Command(unsigned char a);
 static void LCD_Data(unsigned char a);
 

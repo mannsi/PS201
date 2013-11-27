@@ -48,7 +48,7 @@ int main(void)
 	
 	LCD_ShowStartScreen();
 	_delay_ms(1000);
-	
+	disableOutput();
 	writeToLCD(voltageSet,currentSet);
 	LCD_HighLight();
 
@@ -90,6 +90,9 @@ int main(void)
 					encoderControls = VOLTAGE;
 					break;
 			}
+			delay = setDelay;
+			forceUpdate = 1;
+			writeToLCD(voltageSet,currentSet);
 		}
 		
 		// Rotary encoder
@@ -506,11 +509,12 @@ void disableOutput()
 {
 	outputIsOn = 0;
 	LCD_SetOutputOff();
+	writeToLCD(voltageSet, currentSet);
 	transferToDAC(9,0); // Voltage
 	transferToDAC(10,0); // Current
 }
 
-static void initRegistries()
+void initRegistries()
 {
 	DDRB = 0;
 	DDRC = 0;
@@ -547,7 +551,7 @@ static void initRegistries()
 	TCCR1B = (1 << CS10);						// START no prescaler
 }
 
-static void initCalibration()
+void initCalibration()
 {
 	// Calibration variables
 	voltageRef = 49.88;	// The ref voltage times 10
