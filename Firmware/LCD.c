@@ -3,14 +3,27 @@
 int showOutputOn = 1;
 
 // Set up the display in 4 bit mode and ready for writing to
-void LCD_Initialize(void)
+void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 {	
 	//Display
 	DDRD |= 1 << PD6;	// Display chip select
 	DESELECT_DISPLAY;
 	DDRB |= 1 << PB2;	// Backlight
-	PORTB |= 1 << PB2;	// Turn Backlight on
+	DDRB |= 1 << PB1;	// Contrast
 	DDRD |= 1 << PD5;	// Display enable
+	PORTB |= 1 << PB2; 
+	PORTB |= 1 << PB1;
+
+
+	// Setting up OC1 which is the PWM module for
+	// charge pump and backlight. The charge pump is 
+	// always set on half duty cycle while backlight is 
+	// controlled by the user.
+	TCCR1A  = (1 << COM1A1) | (1 << COM1B1);	// Enable both osc
+	TCCR1A |= (1 << WGM10) | (1 << WGM12);		// FAST 8 bit PWM
+	OCR1A = contrast;							// Contrast
+	OCR1B = backlight*19;						// Backlight
+	TCCR1B = (1 << CS10);						// START no prescaler
 
 	// Delay after power up
 	_delay_ms(150);
@@ -98,7 +111,7 @@ void LCD_Write(unsigned char* data)
 }
 
 // To position the cursor
-void LCD_Cursor(unsigned char row, unsigned char column)
+void LCD_Cursor(uint8_t row, uint8_t column)
 {
 	switch (row)
 	{
@@ -135,35 +148,65 @@ void LCD_Clear()
 	_delay_ms(1);
 }
 
-void LCD_ShowStartScreen()
+void LCD_StartScreen()
 {
+	LCD_Clear();
 	LCD_Cursor(0,4);
 	LCD_Write("Digital");
 	LCD_Cursor(1,6);
 	LCD_Write("PSU");
 }
 
-void LCD_WriteValues(unsigned char* voltage,unsigned char* current)
+void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn)
 {
 	// Write normal home screen
 	LCD_Clear();
 	LCD_Cursor(0,0);
-	LCD_Write("V: ");
-	LCD_Write(voltage);
-	LCD_Write(" V");
+	LCD_Write("V:       V");
 	LCD_Cursor(1,0);
-	LCD_Write("I: ");
-	LCD_Write(current);
-	LCD_Write(" mA");
+	LCD_Write("I:      mA");
 
+	LCD_WriteControlArrow();
+	LCD_WriteVoltage(voltage);
+	LCD_WriteCurrent(current);
+
+	if(outputOn)
+		LCD_OutputOn();
+	else
+		LCD_OutputOff();
+}
+
+void LCD_WriteVoltage(uint16_t voltage)
+{
+	unsigned char voltageArray [10];
+	mapVoltage(voltage, voltageArray);
+	LCD_Cursor(0,3);
+	LCD_Write(voltageArray);
+}
+
+void LCD_WriteCurrent(uint16_t current)
+{
+	unsigned char currentArray [10];
+	mapCurrent(current, currentArray);
+	LCD_Cursor(1,3);
+	LCD_Write(currentArray);
+
+}
+
+void LCD_WriteControlArrow(void)
+{
 	// Determine the last selected encoder function
 	switch(encoderControls)
 	{
 		case VOLTAGE:
 			LCD_Cursor(0,2);
 			LCD_Write("~");
+			LCD_Cursor(1,2);
+			LCD_Write(" ");
 			break;
 		case CURRENT:
+			LCD_Cursor(0,2);
+			LCD_Write(" ");
 			LCD_Cursor(1,2);
 			LCD_Write("~");
 			break;
@@ -171,13 +214,14 @@ void LCD_WriteValues(unsigned char* voltage,unsigned char* current)
 			encoderControls = VOLTAGE;
 			LCD_Cursor(0,2);
 			LCD_Write("~");
+			LCD_Cursor(1,2);
+			LCD_Write(" ");
 			break;
 	}
 
-	showOutputOnOff();
 }
 
-int LCD_SetBacklight(int backlightIntensity)
+int LCD_SetBacklight(uint8_t backlightIntensity)
 {
 	// Write small backlight screen
 	LCD_Clear();
@@ -197,13 +241,13 @@ int LCD_SetBacklight(int backlightIntensity)
 		unsigned char dir = SW_CheckEncoder();
 		if(dir)
 		{
-			if(dir == ENCODER_CW) 	
+			if(dir == ENCODER_CCW) 	
 			{
-				backlightIntensity += 1;
+				backlightIntensity--;
 			} 
 			else
 			{
-				backlightIntensity -= 1;
+				backlightIntensity++;
 			}
 			if(backlightIntensity > 20)
 			{
@@ -252,29 +296,31 @@ static void LCD_Command(unsigned char a)
 	DISABLE_DISPLAY;
 }
 
-void showOutputOnOff()
-{
-	if(showOutputOn)
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("ON");
-	}
-	else
-	{
-		LCD_Cursor(0,13);
-		LCD_Write("OFF");
-	}
-}
+//void showOutputOnOff()
+//{
+//	if(showOutputOn)
+//	{
+//		LCD_Cursor(0,13);
+//		LCD_Write("ON");
+//	}
+//	else
+//	{
+//		LCD_Cursor(0,13);
+//		LCD_Write("OFF");
+//	}
+//}
 
-void LCD_SetOutputOn()
+void LCD_OutputOn()
 {
 	showOutputOn = 1;
-	showOutputOnOff();
+	LCD_Cursor(0,13);
+	LCD_Write(" ON");
 }
 
-void LCD_SetOutputOff()
+void LCD_OutputOff()
 {
 	showOutputOn = 0;
-	showOutputOnOff();
+	LCD_Cursor(0,13);
+	LCD_Write("OFF");
 }
 

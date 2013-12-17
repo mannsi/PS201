@@ -27,7 +27,7 @@
 #define ENCODERPINB_IS_OPEN PINC & (1 << PC4)
 #define ENCODERPINB_WAS_OPEN (1 << 5)
 #define ENCODER ((PINC >> PC3) & 0x03)
-#define ENCODER_CW 0x10
+#define ENCODER_CCW 0x10
 
 // To keep up with the encoder
 #define VOLTAGE 	1 << 0

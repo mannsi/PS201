@@ -4,11 +4,10 @@
 #include<avr/io.h>
 #include<avr/interrupt.h>
 
-#define VOLTAGE_MON 0x00
-#define CURRENT_MON 0x01
-#define PREREG 		0x02
-#define VIN_MON 	0x06
-#define TEMP_MON 	0x07
+#define VOLTAGE_MON 0x07 // ADC7
+#define CURRENT_MON 0x01 // ADC1
+#define PREREG 		0x02 // ADC2
+#define VIN_MON 	0x06 // ADC6
 
 // For the ADC status variable we define:
 #define ADC_NEWREADING 		(1<<6)
@@ -22,7 +21,7 @@
 
 void ADC_Initialize(void);
 
-extern int ADC_reading;
+extern uint16_t ADC_reading;
 extern unsigned char ADC_status;
 
 #endif
