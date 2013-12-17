@@ -32,7 +32,7 @@ void LCD_OutputOff(void);
 void LCD_WriteVoltage(uint16_t voltage);
 void LCD_WriteCurrent(uint16_t current);
 
-
+static void showOutputOnOff(void);
 static void LCD_Command(unsigned char a);
 static void LCD_Data(unsigned char a);
 
