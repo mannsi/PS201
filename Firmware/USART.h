@@ -3,7 +3,7 @@
 
 #include<avr/io.h>
 #ifndef F_CPU
-#define F_CPU 16000000
+#define F_CPU 8000000
 #endif
 
 #define BAUD 9600

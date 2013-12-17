@@ -249,7 +249,7 @@ int main(void)
 					newData = USART_ReceiveData();
 					if(newData > 2000) break;
 					voltageSet = newData;
-					writeToLCD(voltageSet, currentSet);
+					LCD_WriteVoltage(voltageSet);
 					if (outputIsOn)
 					{
 						transferToDAC(10, voltageSet / voltageSetMulti);
@@ -265,7 +265,7 @@ int main(void)
 					newData = USART_ReceiveData();
 					if(newData > 100) break;
 					currentSet = newData;
-					writeToLCD(voltageSet, currentSet);
+					LCD_WriteCurrent(currentSet);
 					if (outputIsOn)
 					{
 						transferToDAC(9, currentSet / currentSetMulti);
