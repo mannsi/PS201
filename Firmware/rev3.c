@@ -48,7 +48,7 @@ int main(void)
 
 	LCD_Initialize(backlightIntensity,contrast);
 	ADC_initialize();
-	//USART_Initialize();
+	USART_Initialize();
 	
 	LCD_StartScreen();
 	_delay_ms(1000);
@@ -220,7 +220,7 @@ int main(void)
 			}
 		}
 
-		/*if (readyToReceiveCommand)
+		if (readyToReceiveCommand)
 		{
 			// Listen for USB command
 			unsigned char command = USART_ReceiveCommand();
@@ -303,7 +303,7 @@ int main(void)
 					USART_TransmitChar('\n');
 					break;
 			}
-		}*/
+		}
 	}
 }
 

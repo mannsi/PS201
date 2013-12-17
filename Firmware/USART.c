@@ -3,21 +3,21 @@
 void USART_Initialize(void)
 {
 	// Set BAUD rate
-	UBRRH = (unsigned char)(MYUBRR>>8);
-	UBRRL = (unsigned char) MYUBRR;
+	UBRR0H = (unsigned char)(MYUBRR>>8);
+	UBRR0L = (unsigned char) MYUBRR;
 
 	// Enable receiver and transmitter
-	UCSRB = (1 << RXEN) | (1 << TXEN);
+	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
 	// Set frame format: 8data, 2stop bit
-	UCSRC = (1<<URSEL) | (1<<USBS) | (3<<UCSZ0);
+	UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 }
 
 void USART_TransmitChar(unsigned char data)
 {
 	// Wait for empty transmit buffer
-	while ( !(UCSRA & (1<<UDRE)) );
+	while ( !(UCSR0A & (1<<UDRE0)) );
 	// Put the data into buffer
-	UDR = data;
+	UDR0 = data;
 }
 
 void USART_Transmit(unsigned char * data)
@@ -34,10 +34,10 @@ void USART_Transmit(unsigned char * data)
 
 unsigned char USART_ReceiveCommand()
 {
-	if(UCSRA & 1 << RXC)
+	if(UCSR0A & 1 << RXC0)
 	{
 		// Decode the signal in main loop
-		return UDR;
+		return UDR0;
 	}
 	// return 0 for no command
 	return 0;
@@ -47,10 +47,10 @@ int USART_ReceiveData()
 {
 	int out;
 	// DANGEROUS! we wait for data
-	while( !(UCSRA & (1<<RXC)));
-	out = UDR<<8;
-	while( !(UCSRA & (1<<RXC)));
-	out |= UDR;
+	while( !(UCSR0A & (1<<RXC0)));
+	out = UDR0<<8;
+	while( !(UCSR0A & (1<<RXC0)));
+	out |= UDR0;
 	
 	return out;
 }

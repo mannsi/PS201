@@ -6,7 +6,7 @@
 #include "LCD.h"
 #include "SW.h"
 #include "ADC.h"
-//#include "USART.h"
+#include "USART.h"
 
 // Shortcuts for the DAC chip select pin
 #define SELECT_DAC PORTD &= ~(1 << PD7)
@@ -27,6 +27,12 @@ void switchOutput(void);
 void enableOutput(void);
 void disableOutput(void);
 
+void writeToUsb(uint16_t voltage, 
+				uint16_t current, 
+				uint16_t voltageSet, 
+				uint16_t currentSet, 
+				uint16_t preregVoltage, 
+				unsigned char outputOn);
 
 static void initRegistries(void);
 static void initCalibration(void);
