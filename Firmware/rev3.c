@@ -64,6 +64,7 @@ int main(void)
 		if (SW_Check1())
 		{
 			switchOutput();
+			delay = setDelay;
 			forceUpdate = 1;
 		}
 
@@ -121,11 +122,7 @@ int main(void)
 					}
 					
 					transferToDAC(10, voltageSet / voltageSetMulti);
-
 					LCD_WriteVoltage(voltageSet);
-					// Set delay to keep displaying the set voltage
-					// and current for some time
-					delay = setDelay;
 					break;
 				case CURRENT:
 					if(encoderTurnDirection == ENCODER_CCW) 	
@@ -150,9 +147,9 @@ int main(void)
 					
 					transferToDAC(9, currentSet / currentSetMulti);
 					LCD_WriteCurrent(currentSet);
-					delay = setDelay;
 					break;
 			}
+			delay = setDelay;
 			forceUpdate = 1;
 		}
 	
@@ -271,6 +268,8 @@ int main(void)
 					if(newData > 2000) break;
 					voltageSet = newData;
 					LCD_WriteVoltage(voltageSet);
+					delay = setDelay;
+					forceUpdate = 1;
 					if (outputIsOn)
 					{
 						transferToDAC(10, voltageSet / voltageSetMulti);
@@ -287,6 +286,8 @@ int main(void)
 					if(newData > 100) break;
 					currentSet = newData;
 					LCD_WriteCurrent(currentSet);
+					delay = setDelay;
+					forceUpdate = 1;
 					if (outputIsOn)
 					{
 						transferToDAC(9, currentSet / currentSetMulti);
