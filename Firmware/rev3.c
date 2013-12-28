@@ -18,13 +18,9 @@ uint8_t outputIsOn = 0;
 uint8_t backlightIntensity = 10;
 uint8_t contrast = 50;
 uint16_t voltageRead = 0;
-//uint16_t voltageAveraging = 0;
 uint16_t currentRead = 0;
-//uint16_t currentAveraging = 0;
 uint16_t preregRead = 0;
-//uint16_t preregAveraging = 0;
 uint16_t vinRead = 0;
-//uint16_t vinAveraging = 0;
 uint16_t voltageSet = 0;
 uint16_t currentSet = 0;
 
@@ -54,7 +50,7 @@ int main(void)
 	_delay_ms(1000);
 	
 	// Start in the home screen with the set values
-	LCD_HomeScreen(voltageSet,currentSet,outputIsOn);
+	LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
 
 	/************************
 	*						*
@@ -68,7 +64,7 @@ int main(void)
 		if (SW_Check1())
 		{
 			switchOutput();
-			//forceUpdate = 1;
+			forceUpdate = 1;
 		}
 
 		// If Sw2 is pressed, let the encoder control the backlight
@@ -76,8 +72,7 @@ int main(void)
 		{
 			// Go into backlight setting
 			backlightIntensity = LCD_SetBacklight(backlightIntensity);
-			LCD_HomeScreen(voltageSet,currentSet,outputIsOn);
-			//forceUpdate = 1;
+			LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
 		}
 
 		// If Sw4 is pressed, toggle the encoder
@@ -87,17 +82,15 @@ int main(void)
 			{
 				case VOLTAGE:
 					encoderControls = CURRENT;
-					LCD_WriteControlArrow();
 					break;
 				case CURRENT:
 					encoderControls = VOLTAGE;
-					LCD_WriteControlArrow();
 					break;
 				default:
 					encoderControls = VOLTAGE;
-					LCD_WriteControlArrow();
 					break;
 			}
+			LCD_WriteControlArrow(encoderControls);
 		}
 		
 		// Rotary encoder
@@ -108,44 +101,59 @@ int main(void)
 			{		
 				case VOLTAGE:
 					if(encoderTurnDirection == ENCODER_CCW)	
+					{
 						voltageSet--;
+					}
 					else 					
+					{
 						voltageSet++;
-
+					}
+					
 					// Make sure voltage doesn't go under 0
 					// or over 20 Volts.
 					if(voltageSet > 60000)
+					{
 						voltageSet = 0;
+					}
 					else if(voltageSet > 200)
+					{					
 						voltageSet = 200;
-
+					}
+					
 					transferToDAC(10, voltageSet / voltageSetMulti);
 
 					LCD_WriteVoltage(voltageSet);
 					// Set delay to keep displaying the set voltage
 					// and current for some time
 					delay = setDelay;
-					//forceUpdate = 1;
 					break;
 				case CURRENT:
 					if(encoderTurnDirection == ENCODER_CCW) 	
+					{
 						currentSet--;
+					}
 					else					
+					{
 						currentSet++;
-
+					}
+					
 					// Make sure Current doesn't go under 0
 					// or over 1000 mA.
 					if(currentSet > 60000)
+					{
 						currentSet = 0;
+					}
 					else if(currentSet > 100)
+					{
 						currentSet = 100;
-
+					}
+					
 					transferToDAC(9, currentSet / currentSetMulti);
 					LCD_WriteCurrent(currentSet);
 					delay = setDelay;
-					//forceUpdate = 1;
 					break;
 			}
+			forceUpdate = 1;
 		}
 	
 		// if delay is zero we start a ADC conversion cycle
@@ -161,10 +169,10 @@ int main(void)
 			}
 		}
 		else
+		{
 			delay--;
-
-		//LCD_WriteCurrent(delay);
-
+		}
+			
 		// When a new ADC reading is registered we display it
 		if(ADC_status & ADC_NEWREADING)
 		{
@@ -176,19 +184,13 @@ int main(void)
 			switch(ADC_status)
 			{
 				case ADC_VOLTAGE:
-					oldValue = voltageRead;
 					voltageRead = ADC_reading * voltageReadMulti;
-					if (voltageRead != oldValue)
-						LCD_WriteVoltage(voltageRead);
 					ADC_status = ADC_CURRENT;
 					ADMUX &= 0xF0;
 					ADMUX |= CURRENT_MON;
 					break;
 				case ADC_CURRENT:
-					oldValue = currentRead;
 					currentRead = ADC_reading * currentReadMulti;
-					if (currentRead != oldValue)
-						LCD_WriteCurrent(currentRead);	
 					ADC_status = ADC_PREREGULATOR;
 					ADMUX &= 0xF0;
 					ADMUX |= PREREG;
@@ -214,8 +216,27 @@ int main(void)
 
 			if (ADC_status == ADC_VIN)
 			{	
+			
+				/*
+				Include this if you want to update the device to real values after delay
+				*/
+				if(!firstRun && forceUpdate)
+				{
+					if(outputIsOn)
+					{
+						LCD_WriteCurrent(currentRead);
+						LCD_WriteVoltage(voltageRead);
+					}
+					else
+					{
+						LCD_WriteCurrent(currentSet);
+						LCD_WriteVoltage(voltageSet);
+					}
+				}
+			
 				delay = readDelay;
 				firstRun = 0;
+				forceUpdate = 0;
 				readyToReceiveCommand = 1;
 			}
 		}
@@ -344,14 +365,14 @@ void writeVoltageToUsb(uint16_t voltage)
 {
 	unsigned char voltageArray [10];
 	mapVoltage(voltage, voltageArray);
-	//USART_Transmit(voltageArray);
+	USART_Transmit(voltageArray);
 }
 
 void writeCurrentToUsb(uint16_t current)
 {
 	unsigned char currentArray [10];
 	mapCurrent(current, currentArray);	
-	//USART_Transmit(currentArray);
+	USART_Transmit(currentArray);
 }
 
 void writeToUsb(uint16_t voltage, 
@@ -374,7 +395,7 @@ void writeToUsb(uint16_t voltage,
 	mapCurrent(currentSet, currentSetArray);
 	mapVoltage(preregVoltage, voltagePreregArray);
 	joinArrays(voltageArray, currentArray, voltageSetArray, currentSetArray, voltagePreregArray , outputOn, combinedArray);
-	//USART_Transmit(combinedArray);
+	USART_Transmit(combinedArray);
 }
 
 void joinArrays(

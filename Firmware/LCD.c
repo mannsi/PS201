@@ -14,7 +14,6 @@ void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 	PORTB |= 1 << PB2; 
 	PORTB |= 1 << PB1;
 
-
 	// Setting up OC1 which is the PWM module for
 	// charge pump and backlight. The charge pump is 
 	// always set on half duty cycle while backlight is 
@@ -139,7 +138,6 @@ void LCD_NoHighLight()
 	LCD_Command(0xC);
 }
 
-
 // to clear the display
 void LCD_Clear()
 {
@@ -157,7 +155,7 @@ void LCD_StartScreen()
 	LCD_Write("PSU");
 }
 
-void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn)
+void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn, unsigned char encoderControls)
 {
 	// Write normal home screen
 	LCD_Clear();
@@ -166,14 +164,18 @@ void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn)
 	LCD_Cursor(1,0);
 	LCD_Write("I:      mA");
 
-	LCD_WriteControlArrow();
+	LCD_WriteControlArrow(encoderControls);
 	LCD_WriteVoltage(voltage);
 	LCD_WriteCurrent(current);
 
 	if(outputOn)
+	{
 		LCD_OutputOn();
+	}
 	else
+	{	
 		LCD_OutputOff();
+	}
 }
 
 void LCD_WriteVoltage(uint16_t voltage)
@@ -190,10 +192,9 @@ void LCD_WriteCurrent(uint16_t current)
 	mapCurrent(current, currentArray);
 	LCD_Cursor(1,3);
 	LCD_Write(currentArray);
-
 }
 
-void LCD_WriteControlArrow(void)
+void LCD_WriteControlArrow(unsigned char encoderControls)
 {
 	// Determine the last selected encoder function
 	switch(encoderControls)
@@ -295,20 +296,6 @@ static void LCD_Command(unsigned char a)
 	_delay_ms(1);
 	DISABLE_DISPLAY;
 }
-
-//void showOutputOnOff()
-//{
-//	if(showOutputOn)
-//	{
-//		LCD_Cursor(0,13);
-//		LCD_Write("ON");
-//	}
-//	else
-//	{
-//		LCD_Cursor(0,13);
-//		LCD_Write("OFF");
-//	}
-//}
 
 void LCD_OutputOn()
 {
