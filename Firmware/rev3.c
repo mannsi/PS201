@@ -305,6 +305,8 @@ int main(void)
 			}
 		}
 	}
+
+	return 0;
 }
 
 void writeDebug(char *debugMessage)

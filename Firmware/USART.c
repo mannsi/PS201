@@ -1,5 +1,9 @@
 #include "USART.h"
 
+FILE USART_input = FDEV_SETUP_STREAM(NULL,USART_GetChar,_FDEV_SETUP_READ);
+FILE USART_output = FDEV_SETUP_STREAM(USART_PutChar,NULL,_FDEV_SETUP_WRITE);
+
+
 void USART_Initialize(void)
 {
 	// Set BAUD rate
@@ -7,9 +11,32 @@ void USART_Initialize(void)
 	UBRR0L = (unsigned char) MYUBRR;
 
 	// Enable receiver and transmitter
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+	BIT_SET(UCSR0B,BIT(RXEN0));
+	BIT_SET(UCSR0B,BIT(TXEN0));
 	// Set frame format: 8data, 2stop bit
-	UCSR0C = (1<<USBS0)|(3<<UCSZ00);
+	BIT_SET(UCSR0C,BIT(USBS0));
+	BIT_SET(UCSR0C,BIT(UCSZ00));
+
+	// Set stdout and in
+	//stdout = &USART_output;
+	//stdin  = &USART_input;
+}
+
+int USART_PutChar(char c, FILE *stream)
+{
+	if(c == '\n')
+	{
+		USART_PutChar('\r',stream);
+	}
+	while ( !BIT_GET(UCSR0A,BIT(UDRE0)) );
+	UDR0 = c;
+	return 0;
+}
+
+int USART_GetChar(FILE *stream)
+{
+	while ( !BIT_GET(UCSR0A,BIT(RXC0)) );
+	return (int) UDR0;
 }
 
 void USART_TransmitChar(unsigned char data)

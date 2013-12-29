@@ -3,6 +3,7 @@
 
 #include<avr/io.h>
 #include<avr/interrupt.h>
+#include "def.h"
 #include "LCD.h"
 #include "SW.h"
 #include "ADC.h"
@@ -50,8 +51,5 @@ int appendArray(unsigned char *targetArray,
 				unsigned char *appendingArray, 
 				int appendingArrayMaxSize);
 void clearArray(unsigned char *array, int size);
-
-
-
 
 #endif
