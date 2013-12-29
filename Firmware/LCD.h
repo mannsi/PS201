@@ -2,8 +2,6 @@
 #define LCD_H
 
 #include<avr/io.h>
-#include "SW.h"
-#include "rev3.h"
 
 #ifndef F_CPU
 #define F_CPU 8000000
@@ -23,8 +21,8 @@ void LCD_Clear(void);
 void LCD_HighLight(void);
 void LCD_NoHighLight(void);
 void LCD_StartScreen(void);
-void LCD_HomeScreen(uint16_t v,uint16_t c, uint8_t outputOn);
-void LCD_WriteControlArrow(void);
+void LCD_HomeScreen(uint16_t v,uint16_t c, uint8_t outputOn, unsigned char encoderControls);
+void LCD_WriteControlArrow(unsigned char);
 int LCD_SetBacklight(uint8_t backlightIntensity);
 void LCD_OutputOn(void);
 void LCD_OutputOff(void);

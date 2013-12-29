@@ -26,11 +26,9 @@ class Connection():
             for portNumber in range(256):
                 try:
                     con = serial.Serial(portNumber, self.baudRate, timeout = 0.01)
-                    #print(datetime.now().time())
                     available.append(con.portstr)
                     if self.validConnection(con):
                         defaultPort = con.portstr
-                    #print(datetime.now().time())
                     con.close()
                 except serial.SerialException:
                     pass
