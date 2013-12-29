@@ -1,0 +1,27 @@
+The USART Serial communication for DPS 201 is defined in this file
+
+1) 	We use automation friendly protocol, that means non human-readable.
+2) 	We use HDLC framing protocol with
+		- start char: 	0x7E
+		- end char:		0x7E
+		- esc char:		0x7D
+3) 	This is a master/slave protocol where slave always returns an 
+ 	answer when length and the CRC has been verified
+		- ACK:			0x06
+		- NAK:			0x15
+4) 	ALL packets take the form
+		<u8 start>			Start character
+		<u8 ID>				Command identification
+		<u8 len>			length of data
+		<u8 data[len]>		data
+		<u16 CRC>			16 bit CRC code
+		<u8 end>			end character
+	This means all packets will be of length len+4 (char)
+5)	slave also replies ID when it responds to master. For example, master
+	asks for a measured value, slave responds two packages, first <ACK> 
+	then <ID><data>. If master gives a command then slave only responds
+	with <ACK>.
+6)	Max package lenth (total) is 80.
+7)	All numercal values are sent using SI units in scientific notation.
+8)	Command identifications are defined in the file: idCodes
+
