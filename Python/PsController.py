@@ -81,21 +81,20 @@ class Controller():
                 self.cancelNextGet.get()
                 return
             allValues = self.getAllValues()
-            listOfValues = allValues.split(";") 
-            if len(listOfValues) < 6:
+            if len(allValues) < 6:
                 return     
             self.queue.put(realVoltageString)
-            self.queue.put(listOfValues[0])      
+            self.queue.put(allValues[0])      
             self.queue.put(realCurrentString)
-            self.queue.put(listOfValues[1])      
+            self.queue.put(allValues[1])      
             self.queue.put(targetVoltageString)
-            self.queue.put(listOfValues[2])     
+            self.queue.put(allValues[2])     
             self.queue.put(targetCurrentString)
-            self.queue.put(listOfValues[3])     
+            self.queue.put(allValues[3])     
             self.queue.put(preRegVoltageString)
-            self.queue.put(listOfValues[4])    
+            self.queue.put(allValues[4])    
             self.queue.put(outputOnOffString)
-            self.queue.put(listOfValues[5])
+            self.queue.put(allValues[5])
         except Exception as e:
             self.__connectionLost__("__updateValuesWorker__")      
         
