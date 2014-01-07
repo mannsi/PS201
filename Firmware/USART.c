@@ -81,3 +81,177 @@ int USART_ReceiveData()
 	
 	return out;
 }
+
+int USART_IsReceivingData()
+{
+	// The RXC0 bit of the UCSR0A register is set
+	// when the buffer is loaded.
+	if( BIT_GET(UCSR0A,BIT(RXC0)) )
+	{
+		return 1;
+	}
+	// return 0 for no command
+	return 0;
+
+}
+
+static uint8_t DecodeChar(uint8_t *c, FILE *stream)
+{
+	*c = fgetc(stream);
+	if (*c == USART_END)
+	{
+		*c = '\0';
+		return 1;
+	}
+	if (*c == USART_ESC)
+	{
+		*c = (USART_FLIPBIT ^ fgetc(stream));
+	}
+	return 0;
+}
+
+uint8_t USART_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen, FILE *stream)
+{
+	// Tha data structure is
+	//	<SFLAG><CMD><LEN><DATA[LEN]><CRC><EFLAG>
+	// This function returns CMD.
+	
+	// Catch the SFLAG	
+	uint8_t buffer = fgetc(stream);
+	if(buffer != USART_START)
+	{
+		*cmd = buffer;
+		return 0;
+	}
+
+	// Next the CMD
+	if (DecodeChar(cmd,stream))
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+
+	// The LEN
+	uint8_t len = 0;
+	if (DecodeChar(&len,stream))
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+
+	// Now we find the DATA, first we check if len 
+	// exceeds maxlen
+	if(len > maxlen)
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+	else if(len != maxlen)
+	{
+		data[len] = '\0';
+	}
+
+	int i;
+	for (i = 0; i < len; i++)
+	{
+		if (DecodeChar(&(data[i]),stream))
+		{
+			*cmd = USART_NAK;
+			return *cmd;
+		}
+	}
+
+	// Finally we retrieve the CRC code
+	// High byte
+	uint16_t crc = 0;
+	if (DecodeChar(&buffer,stream))
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+	crc = ((uint16_t) buffer);
+	crc = crc << 8;
+	// Low byte
+	if (DecodeChar(&buffer,stream))
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+	crc |= ((uint16_t) buffer);
+
+	// Check that the stop flag is provided
+	if (fgetc(stream) != USART_END)
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+
+	// Do a CRC check
+	// We use a crc function provided by <util/crc16.h>
+	uint16_t calculatedCrc = 0;
+	calculatedCrc = _crc_ccitt_update(calculatedCrc,*cmd);
+	calculatedCrc = _crc_ccitt_update(calculatedCrc,len);
+	for (i = 0; i < len; i++)
+	{
+		calculatedCrc = _crc_ccitt_update(calculatedCrc,data[i]);
+	}
+
+	// The calculated crc should now be equal to the crc received.
+	if (crc != calculatedCrc)
+	{
+		*cmd = USART_NAK;
+		return *cmd;
+	}
+
+	return *cmd;
+}
+
+static void EncodeChar(uint8_t c, FILE *stream)
+{
+	if (c == USART_END)
+	{
+		putc(USART_ESC,stream);
+		putc(USART_FLIPBIT ^ c,stream);
+	}
+	else if (c == USART_ESC)
+	{
+		putc(USART_ESC,stream);
+		putc(USART_FLIPBIT ^ c,stream);
+	}
+	else 
+	{
+		putc(c,stream);
+	}
+}
+
+// This is similar to getting a packet, see
+// USART_GetPacket for more comments.
+void USART_SendPacket(uint8_t cmd, char *data, FILE *stream)
+{
+	// Calculate the length of the data
+	uint8_t len= (strlen(data));
+	
+	// Calculate the CRC code
+	uint16_t crc = 0;
+	crc = _crc_ccitt_update(crc,cmd);
+	crc = _crc_ccitt_update(crc,len);
+	int i;
+	for (i = 0; i < len; i++)
+	{
+		crc = _crc_ccitt_update(crc,data[i]);
+	}
+
+	// Send the packet
+	putc(USART_START,stream);
+	EncodeChar(cmd,stream);
+	EncodeChar(len,stream);
+	for (i = 0; i < len; i++)
+	{
+		EncodeChar((uint8_t) data[i],stream);
+	}
+	EncodeChar(((uint8_t) (crc >> 8)),stream);
+	EncodeChar(((uint8_t) crc),stream);
+	putc(USART_END,stream);
+
+}
+

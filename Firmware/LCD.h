@@ -8,6 +8,7 @@
 #define F_CPU 8000000
 #endif
 #include<util/delay.h>
+#include "SW.h"
 
 // shortcuts for display 
 #define ENABLE_DISPLAY PORTD |= 1 << PD5
