@@ -4,21 +4,21 @@ import logging
 
 class DataLayer():
     def __init__(self):
-        self.deviceWriteRealVoltage = b'\xd0'
-        self.deviceWriteRealCurrent = b'\xd1'
-        self.deviceWritePreRegulatorVoltage = b'\xd3'
-        self.deviceReadTargetVoltage = b'\xc0'
-        self.deviceReadTargetCurrent = b'\xc1'
-        self.deviceWriteTargetVoltage = b'\xe0'
-        self.deviceWriteTargetCurrent = b'\xe1'
-        self.deviceTurnOnOutput = b'\xc2'
-        self.deviceTurnOffOutput = b'\xc3'
-        self.deviceIsOutputOn = b'\xc4'
-        self.handshakeSignal = b'\xa0'
-        self.programId = b'\xa1'
-        self.deviceWriteAll = b'\xa5'
+        self.__deviceWriteRealVoltage__ = b'\xd0'
+        self.__deviceWriteRealCurrent__ = b'\xd1'
+        self.__deviceWritePreRegulatorVoltage__ = b'\xd3'
+        self.__deviceReadTargetVoltage__ = b'\xc0'
+        self.__deviceReadTargetCurrent__ = b'\xc1'
+        self.__deviceWriteTargetVoltage__ = b'\xe0'
+        self.__deviceWriteTargetCurrent__ = b'\xe1'
+        self.__deviceTurnOnOutput__ = b'\xc2'
+        self.__deviceTurnOffOutput__ = b'\xc3'
+        self.__deviceIsOutputOn__ = b'\xc4'
+        self.__handshakeSignal__ = b'\xa0'
+        self.__programId__ = b'\xa1'
+        self.__deviceWriteAll__ = b'\xa5'
 
-        self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 1,handshakeSignal=self.handshakeSignal,programId=self.programId)
+        self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 1,handshakeSignal=self.__handshakeSignal__,programId=self.__programId__)
 
     def connect(self, usbPortNumber):
         try:
@@ -44,43 +44,50 @@ class DataLayer():
         return None
 
     def getAvailableUsbPorts(self):
-        return self.connection.getAvailableUsbPorts()
+        return self.connection.getUsbPorts()
 
     def getAllValues(self):
-        values = self.connection.getValue(self.deviceWriteAll)
+        values = self.connection.getValue(self.__deviceWriteAll__)
         while not values:
-            values = self.connection.getValue(self.deviceWriteAll)
-        return values
+            values = self.connection.getValue(self.__deviceWriteAll__)
+        splitValues = values.split(";") 
+        floatValues = [float(value) for value in splitValues]
+        return floatValues
 
     def getRealVoltage(self):
-        return self.connection.getValue(self.deviceWriteRealCurrent)
+        return float(self.connection.getValue(self.__deviceWriteRealCurrent__))
 
     def getRealCurrent(self):
-        return self.connection.getValue(self.deviceWriteRealVoltage)
+        return float(self.connection.getValue(self.__deviceWriteRealVoltage__))
 
     def getPreRegulatorVoltage(self):
-        return self.connection.getValue(self.deviceWritePreRegulatorVoltage)
+        return float(self.connection.getValue(self.__deviceWritePreRegulatorVoltage__))
 
     def getTargetVoltage(self):
-        return self.connection.getValue(self.deviceWriteTargetVoltage)
+        value = self.connection.getValue(self.__deviceWriteTargetVoltage__)
+        count = 0
+        while value is "":
+            count += 1
+            value = self.connection.getValue(self.__deviceWriteTargetVoltage__)
+        return float(value)
 
     def getTargetCurrent(self):
-        return self.connection.getValue(self.deviceWriteTargetCurrent)
+        return float(self.connection.getValue(self.__deviceWriteTargetCurrent__))
 
     def getDeviceIsOn(self):
-        return self.connection.getValue(self.deviceIsOutputOn)
+        return bool(self.connection.getValue(self.__deviceIsOutputOn__))
 
     def setTargetVoltage(self, targetVoltage):
-        self.connection.setValue(self.deviceReadTargetVoltage, struct.pack(">H",int(10*targetVoltage)))
+        self.connection.setValue(self.__deviceReadTargetVoltage__, struct.pack(">H",int(10*targetVoltage)))
 
     def setTargetCurrent(self, targetCurrent):
-        self.connection.setValue(self.deviceReadTargetCurrent, struct.pack(">H",int(targetCurrent/10)))
+        self.connection.setValue(self.__deviceReadTargetCurrent__, struct.pack(">H",int(targetCurrent/10)))
       
     def setOutputOnOff(self, shouldBeOn):
         if shouldBeOn:
-            deviceCommand = self.deviceTurnOnOutput
+            deviceCommand = self.__deviceTurnOnOutput__
         else:
-            deviceCommand = self.deviceTurnOffOutput
+            deviceCommand = self.__deviceTurnOffOutput__
         self.connection.setValue(deviceCommand)
 
   

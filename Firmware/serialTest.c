@@ -34,6 +34,7 @@ int main(void){
 				sendpacket(cmd,data);
 				putchar('\n');
 			}
+			sendpacket(cmd,data);
 		}
 	}
 	

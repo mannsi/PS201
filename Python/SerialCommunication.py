@@ -17,7 +17,10 @@ class Connection():
     def setConnection(self, connection):
         self.connection = connection
     
-    def getAvailableUsbPorts(self):
+    """
+    Get a tuple containing (avilableUsbPorts, defaultUsbPort)
+    """
+    def getUsbPorts(self):
         defaultPort = None
         system_name = platform.system()
         available = []
@@ -42,6 +45,14 @@ class Connection():
             usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
             for usbPort in usbList:
                 available.append(usbPort)
+            try:
+                for port in available:
+                    con = serial.Serial(port, self.baudRate, timeout = 0.01)
+                    if self.validConnection(con):
+                        defaultPort = con.portstr
+                        break
+            except serial.SerialException:
+                    pass
         return (available, defaultPort)
     
     def validConnection(self, connection):

@@ -59,7 +59,7 @@ class PsFrame():
     
     def buildUsbPortMenu(self):
       self.submenu.delete(0, END)
-      (avilableUsbPorts, defaultUsbPort)  = controller.getAvailableUsbPorts()
+      (avilableUsbPorts, defaultUsbPort) = controller.getAvailableUsbPorts()
       self.selectedUsbPort = StringVar()
       if connectedPort != '' and connectedPort not in avilableUsbPorts:
         self.submenu.add_radiobutton(label=connectedPort,value=connectedPort,var=self.selectedUsbPort)
@@ -103,8 +103,8 @@ class PsFrame():
         self.topPanel.valuesFrame.currentEntryVar.set(newRealCurrent)
     
     def outPutOnOffUpdate(self, newOutputOn):
-      outputOn = newOutputOn
-      self.topPanel.chkOutputOnVar.set(newOutputOn)
+      outputOn = bool(newOutputOn)
+      self.topPanel.chkOutputOnVar.set(outputOn)
     
     def preRegVoltageUpdate(self, preRegVoltage):
       self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
@@ -245,7 +245,7 @@ class ValuesFrame(Frame):
     def setTargetVoltage(self,args=None):
         targetVoltage = tkinter.simpledialog.askfloat("Target voltage", "Enter new target voltage (0.00 - 20.00 V)",parent=self)
         if targetVoltage is not None:
-            if (targetVoltage > 0 and targetVoltage < 20):
+            if (targetVoltage > 0 and targetVoltage <= 20):
                 controller.setTargetVoltage(targetVoltage, threaded=True)        
 
 class TabControl(Notebook):
