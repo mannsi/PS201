@@ -77,14 +77,14 @@ PROGRAMMER_MCU=m328p
 
 # Name of our project
 # (use a single word, e.g. 'myproject')
-PROJECTNAME=serialTest
+PROJECTNAME=rev3
 
 # Source files
 # List C/C++/Assembly source files:
 # (list all files to compile, e.g. 'a.c b.cpp as.S'):
 # Use .cc, .cpp or .C suffix for C++ files, use .S 
 # (NOT .s !!!) for assembly source code files.
-PRJSRC=serialTest.c USART.c #LCD.c SW.c ADC.c USART.c
+PRJSRC=serialTest.c USART.c# LCD.c SW.c ADC.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include
@@ -116,11 +116,7 @@ AVRDUDE_PROGRAMMERID=stk500v2
 # port--serial or parallel port to which your 
 # hardware programmer is attached
 #
-<<<<<<< HEAD
-AVRDUDE_PORT=/dev/ttyUSB1
-=======
-AVRDUDE_PORT=COM3
->>>>>>> f3187e650b2ed6d60607cd6154b16c009e552ca9
+AVRDUDE_PORT=/dev/ttyUSB0
 
 
 ####################################################

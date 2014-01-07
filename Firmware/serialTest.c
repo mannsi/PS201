@@ -15,29 +15,25 @@ int main(void){
 	stdout = &USART_output;
 	stdin  = &USART_input;
 
-	char input[80];
+	uint8_t cmd = 0;
+	char data[MAXLEN];
 	
-	USART_Transmit((unsigned char) "Hello world");
+	//USART_Transmit((unsigned char) "Hello world");
 	puts("Hello world!");
 	
 	while(1){
-		puts("Hello world!");
-		char firstChar = getchar();
-		if (firstChar == '*')
+		if(USART_IsReceivingData())
 		{
-			// Command
-			fgets(input,80,stdin);
-			printf("You wrote *%s\n",input);
-		}
-		else if (firstChar == ':')
-		{
-			// Command
-			fgets(input,80,stdin);
-			printf("You wrote :%s\n",input);
-		}
-		else
-		{
-			printf("no command: %c\n",firstChar);
+			if(getpacket(&cmd,data))
+			{
+				printf("Command %c received ",cmd);
+				printf("with data ");
+				puts(data);
+				sprintf(data,"Frissi");
+				cmd = ((uint8_t) '1');
+				sendpacket(cmd,data);
+				putchar('\n');
+			}
 		}
 	}
 	
