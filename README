@@ -1,0 +1,45 @@
+*********************
+*					*
+*		PS201		*
+*					*	
+*********************
+
+
+1.	Introduction
+2.	Installation and quick guide
+3.	Serial commands and other information
+4.	Firmware
+5.	Software
+
+
+1.	Introduction
+----------------
+The PS201 repository contains the firmware and pc software for a hardware project, the DPS201. 
+
+DPS201 is a 20 Volt, 1 Ampere adjustable lab power supply, the voltage can be adjusted in 100mV steps from 0 to 20V and the current limit can likewise be adjusted in 10mA steps from 0 to 1A. The precision has not yet been fully characterized but is close to 1% for Voltage and current over the full range. The power supply has independent LCD readout that normally displays the measured voltage and current and a digital encoder which the user can use to adjust the output voltage and current limit. The DPS201 can also controlled and monitored via a USB serial link by the PC software PsController.
+
+In this file we briefly describe the firmware and software which are fully open source licensed under GNU GPL v??. Feel free to copy and modify our software, any feedback is welcome.
+
+
+2.	Installation and quick guide
+--------------------------------
+Installation process of the PC software...
+The usage of the software is self-explanatory. In the lower right hand corner there is a "Connect" button which can be used to connect to the DPS201 after a relevant (virtual) serial port has been selected in the "Tools" drop down menu. After a connection has been mad the status changes to "connected" and the current voltage outputted by the DPS201 as well as the current can be read in the main display area. Other data from the device can be read in the "Status" tab. The user can program the power supply using the "Sequence" tab. Note that this functionality is only possible when the DPS201 is connected to the PC and a serial link is made (the "Status" screen shows "Connected".)
+
+
+3.	Serial commands and other information
+-----------------------------------------
+
+
+4. Firmware
+-----------
+The firmware is placed in the "Firmware" directory and is completely written in C. The bulk of the firmware is in the rev3.c file which uses functions from the other C files in the directory. The files are organized by their functionality in the code, broadly the files contain the following functionality
+def.h	- General definitions.
+ADC.h	- The A to D converter.
+LCD.h	- The control and service functions for the LCD.
+SW.h	- Physical switches on the DPS201.
+USART.h	- The USB serial link and protocol.
+
+
+5.	Software
+------------
