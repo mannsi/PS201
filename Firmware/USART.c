@@ -163,7 +163,7 @@ uint8_t USART_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen, FILE *stream)
 
 	// Finally we retrieve the CRC code
 	// High byte
-	uint16_t crc = 0;
+	uint16_t crc = 0xFFFF;
 	if (DecodeChar(&buffer,stream))
 	{
 		*cmd = USART_NAK;
@@ -189,11 +189,11 @@ uint8_t USART_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen, FILE *stream)
 	// Do a CRC check
 	// We use a crc function provided by <util/crc16.h>
 	uint16_t calculatedCrc = 0;
-	calculatedCrc = _crc_ccitt_update(calculatedCrc,*cmd);
-	calculatedCrc = _crc_ccitt_update(calculatedCrc,len);
+	calculatedCrc = _crc_xmodem_update(calculatedCrc,*cmd);
+	calculatedCrc = _crc_xmodem_update(calculatedCrc,len);
 	for (i = 0; i < len; i++)
 	{
-		calculatedCrc = _crc_ccitt_update(calculatedCrc,data[i]);
+		calculatedCrc = _crc_xmodem_update(calculatedCrc,data[i]);
 	}
 
 	// The calculated crc should now be equal to the crc received.
@@ -232,13 +232,13 @@ void USART_SendPacket(uint8_t cmd, char *data, FILE *stream)
 	uint8_t len= (strlen(data));
 	
 	// Calculate the CRC code
-	uint16_t crc = 0;
-	crc = _crc_ccitt_update(crc,cmd);
-	crc = _crc_ccitt_update(crc,len);
+	uint16_t crc = 0x0000;
+	crc = _crc_xmodem_update(crc,cmd);
+	crc = _crc_xmodem_update(crc,len);
 	int i;
 	for (i = 0; i < len; i++)
 	{
-		crc = _crc_ccitt_update(crc,data[i]);
+		crc = _crc_xmodem_update(crc,data[i]);
 	}
 
 	// Send the packet

@@ -1,6 +1,10 @@
 #ifndef REV3_H
 #define REV3_H
 
+#ifndef F_CPU
+#define F_CPU 16000000
+#endif
+
 #include<avr/io.h>
 #include "def.h"
 #include "USART.h"
