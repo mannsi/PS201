@@ -255,3 +255,25 @@ void USART_SendPacket(uint8_t cmd, char *data, FILE *stream)
 
 }
 
+// Sendpacket without any data
+void USART_SendCmd(uint8_t cmd, FILE *stream)
+{
+	// We still send length of the data which is 0
+	uint8_t len = 0;
+	
+	// Calculate the CRC code
+	uint16_t crc = 0x0000;
+	crc = _crc_xmodem_update(crc,cmd);
+	crc = _crc_xmodem_update(crc,len);
+
+	// Send the packet
+	putc(USART_START,stream);
+	EncodeChar(cmd,stream);
+	EncodeChar(len,stream);
+	EncodeChar(((uint8_t) (crc >> 8)),stream);
+	EncodeChar(((uint8_t) crc),stream);
+	putc(USART_END,stream);
+
+}
+
+

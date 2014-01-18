@@ -7,7 +7,7 @@
 #include <util/crc16.h>
 #include "def.h"
 #ifndef F_CPU
-#define F_CPU 16000000
+#define F_CPU 8000000
 #endif
 
 #ifndef BAUD
@@ -39,6 +39,7 @@
 #define USART_SEND_HANDSHAKE	(0xA0)
 #define USART_HANDSHAKE			(0xA1)
 #define USART_WRITEALL			(0xA5)
+#define USART_WRITEALLCOMMANDS	(0xBB)
 
 void USART_Initialize(void);
 int USART_PutChar(char c, FILE *stream);
@@ -50,6 +51,7 @@ int USART_ReceiveData(void);					// Should go
 int USART_IsReceivingData(void);
 uint8_t USART_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen, FILE *stream);
 void USART_SendPacket(uint8_t cmd, char *data, FILE *stream);
+void USART_SendCmd(uint8_t cmd, FILE *stream);
 
 
 // IO Stream
