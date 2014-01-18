@@ -45,6 +45,9 @@ int main(void)
 	LCD_Initialize(backlightIntensity,contrast);
 	ADC_initialize();
 	USART_Initialize();
+	// Set stdout and in
+	stdout = &USART_output;
+	stdin  = &USART_input;
 	
 	LCD_StartScreen();
 	_delay_ms(1000);
@@ -238,92 +241,145 @@ int main(void)
 			}
 		}
 
-		if (readyToReceiveCommand)
+		if (USART_IsReceivingData())
 		{
 			// Listen for USB command
-			unsigned char command = USART_ReceiveCommand();
+			uint8_t cmd = 0;
+			char data[MAXLEN];
+			char outputChar;
 			int newData;
 			int newData2;
-			char outputChar;
-
-			switch(command)
+			
+			if(getpacket(&cmd,data))
 			{
-				case USART_WRITEALL:
-					if (outputIsOn)
-					{
-						outputChar = '1';
-					}
-					else
-					{
-						outputChar = '0';
-					}
-					writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, outputChar);
-					break;
-				case USART_SEND_HANDSHAKE:
-					USART_TransmitChar(USART_HANDSHAKE);
-					USART_TransmitChar('\n');
-					break;
-				case USART_RECEIVE_VOLTAGE:
-					newData = USART_ReceiveData();
-					if(newData > 2000) break;
-					voltageSet = newData;
-					LCD_WriteVoltage(voltageSet);
-					delay = setDelay;
-					forceUpdate = 1;
-					if (outputIsOn)
-					{
-						transferToDAC(10, voltageSet / voltageSetMulti);
-					}
-					break;			
-				case USART_SEND_VOLTAGE:
-					writeVoltageToUsb(voltageRead);
-					break;
-				case USART_SEND_SET_VOLTAGE:
-					writeVoltageToUsb(voltageSet);
-					break;
-				case USART_RECEIVE_CURRENT:
-					newData = USART_ReceiveData();
-					if(newData > 100) break;
-					currentSet = newData;
-					LCD_WriteCurrent(currentSet);
-					delay = setDelay;
-					forceUpdate = 1;
-					if (outputIsOn)
-					{
-						transferToDAC(9, currentSet / currentSetMulti);
-					}
-					break;			
-				case USART_SEND_CURRENT:
-					writeCurrentToUsb(currentRead);
-					break;
-				case USART_SEND_SET_CURRENT:
-					writeCurrentToUsb(currentSet);
-					break;
-				case USART_SEND_VIN:
-					writeVoltageToUsb(vinRead);
-					break;
-				case USART_SEND_VPREREG:
-					writeVoltageToUsb(preregRead);
-					break;
-				case USART_ENABLE_OUTPUT:
-					enableOutput();
-					break;
-				case USART_DISABLE_OUTPUT:
-					disableOutput();
-					break;
-				case USART_IS_OUTPUT_ON:
-					if (outputIsOn)
-					{
-						outputChar = '1';
-					}
-					else
-					{
-						outputChar = '0';
-					}
-					
-					USART_TransmitChar(outputChar);
-					USART_TransmitChar('\n');
-					break;
+				switch(cmd)
+				{
+					case USART_NAK:
+						sendNAK();
+						cmd = USART_WRITEALLCOMMANDS;
+						sendcmd(cmd);
+						putchar('\n');
+						break;
+					case USART_WRITEALL:
+						sendACK();
+						if (outputIsOn)
+						{
+							outputChar = '1';
+						}
+						else
+						{
+							outputChar = '0';
+						}
+						writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, outputChar);
+						break;
+					case USART_SEND_HANDSHAKE:
+						sendACK();
+						USART_TransmitChar(USART_HANDSHAKE);
+						USART_TransmitChar('\n');
+						break;
+					case USART_RECEIVE_VOLTAGE:
+						sendACK();
+						newData = USART_ReceiveData();
+						if(newData > 2000) break;
+						voltageSet = newData;
+						LCD_WriteVoltage(voltageSet);
+						delay = setDelay;
+						forceUpdate = 1;
+						if (outputIsOn)
+						{
+							transferToDAC(10, voltageSet / voltageSetMulti);
+						}
+						break;			
+					case USART_SEND_VOLTAGE:
+						sendACK();
+						mapVoltage(voltageRead,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_SEND_SET_VOLTAGE:
+						sendACK();
+						mapVoltage(voltageSet,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_RECEIVE_CURRENT:
+						sendACK();
+						newData = USART_ReceiveData();
+						if(newData > 100) break;
+						currentSet = newData;
+						LCD_WriteCurrent(currentSet);
+						delay = setDelay;
+						forceUpdate = 1;
+						if (outputIsOn)
+						{
+							transferToDAC(9, currentSet / currentSetMulti);
+						}
+						break;			
+					case USART_SEND_CURRENT:
+						sendACK();
+						mapCurrent(currentRead,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_SEND_SET_CURRENT:
+						sendACK();
+						mapCurrent(currentSet,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_SEND_VIN:
+						sendACK();
+						writeVoltageToUsb(vinRead);
+						mapVoltage(vinRead,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_SEND_VPREREG:
+						sendACK();
+						mapVoltage(preregRead,data);
+						sendpacket(cmd,data);
+						break;
+					case USART_ENABLE_OUTPUT:
+						sendACK();
+						enableOutput();
+						break;
+					case USART_DISABLE_OUTPUT:
+						sendACK();
+						disableOutput();
+						break;
+					case USART_IS_OUTPUT_ON:
+						sendACK();
+						if (outputIsOn)
+						{
+							data[0] = '1';
+						}
+						else
+						{
+							data[0] = '0';
+						}
+						data[1] = '\0';
+						
+						sendpacket(cmd,data);
+						break;
+					case USART_WRITEALLCOMMANDS:
+						puts("Writing all commands in ASCII:");
+						puts("Send voltage:");
+						sendcmd(USART_SEND_VOLTAGE);
+						puts("\nchange voltage:");
+						sendpacket(USART_RECEIVE_VOLTAGE,data);
+						puts("\nSend current:");
+						sendcmd(USART_SEND_CURRENT);
+						puts("\nchange current:");
+						sendcmd(USART_RECEIVE_CURRENT);
+						puts("\nSend input voltage:");
+						sendcmd(USART_SEND_VIN);
+						puts("\nSend preregulator voltage:");
+						sendcmd(USART_SEND_VPREREG);
+						puts("\nEnable output:");
+						sendcmd(USART_ENABLE_OUTPUT);
+						break;
+					default:
+						sprintf(data,'111\0');
+						cmd = USART_SEND_VOLTAGE;
+						sendpacket(cmd,data);
+						break;
+						
+				}	
 			}
 		}
 	}

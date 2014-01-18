@@ -17,6 +17,14 @@
 #define ENABLE_OUTPUT  PORTC &= ~(1 << PC0)
 #define DISABLE_OUTPUT PORTC |= (1 << PC0)
 
+// Shortcuts for the serial communication
+#define MAXLEN 80
+#define getpacket(_cmd,_data) USART_GetPacket(_cmd,_data,MAXLEN,stdin)
+#define sendpacket(_cmd,_data) USART_SendPacket(_cmd,_data,stdout)
+#define sendcmd(_cmd) USART_SendCmd(_cmd,stdout)
+#define sendACK() sendcmd(USART_ACK)
+#define sendNAK() sendcmd(USART_NAK)
+
 int main(void);
 void transferToDAC(unsigned char CTRL,uint16_t a);
 void mapVoltage(uint16_t volt, unsigned char* b);
