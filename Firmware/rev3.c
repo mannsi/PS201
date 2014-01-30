@@ -279,7 +279,7 @@ int main(void)
 					case USART_RECEIVE_VOLTAGE:
 						sendACK();
 						mapToVoltage(&newSetting,data);
-						if(newSetting > 2000) break;
+						if(newSetting > 200) break;
 						voltageSet = newSetting;
 						LCD_WriteVoltage(voltageSet);
 						delay = setDelay;
@@ -298,11 +298,7 @@ int main(void)
 						break;
 					case USART_RECEIVE_CURRENT:
 						sendACK();
-						puts("\nReceived new current setting: ");
-						puts(data);
 						mapToCurrent(&newSetting,data);
-						puts("Converted to intager gives: ");
-						printf("%i\n",newSetting);
 						if(newSetting > 100) break;
 						currentSet = newSetting;
 						LCD_WriteCurrent(currentSet);
@@ -521,13 +517,13 @@ void mapToVoltage(uint16_t *voltage, unsigned char *voltageArray)
 	// Determine the length of the string
 	char *a;
 	char *b;
-	*voltage = (uint16_t) (strtol(voltageArray,&a,0)*100);
+	*voltage = (uint16_t) (strtol(voltageArray,&a,0)*10);
 	// Find the fractional part of the number
-	if(*(a + 1) == '.')
+	if(*a == '.')
 	{
-		uint16_t fraction = (uint16_t) strtol((a+2),&b,0);
+		uint16_t fraction = (uint16_t) strtol((a+1),&b,0);
 		// Throw away extra digits
-		while(fraction > 100)
+		while(fraction > 10)
 		{
 			fraction = fraction/10;
 		}
@@ -537,9 +533,7 @@ void mapToVoltage(uint16_t *voltage, unsigned char *voltageArray)
 
 void mapToCurrent(uint16_t *current, char *currentArray)
 {
-	// Determine the length of the string
-	char *a;
-	*current  = strtol(&currentArray[1],&a,10);
+	*current  = atol(currentArray)/10;
 }
 
 

@@ -3,6 +3,9 @@
 
 #include<avr/io.h>
 #include<avr/interrupt.h>
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
 #include "def.h"
 #include "LCD.h"
 #include "SW.h"
