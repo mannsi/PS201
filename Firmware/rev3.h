@@ -29,6 +29,8 @@ int main(void);
 void transferToDAC(unsigned char CTRL,uint16_t a);
 void mapVoltage(uint16_t volt, unsigned char* b);
 void mapCurrent(uint16_t cur, unsigned char* b);
+void mapToVoltage(uint16_t* volt, unsigned char* b);
+void mapToCurrent(uint16_t* cur, char* b);
 void writeVoltageToUsb(uint16_t voltage);
 void writeCurrentToUsb(uint16_t current);
 

@@ -247,8 +247,9 @@ int main(void)
 			uint8_t cmd = 0;
 			char data[MAXLEN];
 			char outputChar;
-			int newData;
-			int newData2;
+			char dataChar;
+			uint8_t index = 0;
+			uint16_t newSetting;
 			
 			if(getpacket(&cmd,data))
 			{
@@ -274,21 +275,16 @@ int main(void)
 						break;
 					case USART_SEND_HANDSHAKE:
 						sendACK();
-						USART_TransmitChar(USART_HANDSHAKE);
-						USART_TransmitChar('\n');
 						break;
 					case USART_RECEIVE_VOLTAGE:
 						sendACK();
-						newData = USART_ReceiveData();
-						if(newData > 2000) break;
-						voltageSet = newData;
+						mapToVoltage(&newSetting,data);
+						if(newSetting > 2000) break;
+						voltageSet = newSetting;
 						LCD_WriteVoltage(voltageSet);
 						delay = setDelay;
 						forceUpdate = 1;
-						if (outputIsOn)
-						{
-							transferToDAC(10, voltageSet / voltageSetMulti);
-						}
+						transferToDAC(10, voltageSet / voltageSetMulti);
 						break;			
 					case USART_SEND_VOLTAGE:
 						sendACK();
@@ -302,16 +298,17 @@ int main(void)
 						break;
 					case USART_RECEIVE_CURRENT:
 						sendACK();
-						newData = USART_ReceiveData();
-						if(newData > 100) break;
-						currentSet = newData;
+						puts("\nReceived new current setting: ");
+						puts(data);
+						mapToCurrent(&newSetting,data);
+						puts("Converted to intager gives: ");
+						printf("%i\n",newSetting);
+						if(newSetting > 100) break;
+						currentSet = newSetting;
 						LCD_WriteCurrent(currentSet);
 						delay = setDelay;
 						forceUpdate = 1;
-						if (outputIsOn)
-						{
-							transferToDAC(9, currentSet / currentSetMulti);
-						}
+						transferToDAC(9, currentSet / currentSetMulti);
 						break;			
 					case USART_SEND_CURRENT:
 						sendACK();
@@ -325,7 +322,6 @@ int main(void)
 						break;
 					case USART_SEND_VIN:
 						sendACK();
-						writeVoltageToUsb(vinRead);
 						mapVoltage(vinRead,data);
 						sendpacket(cmd,data);
 						break;
@@ -361,22 +357,22 @@ int main(void)
 						puts("Send voltage:");
 						sendcmd(USART_SEND_VOLTAGE);
 						puts("\nchange voltage:");
+						sprintf(data,"9.87\0");
 						sendpacket(USART_RECEIVE_VOLTAGE,data);
 						puts("\nSend current:");
 						sendcmd(USART_SEND_CURRENT);
 						puts("\nchange current:");
-						sendcmd(USART_RECEIVE_CURRENT);
+						sprintf(data,"234\0");
+						sendpacket(USART_RECEIVE_CURRENT,data);
 						puts("\nSend input voltage:");
 						sendcmd(USART_SEND_VIN);
 						puts("\nSend preregulator voltage:");
 						sendcmd(USART_SEND_VPREREG);
 						puts("\nEnable output:");
 						sendcmd(USART_ENABLE_OUTPUT);
+						puts("\n\n\n\n");
 						break;
 					default:
-						sprintf(data,'111\0');
-						cmd = USART_SEND_VOLTAGE;
-						sendpacket(cmd,data);
 						break;
 						
 				}	
@@ -454,7 +450,7 @@ void writeToUsb(uint16_t voltage,
 	mapCurrent(currentSet, currentSetArray);
 	mapVoltage(preregVoltage, voltagePreregArray);
 	joinArrays(voltageArray, currentArray, voltageSetArray, currentSetArray, voltagePreregArray , outputOn, combinedArray);
-	USART_Transmit(combinedArray);
+	sendpacket(USART_WRITEALL,combinedArray);
 }
 
 void joinArrays(
@@ -503,22 +499,49 @@ int appendArray(unsigned char *targetArray,
 
 void mapVoltage(uint16_t voltage, unsigned char *voltageArray)
 {
-	clearArray(voltageArray, 10);	
 	voltageArray[0] = voltage < 1000 ? ' ' : (char) ( ((int) '0') + voltage / 1000 );
 	voltageArray[1] = voltage < 100 ? ' ' : (char) ( ((int) '0') + (voltage%1000) / (100) );
 	voltageArray[2] = voltage < 10 ? '0' : (char) ( ((int) '0') + (voltage%100) / (10) );
 	voltageArray[3] = '.';
 	voltageArray[4] = (char) ( ((int) '0') + (voltage%10));
+	voltageArray[5] = '\0';
 }
 
 void mapCurrent(uint16_t current, unsigned char *currentArray)
 {
-	clearArray(currentArray, 10);
 	currentArray[0] = current < 100 ? ' ' : (char) ( ((int) '0') + current / 100 );
 	currentArray[1] = current < 10 ? ' ' : (char) ( ((int) '0') + (current%100) / (10) );
 	currentArray[2] = (char) ( ((int) '0') + current%10 );
 	currentArray[3] = '0';
+	currentArray[4] = '\0';
 }
+
+void mapToVoltage(uint16_t *voltage, unsigned char *voltageArray)
+{
+	// Determine the length of the string
+	char *a;
+	char *b;
+	*voltage = (uint16_t) (strtol(voltageArray,&a,0)*100);
+	// Find the fractional part of the number
+	if(*(a + 1) == '.')
+	{
+		uint16_t fraction = (uint16_t) strtol((a+2),&b,0);
+		// Throw away extra digits
+		while(fraction > 100)
+		{
+			fraction = fraction/10;
+		}
+		*voltage = *voltage + fraction;
+	}
+}
+
+void mapToCurrent(uint16_t *current, char *currentArray)
+{
+	// Determine the length of the string
+	char *a;
+	*current  = strtol(&currentArray[1],&a,10);
+}
+
 
 void clearArray(unsigned char *array, int size)
 {
