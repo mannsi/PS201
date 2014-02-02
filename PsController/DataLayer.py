@@ -1,5 +1,4 @@
 import SerialCommunication
-import struct
 import logging
 
 class DataLayer():
@@ -17,8 +16,17 @@ class DataLayer():
         self.__handshakeSignal__ = b'\xa0'
         self.__programId__ = b'\xa1'
         self.__deviceWriteAll__ = b'\xa5'
+        self.__startChar__ = b'\x7E'
+        self.__acknowledgeSignal__ = b'\x06'
+        self.__notAcknowledgeSignal__ = b'\x15'
 
-        self.connection = SerialCommunication.Connection(baudrate = 9600,timeout = 1,handshakeSignal=self.__handshakeSignal__,programId=self.__programId__)
+        self.connection = SerialCommunication.Connection(
+                                                         baudrate = 9600,
+                                                         timeout = 0.25,
+                                                         handshakeSignal=self.__deviceWriteRealVoltage__,
+                                                         startChar=self.__startChar__,
+                                                         acknowledgeSignal=self.__acknowledgeSignal__,
+                                                         notAcknowledgeSignal=self.__notAcknowledgeSignal__)
 
     def connect(self, usbPortNumber):
         try:
@@ -78,10 +86,10 @@ class DataLayer():
         return bool(self.connection.getValue(self.__deviceIsOutputOn__))
 
     def setTargetVoltage(self, targetVoltage):
-        self.connection.setValue(self.__deviceReadTargetVoltage__, struct.pack(">H",int(10*targetVoltage)))
+        self.connection.setValue(self.__deviceReadTargetVoltage__, targetVoltage)
 
     def setTargetCurrent(self, targetCurrent):
-        self.connection.setValue(self.__deviceReadTargetCurrent__, struct.pack(">H",int(targetCurrent/10)))
+        self.connection.setValue(self.__deviceReadTargetCurrent__, targetCurrent)
       
     def setOutputOnOff(self, shouldBeOn):
         if shouldBeOn:

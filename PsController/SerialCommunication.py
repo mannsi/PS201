@@ -4,14 +4,43 @@ import logging
 import platform
 import glob
 import threading
+import time
 from datetime import datetime
+import binascii
+import crcmod.predefined
+
+class DeviceResponse:
+    def fromSerialValue(self,serialValue, startChar):
+        self.idSignal = serialValue[0:1]
+        self.aknowledgementSignal = serialValue[1:2]
+
+        startIndexOfDataRespons = 0
+        for x in range(len(serialValue)):
+            if serialValue[x:x+1] == startChar and serialValue[x+1:x+2] == startChar: # Check for two startChar in a row. Don't know a better python way to do this
+                startIndexOfDataRespons = x + 1 
+        
+        if startIndexOfDataRespons is not 0:
+            dataLength = serialValue[startIndexOfDataRespons + 2]
+            if dataLength > 0:
+                dataIndex = startIndexOfDataRespons+3
+                binaryData = serialValue[dataIndex:dataIndex+dataLength]
+                self.data = binaryData.decode()
 
 class Connection():
-    def __init__(self, baudrate, timeout, handshakeSignal, programId):
+    def __init__(
+                 self, 
+                 baudrate, 
+                 timeout, 
+                 handshakeSignal, 
+                 startChar, 
+                 acknowledgeSignal, 
+                 notAcknowledgeSignal):
         self.baudRate = baudrate
         self.timeout = timeout
-        self.programId = programId
         self.handshakeSignal = handshakeSignal
+        self.startChar = startChar
+        self.acknowledgementSignal = acknowledgeSignal
+        self.notAcknowledgeSignal = notAcknowledgeSignal
         self.processLock = threading.Lock()
         
     def setConnection(self, connection):
@@ -57,15 +86,12 @@ class Connection():
     
     def validConnection(self, connection):
         try:
-            readValue = self.__getValue__(connection, self.handshakeSignal).strip()
-            if readValue:
-                if readValue == self.programId:
-                  return True
-                else:
-                  return False
+            response = self.__sendCommandToDevice__(connection, self.handshakeSignal, '')
+            if response.aknowledgementSignal == self.acknowledgementSignal:
+                return True
             else:
                 return False
-        except:
+        except Exception as e:
             return False 
     
     def deviceOnThisPort(self, usbPortNumber):
@@ -89,7 +115,7 @@ class Connection():
     def getValue(self, command):
         logging.debug("Sending command to device. Command: %s" % command)
         try:
-            value = str(self.__getValue__(self.connection,command), 'ascii').strip()
+            value = self.__getValue__(self.connection,command)
             logging.debug("Reading message from device. Value: %s" % value)
             return value
         except Exception as e:
@@ -99,9 +125,8 @@ class Connection():
     
     def __getValue__(self, serialConnection, command):
         with self.processLock:
-            serialConnection.write(command)
-            value = serialConnection.readline()   
-        return value
+            response = self.__sendCommandToDevice__(serialConnection, command,'')   
+        return response.data
     
     def setValue(self, command, value = None):
       try:
@@ -117,6 +142,39 @@ class Connection():
     
     def __setValue__(self, serialConnection, command, value): 
         with self.processLock:
-            serialConnection.write(command)
-            if value is not None:
-                serialConnection.write(value)
+            self.__sendCommandToDevice__(serialConnection, command, value)
+
+    def __sendCommandToDevice__(self, serialConnection, command, data):
+        binaryData = bytes(str(data), 'ascii')
+        dataLength = bytes([len(binaryData)])
+        crc = CreateCRC16Code(command, binaryData)
+        serialConnection.write(self.startChar)
+        serialConnection.write(command)
+        serialConnection.write(dataLength)
+        if len(binaryData) > 0:
+            serialConnection.write(binaryData)
+        serialConnection.write(crc[0])
+        serialConnection.write(self.startChar)
+    
+        response = self.__readDeviceReponse__(serialConnection)
+        if response.idSignal == self.startChar:
+            return response
+
+        raise Exception("Got neither an ACK nor NAK from device")
+
+    def __readDeviceReponse__(self,serialConnection):
+        serialResponse = serialConnection.readline()
+        response = DeviceResponse()
+        response.fromSerialValue(serialResponse, self.startChar)
+        return response
+
+    
+def CreateCRC16Code(command, binaryData):
+    crc16 = crcmod.predefined.Crc('xmodem')
+    crc16.update(command) #command
+    crc16.update(bytes([len(binaryData)])) #length
+    crc16.update(binaryData)
+    hexCode = hex(crc16.crcValue)
+    hexArray = (crc16.crcValue).to_bytes(2, byteorder='big')
+    return (hexArray, hexCode)
+

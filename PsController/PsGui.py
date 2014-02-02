@@ -13,7 +13,7 @@ mainWindowTitle = "PS201 Controller"
 
 normalWidgetList = []
 inverseWidgetList = []
-controller = PsController.Controller(shouldLog = True, loglevel = logging.DEBUG)
+controller = PsController.Controller(shouldLog = True, loglevel = logging.ERROR)
 targetVoltage = 0
 targetCurrent = 0
 realVoltage = 0
