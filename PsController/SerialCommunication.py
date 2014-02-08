@@ -74,13 +74,13 @@ class Connection():
             usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
             for usbPort in usbList:
                 available.append(usbPort)
-            try:
-                for port in available:
+            for port in available:
+                try:
                     con = serial.Serial(port, self.baudRate, timeout = 0.01)
                     if self.validConnection(con):
                         defaultPort = con.portstr
                         break
-            except serial.SerialException:
+                except serial.SerialException:
                     pass
         return (available, defaultPort)
     
