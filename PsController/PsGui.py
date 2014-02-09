@@ -16,6 +16,7 @@ inverseWidgetList = []
 controller = PsController.Controller(shouldLog = True, loglevel = logging.ERROR)
 targetVoltage = 0
 targetCurrent = 0
+inputVoltage = 0
 realVoltage = 0
 realCurrent = 0
 outputOn = False
@@ -84,6 +85,11 @@ class PsFrame():
       global targetVoltage
       targetVoltage = float(newTargetVoltage)
       self.tabControl.statusTab.voltageEntryVar.set(newTargetVoltage)
+
+    def inputVoltageUpdate(self, newInputVoltage):
+      global inputVoltage
+      inputVoltage = float(newInputVoltage)
+      self.tabControl.statusTab.voltageInputEntryVar.set(newInputVoltage)
     
     def targetCurrentUpdate(self, newTargetCurrent):
       global targetCurrent
@@ -150,6 +156,9 @@ class PsFrame():
                 elif action == PsController.targetVoltageString:
                     targetVoltageValue = controller.queue.get(0)
                     self.targetVoltageUpdate(targetVoltageValue)
+                elif action == PsController.inputVoltageString:
+                    inputVoltage = controller.queue.get(0)
+                    self.inputVoltageUpdate(inputVoltage)
                 elif action == PsController.outputOnOffString:
                     outputOnOff = controller.queue.get(0)
                     self.outPutOnOffUpdate(outputOnOff)
@@ -237,7 +246,7 @@ class ValuesFrame(Frame):
         normalWidgetList.append(self.btnSetTargetCurrent)
     
     def setTargetCurrent(self,args=None):
-        targetCurrent = tkinter.simpledialog.askinteger("Target current", "Enter new target current (0-1000mA)",parent=self)
+        targetCurrent = tkinter.simpledialog.askinteger("Current limit", "Enter new current limit (0-1000mA)",parent=self)
         if targetCurrent is not None:
             if(targetCurrent <= 1000):
                 controller.setTargetCurrent(targetCurrent, threaded=True)
@@ -276,16 +285,21 @@ class StatusTab(Frame):
         self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
         self.voltageEntry.grid(row=0, column=1)
         Label(self, text="(V):").grid(row=0,column=2,sticky=W)
-        Label(self, text="Target current:",font=(fontName, fontSize)).grid(row=1,column=0,sticky=E)
+        Label(self, text="Current limit:",font=(fontName, fontSize)).grid(row=1,column=0,sticky=E)
         self.currentEntryVar = IntVar(None)
         self.currentEntry = Entry(self, textvariable=self.currentEntryVar,width=8,state='readonly',font=(fontName, fontSize))
         self.currentEntry.grid(row=1, column=1)
         Label(self, text="(mA):").grid(row=1,column=2,sticky=W)
-        Label(self, text="Pre reg voltage:",font=(fontName, fontSize)).grid(row=2,column=0,sticky=E)
+        Label(self, text="Input voltage:",font=(fontName, fontSize)).grid(row=2,column=0,sticky=E)
+        self.voltageInputEntryVar = DoubleVar(None)
+        self.voltageInputEntry = Entry(self, textvariable=self.voltageInputEntryVar,width=8,state='readonly',font=(fontName, fontSize))
+        self.voltageInputEntry.grid(row=2, column=1)
+        Label(self, text="(V):").grid(row=2,column=2,sticky=W)
+        Label(self, text="Pre reg voltage:",font=(fontName, fontSize)).grid(row=3,column=0,sticky=E)
         self.preRegVoltageEntryVar = DoubleVar(None)
         self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
-        self.preRegVoltageEntry.grid(row=2, column=1)
-        Label(self, text="(V):").grid(row=2,column=2,sticky=W)
+        self.preRegVoltageEntry.grid(row=3, column=1)
+        Label(self, text="(V):").grid(row=3,column=2,sticky=W)
 
 class SequenceTab(Frame):
     def __init__(self, parent, resetTabM, connected):

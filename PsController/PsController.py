@@ -14,6 +14,7 @@ realVoltageString = "REALVOLTAGE"
 preRegVoltageString = "PREREGVOLTAGE"
 targetCurrentString = "TARGETCURRENT"
 targetVoltageString = "TARGETVOLTAGE"
+inputVoltageString = "INPUTVOLTAGE"
 outputOnOffString = "OUTPUTONOFF"
 scheduleDoneString = "SCHEDULEDONE"
 scheduleNewLineString = "SCHEDULENEWLINE"
@@ -81,7 +82,7 @@ class Controller():
                 self.cancelNextGet.get()
                 return
             allValues = self.getAllValues()
-            if len(allValues) < 6:
+            if len(allValues) < 7:
                 return     
             self.queue.put(realVoltageString)
             self.queue.put(allValues[0])      
@@ -93,8 +94,10 @@ class Controller():
             self.queue.put(allValues[3])     
             self.queue.put(preRegVoltageString)
             self.queue.put(allValues[4])    
+            self.queue.put(inputVoltageString)
+            self.queue.put(allValues[5]) 
             self.queue.put(outputOnOffString)
-            self.queue.put(allValues[5])
+            self.queue.put(allValues[6])
         except Exception as e:
             self.__connectionLost__("__updateValuesWorker__")      
         
