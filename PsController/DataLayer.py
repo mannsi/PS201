@@ -22,7 +22,7 @@ class DataLayer():
 
         self.connection = SerialCommunication.Connection(
                                                          baudrate = 9600,
-                                                         timeout = 0.25,
+                                                         timeout = 0.1,
                                                          handshakeSignal=self.__deviceWriteRealVoltage__,
                                                          startChar=self.__startChar__,
                                                          acknowledgeSignal=self.__acknowledgeSignal__,

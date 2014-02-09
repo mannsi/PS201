@@ -13,6 +13,7 @@ class DeviceResponse:
     def fromSerialValue(self,serialValue, startChar):
         self.idSignal = serialValue[0:1]
         self.aknowledgementSignal = serialValue[1:2]
+        self.data = None
 
         startIndexOfDataRespons = 0
         for x in range(len(serialValue)):
@@ -120,8 +121,8 @@ class Connection():
             return value
         except Exception as e:
             self.disconnect()
-            logging.error("ERROR when getting command ", command, " from device")
-            raise Exception()
+            logging.exception("Error when reading value with command: ", command)
+            raise 
     
     def __getValue__(self, serialConnection, command):
         with self.processLock:
@@ -137,8 +138,8 @@ class Connection():
           self.__setValue__(self.connection, command, value)
       except Exception as e:
           self.disconnect()
-          logging.error("ERROR when sending command ", command , " to device with value ", value )
-          raise Exception()
+          logging.exception("Error when setting value with command: ", command, " and value: ", value)
+          raise 
     
     def __setValue__(self, serialConnection, command, value): 
         with self.processLock:
