@@ -180,17 +180,27 @@ int main(void)
 			ADC_status &= ~ADC_ISREADING;
 			ADC_status &= ~ADC_NEWREADING;
 
-			int oldValue;
+			uint16_t oldValue;
 			switch(ADC_status)
 			{
 				case ADC_VOLTAGE:
+					oldValue = voltageRead;
 					voltageRead = ADC_reading * voltageReadMulti;
+					if(voltageRead != oldValue)
+					{
+						forceUpdate = 1;
+					}
 					ADC_status = ADC_CURRENT;
 					ADMUX &= 0xF0;
 					ADMUX |= CURRENT_MON;
 					break;
 				case ADC_CURRENT:
+					oldValue = currentRead;
 					currentRead = ADC_reading * currentReadMulti;
+					if(currentRead != oldValue)
+					{
+						forceUpdate = 1;
+					}
 					ADC_status = ADC_PREREGULATOR;
 					ADMUX &= 0xF0;
 					ADMUX |= PREREG;
