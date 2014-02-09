@@ -271,7 +271,7 @@ int main(void)
 						{
 							outputChar = '0';
 						}
-						writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, outputChar);
+						writeToUsb(voltageRead, currentRead, voltageSet, currentSet, preregRead, vinRead, outputChar);
 						break;
 					case USART_SEND_HANDSHAKE:
 						sendACK();
@@ -353,7 +353,7 @@ int main(void)
 						puts("Send voltage:");
 						sendcmd(USART_SEND_VOLTAGE);
 						puts("\nchange voltage:");
-						sprintf(data,"9.87\0");
+						sprintf(data,"10\0");
 						sendpacket(USART_RECEIVE_VOLTAGE,data);
 						puts("\nSend current:");
 						sendcmd(USART_SEND_CURRENT);
@@ -430,7 +430,8 @@ void writeToUsb(uint16_t voltage,
 				uint16_t current, 
 				uint16_t voltageSet, 
 				uint16_t currentSet, 
-				uint16_t preregVoltage, 
+				uint16_t preregVoltage,
+				uint16_t inputVoltage, 
 				unsigned char outputOn)
 {
 	unsigned char voltageArray [10];
@@ -438,14 +439,16 @@ void writeToUsb(uint16_t voltage,
 	unsigned char voltageSetArray [10];
 	unsigned char currentSetArray [10];
 	unsigned char voltagePreregArray [10];
-	unsigned char combinedArray [55];
+	unsigned char voltageInputArray [10];
+	unsigned char combinedArray [66];
 	
 	mapVoltage(voltage, voltageArray);
 	mapCurrent(current, currentArray);
 	mapVoltage(voltageSet, voltageSetArray);
 	mapCurrent(currentSet, currentSetArray);
 	mapVoltage(preregVoltage, voltagePreregArray);
-	joinArrays(voltageArray, currentArray, voltageSetArray, currentSetArray, voltagePreregArray , outputOn, combinedArray);
+	mapVoltage(inputVoltage, voltageInputArray);
+	joinArrays(voltageArray, currentArray, voltageSetArray, currentSetArray, voltagePreregArray , voltageInputArray , outputOn, combinedArray);
 	sendpacket(USART_WRITEALL,combinedArray);
 }
 
@@ -454,7 +457,8 @@ void joinArrays(
 	unsigned char *currentArray, 
 	unsigned char *voltageSetArray, 
 	unsigned char *currentSetArray,
-	unsigned char *voltagePreregArray, 
+	unsigned char *voltagePreregArray,
+	unsigned char *voltageInputArray,
 	unsigned char outputOn,
 	unsigned char *combinedArray)
 {
@@ -469,6 +473,8 @@ void joinArrays(
 	newArraySize = appendArray(combinedArray, newArraySize + 1, currentSetArray, 10);
 	combinedArray[newArraySize] = ';';
 	newArraySize = appendArray(combinedArray, newArraySize + 1, voltagePreregArray, 10);
+	combinedArray[newArraySize] = ';';
+	newArraySize = appendArray(combinedArray, newArraySize + 1, voltageInputArray, 10);
 	combinedArray[newArraySize] = ';';
 	combinedArray[newArraySize+1] = outputOn;
 }

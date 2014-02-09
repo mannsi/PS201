@@ -45,7 +45,8 @@ void writeToUsb(uint16_t voltage,
 				uint16_t current, 
 				uint16_t voltageSet, 
 				uint16_t currentSet, 
-				uint16_t preregVoltage, 
+				uint16_t inputVoltage,
+				uint16_t vinVoltage,
 				unsigned char outputOn);
 
 static void initRegistries(void);
@@ -56,7 +57,8 @@ void joinArrays(
 	unsigned char *currentArray, 
 	unsigned char *voltageSetArray, 
 	unsigned char *currentSetArray,
-	unsigned char *voltagePreregArray, 
+	unsigned char *voltagePreregArray,
+	unsigned char *voltageVinArray,
 	unsigned char outputOn,
 	unsigned char *combinedArray);
 int appendArray(unsigned char *targetArray, 
