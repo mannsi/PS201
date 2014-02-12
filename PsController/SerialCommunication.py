@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 import binascii
 import crcmod.predefined
+from Crc import Crc16
 
 class DeviceResponse:
     def fromSerialValue(self,serialValue, startChar):
@@ -148,7 +149,7 @@ class Connection():
     def __sendCommandToDevice__(self, serialConnection, command, data):
         binaryData = bytes(str(data), 'ascii')
         dataLength = bytes([len(binaryData)])
-        crc = CreateCRC16Code(command, binaryData)
+        crc = Crc16.create(command, binaryData)
         serialConnection.write(self.startChar)
         serialConnection.write(command)
         serialConnection.write(dataLength)
@@ -168,14 +169,4 @@ class Connection():
         response = DeviceResponse()
         response.fromSerialValue(serialResponse, self.startChar)
         return response
-
-    
-def CreateCRC16Code(command, binaryData):
-    crc16 = crcmod.predefined.Crc('xmodem')
-    crc16.update(command) #command
-    crc16.update(bytes([len(binaryData)])) #length
-    crc16.update(binaryData)
-    hexCode = hex(crc16.crcValue)
-    hexArray = (crc16.crcValue).to_bytes(2, byteorder='big')
-    return (hexArray, hexCode)
 
