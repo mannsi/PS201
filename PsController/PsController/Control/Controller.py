@@ -1,62 +1,64 @@
 import logging
 import queue
+import uuid
 from datetime import datetime, timedelta
-from DAL.DataLayer import DataLayer
+from DAL.DataAccess import DataAccess
 from Utilities.ThreadHelper import ThreadHelper
 
 connectedString = "Connected !"
-connectingSting = "Connecting ..."
+connectingString = "Connecting ..."
 noDeviceFoundstr= "No device found"
-connectString = "CONNECT"
-realCurrentString = "REALCURRENT"
-realVoltageString = "REALVOLTAGE"
-preRegVoltageString = "PREREGVOLTAGE"
-targetCurrentString = "TARGETCURRENT"
-targetVoltageString = "TARGETVOLTAGE"
-inputVoltageString = "INPUTVOLTAGE"
-outputOnOffString = "OUTPUTONOFF"
-scheduleDoneString = "SCHEDULEDONE"
-scheduleNewLineString = "SCHEDULENEWLINE"
+connectUpdate = "CONNECT"
+realCurrentUpdate = "REALCURRENT"
+realVoltageUpdate = "REALVOLTAGE"
+preRegVoltageUpdate = "PREREGVOLTAGE"
+targetCurrentUpdate = "TARGETCURRENT"
+targetVoltageUpdate = "TARGETVOLTAGE"
+inputVoltageUpdate = "INPUTVOLTAGE"
+outputOnOffUpdate = "OUTPUTONOFF"
+scheduleDoneUpdate = "SCHEDULEDONE"
+scheduleNewLineUpdate = "SCHEDULENEWLINE"
 
 class Controller():
     def __init__(self, shouldLog = False, loglevel = logging.ERROR):
         if shouldLog:
             logging.basicConfig(format='%(asctime)s %(message)s', filename='PS200.log', level=loglevel)
         
-        self.dataLayer = DataLayer()
+        self.DataAccess = DataAccess()
         self.queue = queue.Queue()
         self.cancelNextGet = queue.Queue()
         self.threadHelper = ThreadHelper()
+        self.updateFunctions = {}
       
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.__connectWorker__, [usbPortNumber])
         else:
-            return self.dataLayer.connect(usbPortNumber)
+            return self.DataAccess.connect(usbPortNumber)
     
     def disconnect(self):
-        self.dataLayer.disconnect()
+        self.DataAccess.disconnect()
     
     def getAvailableUsbPorts(self):
-        return self.dataLayer.getAvailableUsbPorts()
+        return self.DataAccess.getAvailableUsbPorts()
    
     def getDeviceUsbPort(self, availableUsbPorts):
-      return self.dataLayer.detectDevicePort()
+      return self.DataAccess.detectDevicePort()
     
     def getAllValues(self):
-        return self.dataLayer.getAllValues()
+        return self.DataAccess.getAllValues()
         
     def setTargetVoltage(self, targetVoltage, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.__setTargetVoltageWorker__, args=[targetVoltage])
         else:
-            self.dataLayer.setTargetVoltage(targetVoltage)
+            self.DataAccess.setTargetVoltage(targetVoltage)
    
     def setTargetCurrent(self, targetCurrent, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.__setTargetCurrentWorker__, args=[targetCurrent])
         else:
-            self.dataLayer.setTargetCurrent(targetCurrent)
+            self.DataAccess.setTargetCurrent(targetCurrent)
         
     def setOutputOnOff(self, shouldBeOn, threaded=False):
         if threaded:
@@ -64,7 +66,7 @@ class Controller():
                 self.cancelNextGet.put("Cancel")
             self.threadHelper.runThreadedJob(self.__setOutputOnOffWorker__, args=[shouldBeOn])
         else:
-            self.dataLayer.setOutputOnOff(shouldBeOn)
+            self.DataAccess.setOutputOnOff(shouldBeOn)
    
     def setLogging(self, shouldLog, loglevel):
         if shouldLog:
@@ -72,6 +74,23 @@ class Controller():
         else:
             logging.propagate = False
    
+    def registerUpdateFunction(self, func, condition):
+        if condition not in self.updateFunctions:
+            self.updateFunctions[condition] = (None,[]) #(Value, list_of_update_functions)
+        self.updateFunctions[condition][1].append(func)
+
+    """
+    A call to this function lets the controller know that the UI is ready to receive updates
+    """
+    def uiPulse(self):
+        while self.queue.qsize():
+            updateCondition = self.queue.get(0)
+            updatedValue = self.queue.get(0)
+            value, updateFunctions = self.updateFunctions[updateCondition]
+            if value != updatedValue:
+                for func in updateFunctions:
+                    func(updatedValue)
+
     def startAutoUpdate(self, interval):
         self.threadHelper.runIntervalJob(self.__updateValuesWorker__, interval)
       
@@ -116,7 +135,8 @@ class Controller():
         return True
    
     def stopSchedule(self):
-        self.queue.put(scheduleDoneString) # Notify the UI
+        self.queue.put(scheduleDoneUpdate)
+        self.queue.put(uuid.uuid4()) # Add a random UUID to fake a change event
         self.threadHelper.stopSchedule()
 
     def __updateValuesWorker__(self):
@@ -127,28 +147,28 @@ class Controller():
             allValues = self.getAllValues()
             if len(allValues) < 7:
                 return     
-            self.queue.put(realVoltageString)
+            self.queue.put(realVoltageUpdate)
             self.queue.put(allValues[0])      
-            self.queue.put(realCurrentString)
+            self.queue.put(realCurrentUpdate)
             self.queue.put(allValues[1])      
-            self.queue.put(targetVoltageString)
+            self.queue.put(targetVoltageUpdate)
             self.queue.put(allValues[2])     
-            self.queue.put(targetCurrentString)
+            self.queue.put(targetCurrentUpdate)
             self.queue.put(allValues[3])     
-            self.queue.put(preRegVoltageString)
+            self.queue.put(preRegVoltageUpdate)
             self.queue.put(allValues[4])    
-            self.queue.put(inputVoltageString)
+            self.queue.put(inputVoltageUpdate)
             self.queue.put(allValues[5]) 
-            self.queue.put(outputOnOffString)
+            self.queue.put(outputOnOffUpdate)
             self.queue.put(allValues[6])
         except Exception as e:
             self.__connectionLost__("__updateValuesWorker__")      
         
     def __connectWorker__(self, usbPortNumber):
-        self.queue.put(connectString)
-        self.queue.put(connectingSting)
+        self.queue.put(connectUpdate)
+        self.queue.put(connectingString)
         connectionSuccessful = self.connect(usbPortNumber)
-        self.queue.put(connectString)
+        self.queue.put(connectUpdate)
         if connectionSuccessful:
             self.queue.put(connectedString)
             self.queue.put(usbPortNumber)

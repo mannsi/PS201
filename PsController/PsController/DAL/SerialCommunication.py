@@ -85,7 +85,7 @@ class SerialConnection():
                 return connection
             else:
                 return None
-        except serial.SerialException:
+        except serial.SerialException as e:
             logging.error("Device not found on given port")
             return False
     
@@ -127,7 +127,7 @@ class SerialConnection():
     def __sendCommandToDevice__(self, serialConnection, command, data):
         binaryData = bytes(str(data), 'ascii')
         dataLength = bytes([len(binaryData)])
-        crc = Crc16.create(command, binaryData)
+        crc = Crc16.Create(command, binaryData)
         serialConnection.write(self.startChar)
         serialConnection.write(command)
         serialConnection.write(dataLength)

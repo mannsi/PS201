@@ -18,7 +18,7 @@ __startChar__ = b'\x7E'
 __acknowledgeSignal__ = b'\x06'
 __notAcknowledgeSignal__ = b'\x15'
 
-class DataLayer():
+class DataAccess():
     def __init__(self):
         self.connection = SerialConnection(
             baudrate = 9600,

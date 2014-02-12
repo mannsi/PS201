@@ -2,15 +2,15 @@
 
 import sys
 import time
-from DataLayer import DataLayer
+from DataAccess import DataAccess
 
-def VoltageInBoundsTest(dataLayer, targetVoltage, outputOn):
-    dataLayer.setOutputOnOff(outputOn)
+def VoltageInBoundsTest(DataAccess, targetVoltage, outputOn):
+    DataAccess.setOutputOnOff(outputOn)
     print("Setting target voltage to ", targetVoltage,"V")
-    dataLayer.setTargetVoltage(targetVoltage)
+    DataAccess.setTargetVoltage(targetVoltage)
     #time.sleep(1)
     print("Reading target voltage")
-    readTargetVoltage = dataLayer.getTargetVoltage()
+    readTargetVoltage = DataAccess.getTargetVoltage()
     if outputOn:
         if readTargetVoltage == targetVoltage:
             print("OK: Reading target voltage")
@@ -22,7 +22,7 @@ def VoltageInBoundsTest(dataLayer, targetVoltage, outputOn):
         else:
             print("FAIL: Expected 0V because output is off but got ", readTargetVoltage, "V")
     print("Testing real voltage")
-    readRealVoltage = dataLayer.getRealVoltage()
+    readRealVoltage = DataAccess.getRealVoltage()
     if outputOn:
         if readRealVoltage == targetVoltage:
             print("OK: Reading real voltage")
@@ -34,14 +34,14 @@ def VoltageInBoundsTest(dataLayer, targetVoltage, outputOn):
         else:
             print("FAIL: Expected 0V because output is off but got ", readRealVoltage, "V")
 
-def VoltageOutOfBoundsTest(dataLayer, targetVoltage, outputOn):
-    dataLayer.setOutputOnOff(outputOn)
+def VoltageOutOfBoundsTest(DataAccess, targetVoltage, outputOn):
+    DataAccess.setOutputOnOff(outputOn)
     print("Test setting voltage out of bounds")
-    targetVoltageBeforeChanges = dataLayer.getTargetVoltage()
-    realVoltageBeforeChanges = dataLayer.getRealVoltage()
-    dataLayer.setTargetVoltage(targetVoltage)
-    targetVoltageAfterChanges = dataLayer.getTargetVoltage()
-    realVoltageAfterChanges = dataLayer.getRealVoltage()
+    targetVoltageBeforeChanges = DataAccess.getTargetVoltage()
+    realVoltageBeforeChanges = DataAccess.getRealVoltage()
+    DataAccess.setTargetVoltage(targetVoltage)
+    targetVoltageAfterChanges = DataAccess.getTargetVoltage()
+    realVoltageAfterChanges = DataAccess.getRealVoltage()
 
     if targetVoltageBeforeChanges == targetVoltageAfterChanges:
         print("OK: Target voltage did not change")
@@ -53,12 +53,12 @@ def VoltageOutOfBoundsTest(dataLayer, targetVoltage, outputOn):
     else:
         print("FAIL: Real voltage did change")
 
-def CurrentInBoundsTest(dataLayer, targetCurrent, outputOn):
-    dataLayer.setOutputOnOff(outputOn)
+def CurrentInBoundsTest(DataAccess, targetCurrent, outputOn):
+    DataAccess.setOutputOnOff(outputOn)
     print("Setting target current to ", targetCurrent,"mA")
-    dataLayer.setTargetCurrent(targetCurrent)
+    DataAccess.setTargetCurrent(targetCurrent)
     print("Reading target voltage")
-    readTargetCurrent = dataLayer.getTargetCurrent()
+    readTargetCurrent = DataAccess.getTargetCurrent()
     if outputOn:
         if readTargetCurrent == targetCurrent:
             print("OK: Reading target Current")
@@ -70,7 +70,7 @@ def CurrentInBoundsTest(dataLayer, targetCurrent, outputOn):
         else:
             print("FAIL: Expected 0mA because output is off but got ", readTargetCurrent, "mA")
     print("Testing real Current")
-    readRealCurrent = dataLayer.getRealCurrent()
+    readRealCurrent = DataAccess.getRealCurrent()
     if outputOn:
         if readRealCurrent == targetCurrent:
             print("OK: Reading real Current")
@@ -82,14 +82,14 @@ def CurrentInBoundsTest(dataLayer, targetCurrent, outputOn):
         else:
             print("FAIL: Expected 0V because output is off but got ", readRealCurrent, "mA")
 
-def CurrentOutOfBoundsTest(dataLayer, targetCurrent, outputOn):
-    dataLayer.setOutputOnOff(outputOn)
+def CurrentOutOfBoundsTest(DataAccess, targetCurrent, outputOn):
+    DataAccess.setOutputOnOff(outputOn)
     print("Test setting Current out of bounds")
-    targetCurrentBeforeChanges = dataLayer.getTargetCurrent()
-    realCurrentBeforeChanges = dataLayer.getRealCurrent()
-    dataLayer.setTargetCurrent(targetCurrent)
-    targetCurrentAfterChanges = dataLayer.getTargetCurrent()
-    realCurrentAfterChanges = dataLayer.getRealCurrent()
+    targetCurrentBeforeChanges = DataAccess.getTargetCurrent()
+    realCurrentBeforeChanges = DataAccess.getRealCurrent()
+    DataAccess.setTargetCurrent(targetCurrent)
+    targetCurrentAfterChanges = DataAccess.getTargetCurrent()
+    realCurrentAfterChanges = DataAccess.getRealCurrent()
 
     if targetCurrentBeforeChanges == targetCurrentAfterChanges:
         print("OK: Target Current did not change")
@@ -101,14 +101,14 @@ def CurrentOutOfBoundsTest(dataLayer, targetCurrent, outputOn):
     else:
         print("FAIL: Real Current did change")
 
-def TestAllTheInBoudnsValues(dataLayer, targetCurrent, targetVoltage, outputOn):
-    dataLayer.setOutputOnOff(outputOn)
+def TestAllTheInBoudnsValues(DataAccess, targetCurrent, targetVoltage, outputOn):
+    DataAccess.setOutputOnOff(outputOn)
     print("Setting target voltage to ", targetVoltage,"V")
     print("Setting target current to ", targetCurrent,"V")
-    dataLayer.setTargetVoltage(targetVoltage)
-    dataLayer.setTargetCurrent(targetCurrent)
+    DataAccess.setTargetVoltage(targetVoltage)
+    DataAccess.setTargetCurrent(targetCurrent)
     print("Reading all values")
-    allValues = dataLayer.getAllValues()
+    allValues = DataAccess.getAllValues()
     listOfValues = allValues.split(";") 
     realVoltage = listOfValues[0]
     realCurrent = listOfValues[1]
@@ -157,8 +157,8 @@ def TestAllTheInBoudnsValues(dataLayer, targetCurrent, targetVoltage, outputOn):
             print("FAIL: Expected 0mA because output is off but got ", realCurrent, "mA")
 
 def Run():
-    dataLayer = DataLayer()
-    port = dataLayer.detectDevicePort()
+    DataAccess = DataAccess()
+    port = DataAccess.detectDevicePort()
 
     if port is None:
         print("No device found on any port")
@@ -166,7 +166,7 @@ def Run():
     else:
         print("Device found on port ", port)
 
-    connected = dataLayer.connect(port)
+    connected = DataAccess.connect(port)
     if connected:
         print("Connected")
     else:
@@ -177,41 +177,41 @@ def Run():
     Initalize test
     """
     print("Initalizing tests")
-    dataLayer.setOutputOnOff(True)
+    DataAccess.setOutputOnOff(True)
 
     """
     VOLTAGE TESTS
     """
     outputOn = True
-    VoltageInBoundsTest(dataLayer, 3, outputOn)
+    VoltageInBoundsTest(DataAccess, 3, outputOn)
     """
-    VoltageInBoundsTest(dataLayer, 5, outputOn)
-    VoltageOutOfBoundsTest(dataLayer, 21, outputOn)
+    VoltageInBoundsTest(DataAccess, 5, outputOn)
+    VoltageOutOfBoundsTest(DataAccess, 21, outputOn)
 
     outputOn = False
-    VoltageInBoundsTest(dataLayer, 3, outputOn)
-    VoltageInBoundsTest(dataLayer, 5, outputOn)
-    VoltageOutOfBoundsTest(dataLayer, 21, outputOn)
+    VoltageInBoundsTest(DataAccess, 3, outputOn)
+    VoltageInBoundsTest(DataAccess, 5, outputOn)
+    VoltageOutOfBoundsTest(DataAccess, 21, outputOn)
 
     """
     #CURRENT TESTS
     """
     outputOn = True
-    CurrentInBoundsTest(dataLayer, 0, outputOn)
-    CurrentInBoundsTest(dataLayer, 3, outputOn)
-    CurrentInBoundsTest(dataLayer, 5, outputOn)
-    CurrentOutOfBoundsTest(dataLayer, 21, outputOn)
+    CurrentInBoundsTest(DataAccess, 0, outputOn)
+    CurrentInBoundsTest(DataAccess, 3, outputOn)
+    CurrentInBoundsTest(DataAccess, 5, outputOn)
+    CurrentOutOfBoundsTest(DataAccess, 21, outputOn)
 
     outputOn = False
-    CurrentInBoundsTest(dataLayer, 0, outputOn)
-    CurrentInBoundsTest(dataLayer, 300, outputOn)
-    CurrentInBoundsTest(dataLayer, 500, outputOn)
-    CurrentOutOfBoundsTest(dataLayer, 2000, outputOn)
+    CurrentInBoundsTest(DataAccess, 0, outputOn)
+    CurrentInBoundsTest(DataAccess, 300, outputOn)
+    CurrentInBoundsTest(DataAccess, 500, outputOn)
+    CurrentOutOfBoundsTest(DataAccess, 2000, outputOn)
 
     """
     #Complex tests
     """
-    TestAllTheInBoudnsValues(dataLayer, 200, 2 , True)
-    TestAllTheInBoudnsValues(dataLayer, 300, 3 , False)
+    TestAllTheInBoudnsValues(DataAccess, 200, 2 , True)
+    TestAllTheInBoudnsValues(DataAccess, 300, 3 , False)
     """
 Run()

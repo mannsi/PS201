@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.ttk import *
 from Control.Controller import Controller
+import Control.Controller
 import logging
 import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
@@ -37,7 +38,36 @@ class PsFrame():
       btnConnect.pack(side=RIGHT)
       inverseWidgetList.append(btnConnect)
       self.addMenuBar()
+      # TODO go through these functions and move them to their own UI components. No
+      # need for the parent class to handle updating of the entire tree
+      controller.registerUpdateFunction(self.updateConnectedStatus, Control.Controller.connectUpdate)
+      controller.registerUpdateFunction(self.realCurrentUpdate, Control.Controller.realCurrentUpdate)
+      controller.registerUpdateFunction(self.realVoltageUpdate, Control.Controller.realVoltageUpdate)
+      controller.registerUpdateFunction(self.targetCurrentUpdate, Control.Controller.targetCurrentUpdate)
+      controller.registerUpdateFunction(self.targetVoltageUpdate, Control.Controller.targetVoltageUpdate)
+      controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
+      controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
+      controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
+      controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
+      controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
+
     
+    def updateConnectedStatus(self, value):
+        global connected
+        global connectedPort
+        connectStatus = value
+        self.topPanel.lblStatusValueVar.set(connectStatus)
+        if connectStatus == Control.Controller.connectedString:
+            connected = True
+            controller.startAutoUpdate(interval = 1)
+            connectedPort = controller.queue.get(0)
+            self.connectedStateChanged(True)
+        elif connectStatus == Control.Controller.noDeviceFoundstr:
+            # When this state is reached I must stop listening more for this state since many thread will return this state
+            # I also have to stop the current threads until the connectedString is returned
+            connected = False
+            self.connectedStateChanged(False)  
+
     def addMenuBar(self):
       menubar = Menu(self.mainWindow)
     
@@ -114,7 +144,7 @@ class PsFrame():
     def preRegVoltageUpdate(self, preRegVoltage):
       self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
     
-    def sequenceDone(self):
+    def sequenceDone(self, args):
       self.tabControl.sequenceTab.selectLine(-1)  
       self.tabControl.sequenceTab.scheduleStopped()
       
@@ -125,55 +155,9 @@ class PsFrame():
     Periodically checks the queue for updates to the UI.
     """
     def periodicUiUpdate(self):
-        while controller.queue.qsize():
-            try:
-                action = controller.queue.get(0)
-                if action == PsController.connectString:
-                    global connected
-                    global connectedPort
-                    connectStatus = controller.queue.get(0)
-                    self.topPanel.lblStatusValueVar.set(connectStatus)
-                    if connectStatus == PsController.connectedString:
-                        connected = True
-                        controller.startAutoUpdate(interval = 1)
-                        connectedPort = controller.queue.get(0)
-                        self.connectedStateChanged(True)
-                    elif connectStatus == PsController.noDeviceFoundstr:
-                        # When this state is reached I must stop listening more for this state since many thread will return this state
-                        # I also have to stop the current threads until the connectedString is returned
-                        connected = False
-                        self.connectedStateChanged(False)  
-                elif action == PsController.realCurrentString:
-                    realCurrentValue = controller.queue.get(0)
-                    self.realCurrentUpdate(realCurrentValue)
-                elif action == PsController.realVoltageString:
-                    realVoltageValue = controller.queue.get(0)
-                    self.realVoltageUpdate(realVoltageValue)
-                elif action == PsController.targetCurrentString:
-                    targetCurrentValue = controller.queue.get(0)
-                    self.targetCurrentUpdate(targetCurrentValue)
-                elif action == PsController.targetVoltageString:
-                    targetVoltageValue = controller.queue.get(0)
-                    self.targetVoltageUpdate(targetVoltageValue)
-                elif action == PsController.inputVoltageString:
-                    inputVoltage = controller.queue.get(0)
-                    self.inputVoltageUpdate(inputVoltage)
-                elif action == PsController.outputOnOffString:
-                    outputOnOff = controller.queue.get(0)
-                    self.outPutOnOffUpdate(outputOnOff)
-                elif action == PsController.preRegVoltageString:
-                    preRegVoltageValue = controller.queue.get(0)
-                    self.preRegVoltageUpdate(preRegVoltageValue)
-                elif action == PsController.scheduleDoneString:
-                    self.sequenceDone()
-                elif action == PsController.scheduleNewLineString:
-                    rowNumber = controller.queue.get(0)
-                    self.sequenceLineChanged(rowNumber)
-            except:
-                pass
-            finally:
-                self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
+        controller.uiPulse()
         self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
+
     def connectedStateChanged(self, connected):
         if connected:
             state = NORMAL
