@@ -1,4 +1,4 @@
-import SerialCommunication
+from DAL.SerialCommunication import Connection
 import logging
 
 class DataLayer():
@@ -20,13 +20,13 @@ class DataLayer():
         self.__acknowledgeSignal__ = b'\x06'
         self.__notAcknowledgeSignal__ = b'\x15'
 
-        self.connection = SerialCommunication.Connection(
-                                                         baudrate = 9600,
-                                                         timeout = 0.1,
-                                                         handshakeSignal=self.__deviceWriteRealVoltage__,
-                                                         startChar=self.__startChar__,
-                                                         acknowledgeSignal=self.__acknowledgeSignal__,
-                                                         notAcknowledgeSignal=self.__notAcknowledgeSignal__)
+        self.connection = Connection(
+            baudrate = 9600,
+            timeout = 0.1,
+            handshakeSignal=self.__deviceWriteRealVoltage__,
+            startChar=self.__startChar__,
+            acknowledgeSignal=self.__acknowledgeSignal__,
+            notAcknowledgeSignal=self.__notAcknowledgeSignal__)
 
     def connect(self, usbPortNumber):
         try:

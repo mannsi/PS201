@@ -1,5 +1,5 @@
-from DataLayer import DataLayer
-import ThreadHelper
+from DAL.DataLayer import DataLayer
+from Utilities.ThreadHelper import ThreadHelper
 import logging
 import queue
 import threading
@@ -27,7 +27,7 @@ class Controller():
         self.dataLayer = DataLayer()
         self.queue = queue.Queue()
         self.cancelNextGet = queue.Queue()
-        self.threadHelper = ThreadHelper.ThreadHelper()
+        self.threadHelper = ThreadHelper()
       
     def connect(self, usbPortNumber, threaded=False):
         if threaded:

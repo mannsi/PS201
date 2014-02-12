@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 import binascii
 import crcmod.predefined
-from Crc import Crc16
+from Utilities.Crc import Crc16
 
 class DeviceResponse:
     def fromSerialValue(self,serialValue, startChar):
@@ -28,6 +28,7 @@ class DeviceResponse:
                 binaryData = serialValue[dataIndex:dataIndex+dataLength]
                 self.data = binaryData.decode()
 
+#TODO rename to SerialConnection
 class Connection():
     def __init__(
                  self, 

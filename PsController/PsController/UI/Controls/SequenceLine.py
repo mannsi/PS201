@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-from ExtendedEntry import DecimalEntry
+from UI.Controls.ExtendedEntry import DecimalEntry
 
 class SequenceLineStruct():
   def __init__(self):

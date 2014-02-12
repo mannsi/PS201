@@ -1,12 +1,12 @@
 from tkinter import *
 from tkinter.ttk import *
-from Controller import Controller
+from Control.Controller import Controller
 import logging
 import tkinter.simpledialog
-from AboutDialog import *
-from Dialogs import RampDialog, DataLoggingDialog
-import tkBaseDialog
-from SequenceLineFrame import *
+from UI.Dialogs.AboutDialog import *
+from UI.Dialogs.Dialogs import RampDialog, DataLoggingDialog
+import UI.Dialogs.tkBaseDialog
+from UI.Controls.SequenceLineFrame import SequenceLineFrame
 
 mainWindowSize = '700x400'
 mainWindowTitle = "PS201 Controller"

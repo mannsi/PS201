@@ -1,10 +1,10 @@
+import os
 from tkinter import *
 from tkinter.ttk import *
-import tkBaseDialog
 from tkinter import filedialog
-from ExtendedEntry import DecimalEntry
-from SequenceLine import SequenceLineStruct
-import os
+from UI.Dialogs.tkBaseDialog import Dialog
+from UI.Controls.ExtendedEntry import DecimalEntry
+from UI.Controls.SequenceLine import SequenceLineStruct
 
 class LinearRamp():
   def __init__(self):
@@ -16,7 +16,7 @@ class LinearRamp():
     self.timeType = 'sec'
     self.numSteps = 0
 
-class RampDialog(tkBaseDialog.Dialog):
+class RampDialog(Dialog):
   def body(self, master):   
     self.addRampGui(master)
     self.okClicked = False
@@ -84,7 +84,7 @@ class RampDialog(tkBaseDialog.Dialog):
       current += currentIncrement
     return lines
 
-class DataLoggingDialog(tkBaseDialog.Dialog):
+class DataLoggingDialog(Dialog):
   def body(self, master):   
     self.createGui(master)
     self.okClicked = False
