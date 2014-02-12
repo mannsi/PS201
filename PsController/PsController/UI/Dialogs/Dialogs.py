@@ -2,9 +2,9 @@ import os
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import filedialog
-from UI.Dialogs.tkBaseDialog import Dialog
-from UI.Controls.ExtendedEntry import DecimalEntry
-from UI.Controls.SequenceLine import SequenceLineStruct
+from .tkBaseDialog import Dialog
+from ..Controls.ExtendedEntry import DecimalEntry
+from ..Controls.SequenceLine import SequenceLineStruct
 
 class LinearRamp():
   def __init__(self):

@@ -1,7 +1,7 @@
 from tkinter import *
-import UI.Dialogs.tkBaseDialog
+from .tkBaseDialog import Dialog
 
-class AboutDialog(UI.Dialogs.tkBaseDialog.Dialog):
+class AboutDialog(Dialog):
   def body(self, master):
     Label(master, text="The text in the about dialog. Don't know if it should contain f.x. email addresses or stuff like that").pack()
 

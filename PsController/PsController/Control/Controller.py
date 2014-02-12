@@ -1,9 +1,8 @@
-from DAL.DataLayer import DataLayer
-from Utilities.ThreadHelper import ThreadHelper
 import logging
 import queue
-import threading
 from datetime import datetime, timedelta
+from DAL.DataLayer import DataLayer
+from Utilities.ThreadHelper import ThreadHelper
 
 connectedString = "Connected !"
 connectingSting = "Connecting ..."
@@ -76,6 +75,50 @@ class Controller():
     def startAutoUpdate(self, interval):
         self.threadHelper.runIntervalJob(self.__updateValuesWorker__, interval)
       
+    def startSchedule(self,
+                      lines,
+                      startingTargetVoltage,
+                      startingTargetCurrent, 
+                      startingOutputOn,
+                      logWhenValuesChange=False,
+                      filePath=None,
+                      useLoggingTimeInterval=False,
+                      loggingTimeInterval=0):
+    
+        listOfFunctions = []
+        listOfFiringTimes = []
+        listOfArgs = []
+        
+        legalLines = []
+        for line in lines:
+            if line.getDuration() != 0:
+                legalLines.append(line)
+        numLines = len(legalLines)
+        if numLines == 0:
+            return
+        nextFireTime = datetime.now() + timedelta(seconds=1)
+        for line in legalLines:
+            listOfFunctions.append(self.__addJobForLine__)
+            listOfFiringTimes.append(nextFireTime)
+            listOfArgs.append([line, logWhenValuesChange, filePath])
+            timeType = line.getTimeType()
+            if timeType == "sec":
+                nextFireTime += timedelta(seconds=line.getDuration())
+            elif timeType == "min":
+                nextFireTime += timedelta(minutes=line.getDuration())
+            elif timeType == "hour":
+                nextFireTime += timedelta(hours=line.getDuration())
+        self.setOutputOnOff(True)
+        listOfFunctions.append(self.__resetDevice__)
+        listOfFiringTimes.append(nextFireTime)
+        listOfArgs.append([startingTargetVoltage, startingTargetCurrent, startingOutputOn])
+        self.threadHelper.runSchedule(listOfFunctions, listOfFiringTimes, listOfArgs, useLoggingTimeInterval, loggingTimeInterval,filePath, self.__logValuesToFile__)
+        return True
+   
+    def stopSchedule(self):
+        self.queue.put(scheduleDoneString) # Notify the UI
+        self.threadHelper.stopSchedule()
+
     def __updateValuesWorker__(self):
         try:
             if self.cancelNextGet.qsize() != 0:
@@ -136,50 +179,6 @@ class Controller():
         self.queue.put(connectString)
         self.queue.put(noDeviceFoundstr)
         print("connection lost worker. Connection lost in ", source)
-       
-    def startSchedule(self,
-                      lines,
-                      startingTargetVoltage,
-                      startingTargetCurrent, 
-                      startingOutputOn,
-                      logWhenValuesChange=False,
-                      filePath=None,
-                      useLoggingTimeInterval=False,
-                      loggingTimeInterval=0):
-    
-        listOfFunctions = []
-        listOfFiringTimes = []
-        listOfArgs = []
-        
-        legalLines = []
-        for line in lines:
-            if line.getDuration() != 0:
-                legalLines.append(line)
-        numLines = len(legalLines)
-        if numLines == 0:
-            return
-        nextFireTime = datetime.now() + timedelta(seconds=1)
-        for line in legalLines:
-            listOfFunctions.append(self.__addJobForLine__)
-            listOfFiringTimes.append(nextFireTime)
-            listOfArgs.append([line, logWhenValuesChange, filePath])
-            timeType = line.getTimeType()
-            if timeType == "sec":
-                nextFireTime += timedelta(seconds=line.getDuration())
-            elif timeType == "min":
-                nextFireTime += timedelta(minutes=line.getDuration())
-            elif timeType == "hour":
-                nextFireTime += timedelta(hours=line.getDuration())
-        self.setOutputOnOff(True)
-        listOfFunctions.append(self.__resetDevice__)
-        listOfFiringTimes.append(nextFireTime)
-        listOfArgs.append([startingTargetVoltage, startingTargetCurrent, startingOutputOn])
-        self.threadHelper.runSchedule(listOfFunctions, listOfFiringTimes, listOfArgs, useLoggingTimeInterval, loggingTimeInterval,filePath, self.__logValuesToFile__)
-        return True
-   
-    def stopSchedule(self):
-        self.queue.put(scheduleDoneString) # Notify the UI
-        self.threadHelper.stopSchedule()
    
     def __addJobForLine__(self, line, logToDataFile, filePath):
         self.queue.put(scheduleNewLineString)

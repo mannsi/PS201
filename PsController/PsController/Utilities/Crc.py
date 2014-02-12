@@ -1,12 +1,3 @@
-import serial
-import sys
-import logging
-import platform
-import glob
-import threading
-import time
-from datetime import datetime
-import binascii
 import crcmod.predefined
 
 class Crc16:

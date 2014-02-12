@@ -1,32 +1,32 @@
-from DAL.SerialCommunication import Connection
 import logging
+from .SerialCommunication import SerialConnection
+
+__deviceWriteRealVoltage__ = b'\xd0'
+__deviceWriteRealCurrent__ = b'\xd1'
+__deviceWritePreRegulatorVoltage__ = b'\xd3'
+__deviceReadTargetVoltage__ = b'\xc0'
+__deviceReadTargetCurrent__ = b'\xc1'
+__deviceWriteTargetVoltage__ = b'\xe0'
+__deviceWriteTargetCurrent__ = b'\xe1'
+__deviceTurnOnOutput__ = b'\xc2'
+__deviceTurnOffOutput__ = b'\xc3'
+__deviceIsOutputOn__ = b'\xc4'
+__handshakeSignal__ = b'\xa0'
+__programId__ = b'\xa1'
+__deviceWriteAll__ = b'\xa5'
+__startChar__ = b'\x7E'
+__acknowledgeSignal__ = b'\x06'
+__notAcknowledgeSignal__ = b'\x15'
 
 class DataLayer():
     def __init__(self):
-        self.__deviceWriteRealVoltage__ = b'\xd0'
-        self.__deviceWriteRealCurrent__ = b'\xd1'
-        self.__deviceWritePreRegulatorVoltage__ = b'\xd3'
-        self.__deviceReadTargetVoltage__ = b'\xc0'
-        self.__deviceReadTargetCurrent__ = b'\xc1'
-        self.__deviceWriteTargetVoltage__ = b'\xe0'
-        self.__deviceWriteTargetCurrent__ = b'\xe1'
-        self.__deviceTurnOnOutput__ = b'\xc2'
-        self.__deviceTurnOffOutput__ = b'\xc3'
-        self.__deviceIsOutputOn__ = b'\xc4'
-        self.__handshakeSignal__ = b'\xa0'
-        self.__programId__ = b'\xa1'
-        self.__deviceWriteAll__ = b'\xa5'
-        self.__startChar__ = b'\x7E'
-        self.__acknowledgeSignal__ = b'\x06'
-        self.__notAcknowledgeSignal__ = b'\x15'
-
-        self.connection = Connection(
+        self.connection = SerialConnection(
             baudrate = 9600,
             timeout = 0.1,
-            handshakeSignal=self.__deviceWriteRealVoltage__,
-            startChar=self.__startChar__,
-            acknowledgeSignal=self.__acknowledgeSignal__,
-            notAcknowledgeSignal=self.__notAcknowledgeSignal__)
+            handshakeSignal=__deviceWriteRealVoltage__,
+            startChar=__startChar__,
+            acknowledgeSignal=__acknowledgeSignal__,
+            notAcknowledgeSignal=__notAcknowledgeSignal__)
 
     def connect(self, usbPortNumber):
         try:
@@ -55,47 +55,47 @@ class DataLayer():
         return self.connection.getUsbPorts()
 
     def getAllValues(self):
-        values = self.connection.getValue(self.__deviceWriteAll__)
+        values = self.connection.getValue(__deviceWriteAll__)
         while not values:
-            values = self.connection.getValue(self.__deviceWriteAll__)
+            values = self.connection.getValue(__deviceWriteAll__)
         splitValues = values.split(";") 
         floatValues = [float(value) for value in splitValues]
         return floatValues
 
     def getRealVoltage(self):
-        return float(self.connection.getValue(self.__deviceWriteRealCurrent__))
+        return float(self.connection.getValue(__deviceWriteRealCurrent__))
 
     def getRealCurrent(self):
-        return float(self.connection.getValue(self.__deviceWriteRealVoltage__))
+        return float(self.connection.getValue(__deviceWriteRealVoltage__))
 
     def getPreRegulatorVoltage(self):
-        return float(self.connection.getValue(self.__deviceWritePreRegulatorVoltage__))
+        return float(self.connection.getValue(__deviceWritePreRegulatorVoltage__))
 
     def getTargetVoltage(self):
-        value = self.connection.getValue(self.__deviceWriteTargetVoltage__)
+        value = self.connection.getValue(__deviceWriteTargetVoltage__)
         count = 0
         while value is "":
             count += 1
-            value = self.connection.getValue(self.__deviceWriteTargetVoltage__)
+            value = self.connection.getValue(__deviceWriteTargetVoltage__)
         return float(value)
 
     def getTargetCurrent(self):
-        return float(self.connection.getValue(self.__deviceWriteTargetCurrent__))
+        return float(self.connection.getValue(__deviceWriteTargetCurrent__))
 
     def getDeviceIsOn(self):
-        return bool(self.connection.getValue(self.__deviceIsOutputOn__))
+        return bool(self.connection.getValue(__deviceIsOutputOn__))
 
     def setTargetVoltage(self, targetVoltage):
-        self.connection.setValue(self.__deviceReadTargetVoltage__, targetVoltage)
+        self.connection.setValue(__deviceReadTargetVoltage__, targetVoltage)
 
     def setTargetCurrent(self, targetCurrent):
-        self.connection.setValue(self.__deviceReadTargetCurrent__, targetCurrent)
+        self.connection.setValue(__deviceReadTargetCurrent__, targetCurrent)
       
     def setOutputOnOff(self, shouldBeOn):
         if shouldBeOn:
-            deviceCommand = self.__deviceTurnOnOutput__
+            deviceCommand = __deviceTurnOnOutput__
         else:
-            deviceCommand = self.__deviceTurnOffOutput__
+            deviceCommand = __deviceTurnOffOutput__
         self.connection.setValue(deviceCommand)
 
   

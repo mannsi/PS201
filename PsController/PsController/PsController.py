@@ -5,7 +5,6 @@ import logging
 import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
 from UI.Dialogs.Dialogs import RampDialog, DataLoggingDialog
-import UI.Dialogs.tkBaseDialog
 from UI.Controls.SequenceLineFrame import SequenceLineFrame
 
 mainWindowSize = '700x400'

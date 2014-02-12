@@ -1,8 +1,5 @@
 import serial
 import crcmod.predefined
-import struct
-import time
-import binascii
 
 __deviceWriteRealVoltage__ = b'\xd0'
 __deviceWriteRealCurrent__ = b'\xd1'

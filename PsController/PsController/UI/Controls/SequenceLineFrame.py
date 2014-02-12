@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-from UI.Controls.SequenceLine import SequenceLine
+from .SequenceLine import SequenceLine
 
 class SequenceLineFrame(Frame):
   def __init__(self,parent):
