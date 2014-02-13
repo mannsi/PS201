@@ -7,6 +7,7 @@ import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
 from UI.Dialogs.Dialogs import RampDialog, DataLoggingDialog
 from UI.Controls.SequenceLineFrame import SequenceLineFrame
+from DAL.DeviceValues import DeviceValues
 
 mainWindowSize = '700x400'
 mainWindowTitle = "PS201 Controller"
@@ -14,15 +15,8 @@ mainWindowTitle = "PS201 Controller"
 normalWidgetList = []
 inverseWidgetList = []
 controller = Controller(shouldLog = True, loglevel = logging.ERROR)
-targetVoltage = 0
-targetCurrent = 0
-inputVoltage = 0
-realVoltage = 0
-realCurrent = 0
-outputOn = False
-connectedPort = ''
-selectedUsbPort = ''
-connected = False
+currentValues = DeviceValues()
+
 
 class PsFrame():
     def __init__(self):
@@ -38,8 +32,6 @@ class PsFrame():
       btnConnect.pack(side=RIGHT)
       inverseWidgetList.append(btnConnect)
       self.addMenuBar()
-      # TODO go through these functions and move them to their own UI components. No
-      # need for the parent class to handle updating of the entire tree
       controller.registerUpdateFunction(self.updateConnectedStatus, Control.Controller.connectUpdate)
       controller.registerUpdateFunction(self.realCurrentUpdate, Control.Controller.realCurrentUpdate)
       controller.registerUpdateFunction(self.realVoltageUpdate, Control.Controller.realVoltageUpdate)
@@ -48,24 +40,14 @@ class PsFrame():
       controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
       controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
       controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
-      controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
-      controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
-
     
     def updateConnectedStatus(self, value):
-        global connected
-        global connectedPort
-        connectStatus = value
-        self.topPanel.lblStatusValueVar.set(connectStatus)
-        if connectStatus == Control.Controller.connectedString:
-            connected = True
+        if value == Control.Controller.connectedString:
             controller.startAutoUpdate(interval = 1)
-            connectedPort = controller.queue.get(0)
             self.connectedStateChanged(True)
-        elif connectStatus == Control.Controller.noDeviceFoundstr:
+        elif value == Control.Controller.noDeviceFoundstr:
             # When this state is reached I must stop listening more for this state since many thread will return this state
             # I also have to stop the current threads until the connectedString is returned
-            connected = False
             self.connectedStateChanged(False)  
 
     def addMenuBar(self):
@@ -91,10 +73,6 @@ class PsFrame():
       self.submenu.delete(0, END)
       (avilableUsbPorts, defaultUsbPort) = controller.getAvailableUsbPorts()
       self.selectedUsbPort = StringVar()
-      if connectedPort != '' and connectedPort not in avilableUsbPorts:
-        self.submenu.add_radiobutton(label=connectedPort,value=connectedPort,var=self.selectedUsbPort)
-        self.selectedUsbPort.set(connectedPort)
-      
       for port in avilableUsbPorts:
         self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPort)
         if defaultUsbPort == port:
@@ -111,49 +89,34 @@ class PsFrame():
       controller.connect(usbPort, threaded=True)
     
     def targetVoltageUpdate(self, newTargetVoltage):
-      global targetVoltage
-      targetVoltage = float(newTargetVoltage)
-      self.tabControl.statusTab.voltageEntryVar.set(newTargetVoltage)
+        global currentValues
+        currentValues.targetVoltage = float(newTargetVoltage)
 
     def inputVoltageUpdate(self, newInputVoltage):
-      global inputVoltage
-      inputVoltage = float(newInputVoltage)
-      self.tabControl.statusTab.voltageInputEntryVar.set(newInputVoltage)
+        global currentValues
+        currentValues.inputVoltage = float(newInputVoltage)
     
     def targetCurrentUpdate(self, newTargetCurrent):
-      global targetCurrent
-      targetCurrent = int(newTargetCurrent)
-      self.tabControl.statusTab.currentEntryVar.set(newTargetCurrent)
+        global currentValues
+        currentValues.targetCurrent = int(newTargetCurrent)
     
     def realVoltageUpdate(self, newRealVoltage):
-      global realVoltage
-      if newRealVoltage != realVoltage:
-        realVoltage = newRealVoltage
-        self.topPanel.valuesFrame.voltageEntryVar.set(newRealVoltage)
+        global currentValues
+        currentValues.realVoltage = newRealVoltage
     
     def realCurrentUpdate(self, newRealCurrent):
-      global realCurrent
-      if newRealCurrent != realCurrent:
-        realCurrent = newRealCurrent
-        self.topPanel.valuesFrame.currentEntryVar.set(newRealCurrent)
+        global currentValues
+        currentValues.realCurrent = newRealCurrent
     
     def outPutOnOffUpdate(self, newOutputOn):
-      outputOn = bool(newOutputOn)
-      self.topPanel.chkOutputOnVar.set(outputOn)
+        global currentValues
+        currentValues.outputOn = newOutputOn
     
     def preRegVoltageUpdate(self, preRegVoltage):
-      self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
+        global currentValues
+        currentValues.preRegVoltage = preRegVoltage
+        self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
     
-    def sequenceDone(self, args):
-      self.tabControl.sequenceTab.selectLine(-1)  
-      self.tabControl.sequenceTab.scheduleStopped()
-      
-    def sequenceLineChanged(self, rowNumber):
-      self.tabControl.sequenceTab.selectLine(rowNumber)  
-    
-    """
-    Periodically checks the queue for updates to the UI.
-    """
     def periodicUiUpdate(self):
         controller.uiPulse()
         self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
@@ -185,23 +148,28 @@ class HeaderPanel(Frame):
         self.chkOutputOn = Checkbutton(topLinFrame, text = "Output On", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
         self.chkOutputOn.pack(side=LEFT, anchor=N)
         normalWidgetList.append(self.chkOutputOn)
-        
         Label(topLinFrame, text="", width=15).pack(side=RIGHT, anchor=N)
-        
         statusPanel = Frame(topLinFrame)
         self.lblStatus = Label(statusPanel, text="Status: ").pack(side=LEFT)
         self.lblStatusValueVar = StringVar(value="Not connected")
         self.lblStatusValue = Label(statusPanel, textvariable=self.lblStatusValueVar).pack()
         statusPanel.pack()
-        
         topLinFrame.pack(fill=X)
-        
         self.valuesFrame = ValuesFrame(self)
         self.valuesFrame.pack(pady=10)
-        
+        controller.registerUpdateFunction(self.updateConnectionStatus, Control.Controller.connectUpdate)
+        controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
+
     def outPutOnOff(self):
         chkValue = self.chkOutputOnVar.get()
         controller.setOutputOnOff(chkValue, threaded=True)
+
+    def updateConnectionStatus(self, value):
+        connectStatus = value
+        self.lblStatusValueVar.set(connectStatus)
+
+    def outPutOnOffUpdate(self, newOutputOn):
+        self.chkOutputOnVar.set(newOutputOn)
 
 class ValuesFrame(Frame):
     def __init__(self, parent):
@@ -227,6 +195,10 @@ class ValuesFrame(Frame):
         self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
         self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
         normalWidgetList.append(self.btnSetTargetCurrent)
+
+        controller.registerUpdateFunction(self.realCurrentUpdate, Control.Controller.realCurrentUpdate)
+        controller.registerUpdateFunction(self.realVoltageUpdate, Control.Controller.realVoltageUpdate)
+
     
     def setTargetCurrent(self,args=None):
         targetCurrent = tkinter.simpledialog.askinteger("Current limit", "Enter new current limit (0-1000mA)",parent=self)
@@ -239,6 +211,12 @@ class ValuesFrame(Frame):
         if targetVoltage is not None:
             if (targetVoltage > 0 and targetVoltage <= 20):
                 controller.setTargetVoltage(targetVoltage, threaded=True)        
+
+    def realVoltageUpdate(self, newRealVoltage):
+        self.voltageEntryVar.set(newRealVoltage)
+    
+    def realCurrentUpdate(self, newRealCurrent):
+        self.currentEntryVar.set(newRealCurrent)
 
 class TabControl(Notebook):
     def __init__(self, parent):
@@ -262,7 +240,7 @@ class StatusTab(Frame):
         Frame.__init__(self,parent)
         fontName = "Verdana"
         fontSize = 12
-        
+      
         Label(self, text="Target voltage:",font=(fontName, fontSize)).grid(row=0,column=0,sticky=E)
         self.voltageEntryVar = DoubleVar(None)
         self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
@@ -283,6 +261,22 @@ class StatusTab(Frame):
         self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
         self.preRegVoltageEntry.grid(row=3, column=1)
         Label(self, text="(V):").grid(row=3,column=2,sticky=W)
+        controller.registerUpdateFunction(self.targetVoltageUpdate, Control.Controller.targetVoltageUpdate)
+        controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
+        controller.registerUpdateFunction(self.targetCurrentUpdate, Control.Controller.targetCurrentUpdate)
+        controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
+
+    def targetVoltageUpdate(self, newTargetVoltage):
+        self.voltageEntryVar.set(newTargetVoltage) 
+
+    def inputVoltageUpdate(self, newInputVoltage):
+        self.voltageInputEntryVar.set(newInputVoltage)
+
+    def targetCurrentUpdate(self, newTargetCurrent):
+        self.currentEntryVar.set(newTargetCurrent)
+
+    def preRegVoltageUpdate(self, preRegVoltage):
+        self.preRegVoltageEntryVar.set(preRegVoltage)
 
 class SequenceTab(Frame):
     def __init__(self, parent, resetTabM, connected):
@@ -290,6 +284,8 @@ class SequenceTab(Frame):
         self.parent = parent
         self.resetTabM = resetTabM
         self.initalizeView(connected)
+        controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
+        controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
     
     def initalizeView(self, connected):
         self.addLinesFrame()
@@ -328,25 +324,25 @@ class SequenceTab(Frame):
                 if dialog.logWhenValuesChange:
                     if dialog.filePath is not "":
                         scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                                    startingTargetVoltage = targetVoltage,
-                                                                    startingTargetCurrent = targetCurrent, 
-                                                                    startingOutputOn = outputOn,
+                                                                    startingTargetVoltage = currentValues.targetVoltage,
+                                                                    startingTargetCurrent = currentValues.targetCurrent, 
+                                                                    startingOutputOn = currentValues.outputOn,
                                                                     logWhenValuesChange=True,
                                                                     filePath=dialog.filePath)
                 elif dialog.logEveryXSeconds:
                     if dialog.timeInterval:
                         scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
                                                                      useLoggingTimeInterval=True,
-                                                                     startingTargetVoltage = targetVoltage,
-                                                                     startingTargetCurrent = targetCurrent, 
-                                                                     startingOutputOn = outputOn,
+                                                                     startingTargetVoltage = currentValues.targetVoltage,
+                                                                     startingTargetCurrent = currentValues.targetCurrent, 
+                                                                     startingOutputOn = currentValues.outputOn,
                                                                      loggingTimeInterval=dialog.timeInterval,
                                                                      filePath=dialog.filePath)
         else:       
             scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                         startingTargetVoltage = targetVoltage,
-                                                         startingTargetCurrent = targetCurrent, 
-                                                         startingOutputOn = outputOn)
+                                                         startingTargetVoltage = currentValues.targetVoltage,
+                                                         startingTargetCurrent = currentValues.targetCurrent, 
+                                                         startingOutputOn = currentValues.outputOn)
         if (scheduleStarted):
             self.btnStop.configure(state = NORMAL)
             self.btnStart.configure(state = DISABLED)
@@ -373,13 +369,20 @@ class SequenceTab(Frame):
         #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
     
     def resetLines(self):
-        self.resetTabM(connected)
+        self.resetTabM(controller.connected)
     
     def linearRamping(self):
         dialog = RampDialog(self,title="Voltage ramp")
         if dialog.okClicked:
             for l in dialog.voltageRampLines:
                 self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+
+    def sequenceDone(self, args):
+      self.selectLine(-1)  
+      self.scheduleStopped()
+
+    def sequenceLineChanged(self, rowNumber):
+      self.selectLine(rowNumber)  
 
 if __name__ == "__main__":
     psFrame = PsFrame()

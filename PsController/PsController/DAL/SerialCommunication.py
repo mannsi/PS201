@@ -37,7 +37,7 @@ class SerialConnection():
             # Scan for available ports.
             for portNumber in range(256):
                 try:
-                    con = serial.Serial(portNumber, self.baudRate, timeout = 0.01)
+                    con = serial.Serial(portNumber, self.baudRate, timeout = 0.1)
                     available.append(con.portstr)
                     if self.validConnection(con):
                         defaultPort = con.portstr
@@ -56,7 +56,7 @@ class SerialConnection():
                 available.append(usbPort)
             for port in available:
                 try:
-                    con = serial.Serial(port, self.baudRate, timeout = 0.01)
+                    con = serial.Serial(port, self.baudRate, timeout = 0.1)
                     if self.validConnection(con):
                         defaultPort = con.portstr
                         break
@@ -66,11 +66,9 @@ class SerialConnection():
     
     def validConnection(self, connection):
         try:
-            response = self.__sendCommandToDevice__(connection, self.handshakeSignal, '')
-            if response.aknowledgementSignal == self.acknowledgementSignal:
-                return True
-            else:
-                return False
+            self.__sendCommandToDevice__(connection, self.handshakeSignal, '')
+            serialResponse = connection.read(2)
+            return len(serialResponse) == 2 and serialResponse[1:2] == self.acknowledgementSignal
         except Exception as e:
             return False 
     
@@ -105,7 +103,8 @@ class SerialConnection():
     
     def __getValue__(self, serialConnection, command):
         with self.processLock:
-            response = self.__sendCommandToDevice__(serialConnection, command,'')   
+            self.__sendCommandToDevice__(serialConnection, command,'')   
+            response = self.__readDeviceReponse__(serialConnection)
         return response.data
     
     def setValue(self, command, value = None):
@@ -135,12 +134,6 @@ class SerialConnection():
             serialConnection.write(binaryData)
         serialConnection.write(crc[0])
         serialConnection.write(self.startChar)
-    
-        response = self.__readDeviceReponse__(serialConnection)
-        if response.idSignal == self.startChar:
-            return response
-
-        raise Exception("Got neither an ACK nor NAK from device")
 
     def __readDeviceReponse__(self,serialConnection):
         serialResponse = serialConnection.readline()

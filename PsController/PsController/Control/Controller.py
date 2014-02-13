@@ -29,6 +29,7 @@ class Controller():
         self.cancelNextGet = queue.Queue()
         self.threadHelper = ThreadHelper()
         self.updateFunctions = {}
+        self.connected = False
       
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
@@ -167,11 +168,10 @@ class Controller():
     def __connectWorker__(self, usbPortNumber):
         self.queue.put(connectUpdate)
         self.queue.put(connectingString)
-        connectionSuccessful = self.connect(usbPortNumber)
+        self.connected = self.connect(usbPortNumber)
         self.queue.put(connectUpdate)
-        if connectionSuccessful:
+        if self.connected:
             self.queue.put(connectedString)
-            self.queue.put(usbPortNumber)
         else:
             print("Connect worker: Connection exception. Failed to connect")
             self.queue.put(noDeviceFoundstr)
