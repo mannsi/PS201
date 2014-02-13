@@ -5,7 +5,8 @@ import Control.Controller
 import logging
 import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
-from UI.Dialogs.Dialogs import RampDialog, DataLoggingDialog
+from UI.Dialogs.RampDialog import RampDialog
+from UI.Dialogs.DataLoggingDialog import DataLoggingDialog
 from UI.Controls.SequenceLineFrame import SequenceLineFrame
 from DAL.DeviceValues import DeviceValues
 

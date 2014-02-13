@@ -66,7 +66,7 @@ class SerialConnection():
     
     def validConnection(self, connection):
         try:
-            self.__sendCommandToDevice__(connection, self.handshakeSignal, '')
+            self._sendCommandToDevice(connection, self.handshakeSignal, '')
             serialResponse = connection.read(2)
             return len(serialResponse) == 2 and serialResponse[1:2] == self.acknowledgementSignal
         except Exception as e:
@@ -93,7 +93,7 @@ class SerialConnection():
     def getValue(self, command):
         logging.debug("Sending command to device. Command: %s" % command)
         try:
-            value = self.__getValue__(self.connection,command)
+            value = self._getValue(self.connection,command)
             logging.debug("Reading message from device. Value: %s" % value)
             return value
         except Exception as e:
@@ -101,10 +101,10 @@ class SerialConnection():
             logging.exception("Error when reading value with command: ", command)
             raise 
     
-    def __getValue__(self, serialConnection, command):
+    def _getValue(self, serialConnection, command):
         with self.processLock:
-            self.__sendCommandToDevice__(serialConnection, command,'')   
-            response = self.__readDeviceReponse__(serialConnection)
+            self._sendCommandToDevice(serialConnection, command,'')   
+            response = self._readDeviceReponse(serialConnection)
         return response.data
     
     def setValue(self, command, value = None):
@@ -113,17 +113,17 @@ class SerialConnection():
           if value:
               loggingString += ". value:%s" % value
           logging.debug(loggingString)
-          self.__setValue__(self.connection, command, value)
+          self._setValue(self.connection, command, value)
       except Exception as e:
           self.disconnect()
           logging.exception("Error when setting value with command: ", command, " and value: ", value)
           raise 
     
-    def __setValue__(self, serialConnection, command, value): 
+    def _setValue(self, serialConnection, command, value): 
         with self.processLock:
-            self.__sendCommandToDevice__(serialConnection, command, value)
+            self._sendCommandToDevice(serialConnection, command, value)
 
-    def __sendCommandToDevice__(self, serialConnection, command, data):
+    def _sendCommandToDevice(self, serialConnection, command, data):
         binaryData = bytes(str(data), 'ascii')
         dataLength = bytes([len(binaryData)])
         crc = Crc16.Create(command, binaryData)
@@ -135,7 +135,7 @@ class SerialConnection():
         serialConnection.write(crc[0])
         serialConnection.write(self.startChar)
 
-    def __readDeviceReponse__(self,serialConnection):
+    def _readDeviceReponse(self,serialConnection):
         serialResponse = serialConnection.readline()
         response = DeviceResponse()
         response.fromSerialValue(serialResponse, self.startChar)
