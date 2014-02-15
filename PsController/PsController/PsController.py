@@ -28,7 +28,7 @@ class PsController():
       self.topPanel.pack(fill=X)
       self.tabControl = TabControl(self.mainWindow)
       self.tabControl.pack(fill=BOTH, expand=1)
-      btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice(self.selectedUsbPort.get()))
+      btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
       btnConnect.pack(side=RIGHT)
       inverseWidgetList.append(btnConnect)
       self.addMenuBar()
@@ -70,11 +70,11 @@ class PsController():
     def buildUsbPortMenu(self):
       self.submenu.delete(0, END)
       (avilableUsbPorts, defaultUsbPort) = controller.getAvailableUsbPorts()
-      self.selectedUsbPort = StringVar()
+      self.selectedUsbPortVar = StringVar()
       for port in avilableUsbPorts:
-        self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPort)
+        self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPortVar)
         if defaultUsbPort == port:
-          self.selectedUsbPort.set(port)
+          self.selectedUsbPortVar.set(port)
           
       self.submenu.add_separator()    
       self.submenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
@@ -82,9 +82,10 @@ class PsController():
     def aboutDialog(self):
       dialog = AboutDialog(self.mainWindow,title="About",showCancel=False)
     
-    def connectToDevice(self, usbPort):
-      self.periodicUiUpdate()
-      controller.connect(usbPort, threaded=True)
+    def connectToDevice(self):
+        usbPort = self.selectedUsbPortVar.get()
+        self.periodicUiUpdate()
+        controller.connect(usbPort, threaded=True)
     
     def targetVoltageUpdate(self, newTargetVoltage):
         global currentValues
@@ -234,4 +235,7 @@ class TabControl(Notebook):
 
 if __name__ == "__main__":
     psFrame = PsController()
+    psFrame.connectToDevice()
     psFrame.show()
+
+    
