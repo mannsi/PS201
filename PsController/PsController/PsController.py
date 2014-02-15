@@ -3,11 +3,11 @@ from tkinter.ttk import *
 from Control.Controller import Controller
 import Control.Controller
 import logging
+import os
 import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
-from UI.Dialogs.RampDialog import RampDialog
-from UI.Dialogs.DataLoggingDialog import DataLoggingDialog
-from UI.Frames.SequenceLineFrame import SequenceLineFrame
+from UI.Frames.SequenceTabFrame import SequenceTabFrame
+from UI.Frames.StatusTabFrame import StatusTabFrame
 from Model.DeviceValues import DeviceValues
 
 mainWindowSize = '700x400'
@@ -18,14 +18,13 @@ inverseWidgetList = []
 controller = Controller(shouldLog = True, loglevel = logging.ERROR)
 currentValues = DeviceValues()
 
-
-class PsFrame():
+class PsController():
     def __init__(self):
       self.guiRefreshRate = 200
       self.mainWindow = Tk()
       self.mainWindow.title(mainWindowTitle)
       self.mainWindow.geometry(mainWindowSize)
-      self.topPanel = HeaderPanel(self.mainWindow)
+      self.topPanel = _HeaderPanel(self.mainWindow)
       self.topPanel.pack(fill=X)
       self.tabControl = TabControl(self.mainWindow)
       self.tabControl.pack(fill=BOTH, expand=1)
@@ -47,8 +46,6 @@ class PsFrame():
             controller.startAutoUpdate(interval = 1)
             self.connectedStateChanged(True)
         elif value == Control.Controller.noDeviceFoundstr:
-            # When this state is reached I must stop listening more for this state since many thread will return this state
-            # I also have to stop the current threads until the connectedString is returned
             self.connectedStateChanged(False)  
 
     def addMenuBar(self):
@@ -116,7 +113,6 @@ class PsFrame():
     def preRegVoltageUpdate(self, preRegVoltage):
         global currentValues
         currentValues.preRegVoltage = preRegVoltage
-        self.tabControl.statusTab.preRegVoltageEntryVar.set(preRegVoltage)
     
     def periodicUiUpdate(self):
         controller.uiPulse()
@@ -139,7 +135,7 @@ class PsFrame():
     def show(self):
         self.mainWindow.mainloop()
 
-class HeaderPanel(Frame):
+class _HeaderPanel(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
@@ -156,7 +152,7 @@ class HeaderPanel(Frame):
         self.lblStatusValue = Label(statusPanel, textvariable=self.lblStatusValueVar).pack()
         statusPanel.pack()
         topLinFrame.pack(fill=X)
-        self.valuesFrame = ValuesFrame(self)
+        self.valuesFrame = _ValuesFrame(self)
         self.valuesFrame.pack(pady=10)
         controller.registerUpdateFunction(self.updateConnectionStatus, Control.Controller.connectUpdate)
         controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
@@ -172,7 +168,7 @@ class HeaderPanel(Frame):
     def outPutOnOffUpdate(self, newOutputOn):
         self.chkOutputOnVar.set(newOutputOn == 1)
 
-class ValuesFrame(Frame):
+class _ValuesFrame(Frame):
     def __init__(self, parent):
         Frame.__init__(self,parent)
         self.parent=parent
@@ -224,8 +220,8 @@ class TabControl(Notebook):
         self.parent = parent
         Notebook.__init__(self, parent, name='tab control')
         
-        self.statusTab = StatusTab(self)
-        self.sequenceTab = SequenceTab(self,self.resetSequenceTab, False)
+        self.statusTab = StatusTabFrame(self, controller)
+        self.sequenceTab = SequenceTabFrame(self,self.resetSequenceTab, False, controller, normalWidgetList)
         
         self.add(self.statusTab, text='Status')
         self.add(self.sequenceTab, text='Sequence')
@@ -236,154 +232,6 @@ class TabControl(Notebook):
         self.add(self.sequenceTab, text='Sequence')
         self.select(self.sequenceTab)
 
-class StatusTab(Frame):
-    def __init__(self, parent):
-        Frame.__init__(self,parent)
-        fontName = "Verdana"
-        fontSize = 12
-      
-        Label(self, text="Target voltage:",font=(fontName, fontSize)).grid(row=0,column=0,sticky=E)
-        self.voltageEntryVar = DoubleVar(None)
-        self.voltageEntry = Entry(self, textvariable=self.voltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
-        self.voltageEntry.grid(row=0, column=1)
-        Label(self, text="(V):").grid(row=0,column=2,sticky=W)
-        Label(self, text="Current limit:",font=(fontName, fontSize)).grid(row=1,column=0,sticky=E)
-        self.currentEntryVar = IntVar(None)
-        self.currentEntry = Entry(self, textvariable=self.currentEntryVar,width=8,state='readonly',font=(fontName, fontSize))
-        self.currentEntry.grid(row=1, column=1)
-        Label(self, text="(mA):").grid(row=1,column=2,sticky=W)
-        Label(self, text="Input voltage:",font=(fontName, fontSize)).grid(row=2,column=0,sticky=E)
-        self.voltageInputEntryVar = DoubleVar(None)
-        self.voltageInputEntry = Entry(self, textvariable=self.voltageInputEntryVar,width=8,state='readonly',font=(fontName, fontSize))
-        self.voltageInputEntry.grid(row=2, column=1)
-        Label(self, text="(V):").grid(row=2,column=2,sticky=W)
-        Label(self, text="Pre reg voltage:",font=(fontName, fontSize)).grid(row=3,column=0,sticky=E)
-        self.preRegVoltageEntryVar = DoubleVar(None)
-        self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
-        self.preRegVoltageEntry.grid(row=3, column=1)
-        Label(self, text="(V):").grid(row=3,column=2,sticky=W)
-        controller.registerUpdateFunction(self.targetVoltageUpdate, Control.Controller.targetVoltageUpdate)
-        controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
-        controller.registerUpdateFunction(self.targetCurrentUpdate, Control.Controller.targetCurrentUpdate)
-        controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
-
-    def targetVoltageUpdate(self, newTargetVoltage):
-        self.voltageEntryVar.set(newTargetVoltage) 
-
-    def inputVoltageUpdate(self, newInputVoltage):
-        self.voltageInputEntryVar.set(newInputVoltage)
-
-    def targetCurrentUpdate(self, newTargetCurrent):
-        self.currentEntryVar.set(newTargetCurrent)
-
-    def preRegVoltageUpdate(self, preRegVoltage):
-        self.preRegVoltageEntryVar.set(preRegVoltage)
-
-class SequenceTab(Frame):
-    def __init__(self, parent, resetTabM, connected):
-        Frame.__init__(self,parent)
-        self.parent = parent
-        self.resetTabM = resetTabM
-        self.initalizeView(connected)
-        controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
-        controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
-    
-    def initalizeView(self, connected):
-        self.addLinesFrame()
-        buttonFrame = Frame(self)
-        self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
-        self.btnAdd.pack(side=LEFT)
-        self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.resetLines)
-        self.btnClearLines.pack(side=LEFT)
-        
-        self.btnLinearRamping = Button(buttonFrame, text = "Linear ramping", command=self.linearRamping)
-        self.btnLinearRamping.pack(side=LEFT)
-        
-        self.logToFileVar = IntVar(value=0)
-        self.logToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
-        self.logToFile.pack(side=LEFT)
-        
-        if connected:
-            startButtonState = NORMAL
-        else:
-            startButtonState = DISABLED
-        self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
-        self.btnStop.pack(side=RIGHT)
-        self.btnStart = Button(buttonFrame, text = "Start", state=startButtonState, command=self.start)
-        self.btnStart.pack(side=RIGHT)
-        buttonFrame.pack(fill='x')
-        normalWidgetList.append(self.btnStart) 
-     
-    def selectLine(self, rowNumber):
-        self.sequenceLineFrame.selectLine(rowNumber)  
-      
-    def start(self):
-        scheduleStarted = False
-        if self.logToFileVar.get():
-            dialog = DataLoggingDialog(self,title="Log to file")
-            if dialog.okClicked:
-                if dialog.logWhenValuesChange:
-                    if dialog.filePath is not "":
-                        scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                                    startingTargetVoltage = currentValues.targetVoltage,
-                                                                    startingTargetCurrent = currentValues.targetCurrent, 
-                                                                    startingOutputOn = currentValues.outputOn,
-                                                                    logWhenValuesChange=True,
-                                                                    filePath=dialog.filePath)
-                elif dialog.logEveryXSeconds:
-                    if dialog.timeInterval:
-                        scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                                     useLoggingTimeInterval=True,
-                                                                     startingTargetVoltage = currentValues.targetVoltage,
-                                                                     startingTargetCurrent = currentValues.targetCurrent, 
-                                                                     startingOutputOn = currentValues.outputOn,
-                                                                     loggingTimeInterval=dialog.timeInterval,
-                                                                     filePath=dialog.filePath)
-        else:       
-            scheduleStarted = controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                         startingTargetVoltage = currentValues.targetVoltage,
-                                                         startingTargetCurrent = currentValues.targetCurrent, 
-                                                         startingOutputOn = currentValues.outputOn)
-        if (scheduleStarted):
-            self.btnStop.configure(state = NORMAL)
-            self.btnStart.configure(state = DISABLED)
-            self.btnClearLines.configure(state = DISABLED)
-            self.btnAdd.configure(state = DISABLED)
-            self.btnLinearRamping.configure(state = DISABLED)
-        
-    def stop(self):
-        controller.stopSchedule()
-         
-    def scheduleStopped(self):  
-        self.btnStart.configure(state = NORMAL)
-        self.btnClearLines.configure(state = NORMAL)
-        self.btnAdd.configure(state = NORMAL)
-        self.btnLinearRamping.configure(state = NORMAL)
-        self.btnStop.configure(state = DISABLED)
-      
-    def addLine(self):
-        self.sequenceLineFrame.addLine()
-    
-    def addLinesFrame(self):
-        canvas = Canvas(self,height=100,highlightthickness=0)
-        self.sequenceLineFrame = SequenceLineFrame(canvas)
-    
-    def resetLines(self):
-        self.resetTabM(controller.connected)
-    
-    def linearRamping(self):
-        dialog = RampDialog(self,title="Voltage ramp")
-        if dialog.okClicked:
-            for l in dialog.voltageRampLines:
-                self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
-
-    def sequenceDone(self, args):
-      self.selectLine(-1)  
-      self.scheduleStopped()
-
-    def sequenceLineChanged(self, rowNumber):
-      self.selectLine(rowNumber)  
-
 if __name__ == "__main__":
-    psFrame = PsFrame()
+    psFrame = PsController()
     psFrame.show()

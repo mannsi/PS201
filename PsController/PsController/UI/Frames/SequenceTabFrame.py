@@ -1,0 +1,114 @@
+from tkinter import *
+from tkinter.ttk import *
+import Control.Controller
+from UI.Dialogs.AboutDialog import *
+from UI.Dialogs.RampDialog import RampDialog
+from UI.Dialogs.DataLoggingDialog import DataLoggingDialog
+from UI.Frames.SequenceLineFrame import SequenceLineFrame
+
+class SequenceTabFrame(Frame):
+    def __init__(self, parent, resetTabM, connected, controller, normalWidgetList):
+        Frame.__init__(self,parent)
+        self.parent = parent
+        self.resetTabM = resetTabM
+        self.normalWidgetList = normalWidgetList
+        self.controller = controller
+        self.initalizeView(connected)
+        controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
+        controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
+    
+    def initalizeView(self, connected):
+        self.addLinesFrame()
+        buttonFrame = Frame(self)
+        self.btnAdd = Button(buttonFrame, text = "Add line", command=self.addLine)
+        self.btnAdd.pack(side=LEFT)
+        self.btnClearLines = Button(buttonFrame, text = "Clear", command=self.resetLines)
+        self.btnClearLines.pack(side=LEFT)
+        
+        self.btnLinearRamping = Button(buttonFrame, text = "Linear ramping", command=self.linearRamping)
+        self.btnLinearRamping.pack(side=LEFT)
+        
+        self.logToFileVar = IntVar(value=0)
+        self.logToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
+        self.logToFile.pack(side=LEFT)
+        
+        if connected:
+            startButtonState = NORMAL
+        else:
+            startButtonState = DISABLED
+        self.btnStop = Button(buttonFrame, text = "Stop", state=DISABLED, command=self.stop)
+        self.btnStop.pack(side=RIGHT)
+        self.btnStart = Button(buttonFrame, text = "Start", state=startButtonState, command=self.start)
+        self.btnStart.pack(side=RIGHT)
+        buttonFrame.pack(fill='x')
+        self.normalWidgetList.append(self.btnStart) 
+     
+    def selectLine(self, rowNumber):
+        self.sequenceLineFrame.selectLine(rowNumber)  
+      
+    def start(self):
+        scheduleStarted = False
+        if self.logToFileVar.get():
+            dialog = DataLoggingDialog(self,title="Log to file")
+            if dialog.okClicked:
+                if dialog.logWhenValuesChange:
+                    if dialog.filePath is not "":
+                        scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
+                                                                    startingTargetVoltage = currentValues.targetVoltage,
+                                                                    startingTargetCurrent = currentValues.targetCurrent, 
+                                                                    startingOutputOn = currentValues.outputOn,
+                                                                    logWhenValuesChange=True,
+                                                                    filePath=dialog.filePath)
+                elif dialog.logEveryXSeconds:
+                    if dialog.timeInterval:
+                        scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
+                                                                     useLoggingTimeInterval=True,
+                                                                     startingTargetVoltage = currentValues.targetVoltage,
+                                                                     startingTargetCurrent = currentValues.targetCurrent, 
+                                                                     startingOutputOn = currentValues.outputOn,
+                                                                     loggingTimeInterval=dialog.timeInterval,
+                                                                     filePath=dialog.filePath)
+        else:       
+            scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
+                                                         startingTargetVoltage = currentValues.targetVoltage,
+                                                         startingTargetCurrent = currentValues.targetCurrent, 
+                                                         startingOutputOn = currentValues.outputOn)
+        if (scheduleStarted):
+            self.btnStop.configure(state = NORMAL)
+            self.btnStart.configure(state = DISABLED)
+            self.btnClearLines.configure(state = DISABLED)
+            self.btnAdd.configure(state = DISABLED)
+            self.btnLinearRamping.configure(state = DISABLED)
+        
+    def stop(self):
+        self.controller.stopSchedule()
+         
+    def scheduleStopped(self):  
+        self.btnStart.configure(state = NORMAL)
+        self.btnClearLines.configure(state = NORMAL)
+        self.btnAdd.configure(state = NORMAL)
+        self.btnLinearRamping.configure(state = NORMAL)
+        self.btnStop.configure(state = DISABLED)
+      
+    def addLine(self):
+        self.sequenceLineFrame.addLine()
+    
+    def addLinesFrame(self):
+        canvas = Canvas(self,height=100,highlightthickness=0)
+        self.sequenceLineFrame = SequenceLineFrame(canvas)
+    
+    def resetLines(self):
+        self.resetTabM(self.controller.connected)
+    
+    def linearRamping(self):
+        dialog = RampDialog(self,title="Voltage ramp")
+        if dialog.okClicked:
+            for l in dialog.voltageRampLines:
+                self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
+
+    def sequenceDone(self, args):
+      self.selectLine(-1)  
+      self.scheduleStopped()
+
+    def sequenceLineChanged(self, rowNumber):
+      self.selectLine(rowNumber)  
