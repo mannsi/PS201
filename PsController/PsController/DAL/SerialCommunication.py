@@ -3,7 +3,7 @@ import logging
 import platform
 import glob
 import threading
-from .DeviceResponse import DeviceResponse
+from Model.DeviceResponse import DeviceResponse
 from Utilities.Crc import Crc16
 
 class SerialConnection():

@@ -7,8 +7,8 @@ import tkinter.simpledialog
 from UI.Dialogs.AboutDialog import *
 from UI.Dialogs.RampDialog import RampDialog
 from UI.Dialogs.DataLoggingDialog import DataLoggingDialog
-from UI.Controls.SequenceLineFrame import SequenceLineFrame
-from DAL.DeviceValues import DeviceValues
+from UI.Frames.SequenceLineFrame import SequenceLineFrame
+from Model.DeviceValues import DeviceValues
 
 mainWindowSize = '700x400'
 mainWindowTitle = "PS201 Controller"

@@ -1,7 +1,13 @@
 from tkinter import *
 from tkinter.ttk import *
-from .DecimalEntry import DecimalEntry
-from Model.SequenceLineStruct import SequenceLineStruct
+from UI.Controls.DecimalEntry import DecimalEntry
+
+class SequenceLineStruct():
+  def __init__(self):
+    self.voltage = 0
+    self.current = 0
+    self.duration = 0
+    self.timeType = 'sec'
 
 class SequenceLine():
   def __init__(self, parent, rowNumber, removeLineFunc, voltage=0.0, current=0, timeType='sec', duration=0):

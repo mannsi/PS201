@@ -1,16 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
 
-class ExtendedDoubleVar(DoubleVar):
-    def __init__(self):
-        DoubleVar.__init__(None)
-    def get(self):
-      try:
-        val = super.get()
-        return val
-      except:
-        return 0
-
 class DecimalEntry(Entry):
     def __init__(self, master, maxDecimals, maxValue, minValue, minIncrement, *args, **kwargs):
       self.minValue = minValue

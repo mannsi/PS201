@@ -3,8 +3,7 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter import filedialog
 from .tkBaseDialog import Dialog
-from ..Controls.ExtendedEntry import DecimalEntry
-from ..Controls.SequenceLine import SequenceLineStruct
+from UI.Controls.DecimalEntry import DecimalEntry
 
 class DataLoggingDialog(Dialog):
     def body(self, master):   
