@@ -170,7 +170,7 @@ class HeaderPanel(Frame):
         self.lblStatusValueVar.set(connectStatus)
 
     def outPutOnOffUpdate(self, newOutputOn):
-        self.chkOutputOnVar.set(newOutputOn)
+        self.chkOutputOnVar.set(newOutputOn == 1)
 
 class ValuesFrame(Frame):
     def __init__(self, parent):
@@ -367,7 +367,6 @@ class SequenceTab(Frame):
     def addLinesFrame(self):
         canvas = Canvas(self,height=100,highlightthickness=0)
         self.sequenceLineFrame = SequenceLineFrame(canvas)
-        #self.scheduleLineFrame.pack(side=LEFT,anchor=N)
     
     def resetLines(self):
         self.resetTabM(controller.connected)

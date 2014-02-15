@@ -28,7 +28,7 @@ class Controller():
         self.queue = queue.Queue()
         self.cancelNextGet = queue.Queue()
         self.threadHelper = ThreadHelper()
-        self.updateFunctions = {}
+        self.updateParameters = {}
         self.connected = False
       
     def connect(self, usbPortNumber, threaded=False):
@@ -76,9 +76,9 @@ class Controller():
             logging.propagate = False
    
     def registerUpdateFunction(self, func, condition):
-        if condition not in self.updateFunctions:
-            self.updateFunctions[condition] = (None,[]) #(Value, list_of_update_functions)
-        self.updateFunctions[condition][1].append(func)
+        if condition not in self.updateParameters:
+            self.updateParameters[condition] = [None,[]] #(Value, list_of_update_functions)
+        self.updateParameters[condition][1].append(func)
 
     """
     A call to this function lets the controller know that the UI is ready to receive updates
@@ -87,8 +87,9 @@ class Controller():
         while self.queue.qsize():
             updateCondition = self.queue.get(0)
             updatedValue = self.queue.get(0)
-            value, updateFunctions = self.updateFunctions[updateCondition]
+            value, updateFunctions = self.updateParameters[updateCondition]
             if value != updatedValue:
+                self.updateParameters[updateCondition][0] = updatedValue
                 for func in updateFunctions:
                     func(updatedValue)
 
@@ -201,7 +202,7 @@ class Controller():
         print("connection lost worker. Connection lost in ", source)
    
     def _addJobForLine(self, line, logToDataFile, filePath):
-        self.queue.put(scheduleNewLineString)
+        self.queue.put(scheduleNewLineUpdate)
         self.queue.put(line.rowNumber)
         self._setTargetVoltageWorker(line.getVoltage())
         self._setTargetCurrentWorker(line.getCurrent())
