@@ -5,27 +5,18 @@ int showOutputOn = 1;
 // Set up the display in 4 bit mode and ready for writing to
 void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 {	
-	//Display
-	DDRD |= 1 << PD6;	// Display chip select
-	DESELECT_DISPLAY;
-	DDRB |= 1 << PB2;	// Backlight
-	DDRB |= 1 << PB1;	// Contrast
-	DDRD |= 1 << PD5;	// Display enable
-	PORTB |= 1 << PB2; 
-	PORTB |= 1 << PB1;
-
 	// Setting up OC1 which is the PWM module for
 	// charge pump and backlight. The charge pump is 
 	// always set on half duty cycle while backlight is 
 	// controlled by the user.
-	TCCR1A  = (1 << COM1A1) | (1 << COM1B1);	// Enable both osc
+	TCCR1A  = (1 << COM1A1)| (1 << COM1B1);	// Enable both osc
 	TCCR1A |= (1 << WGM10) | (1 << WGM12);		// FAST 8 bit PWM
 	OCR1A = contrast;							// Contrast
-	OCR1B = backlight*19;						// Backlight
+	OCR1B = backlight*10;//9;						// Backlight
 	TCCR1B = (1 << CS10);						// START no prescaler
 
 	// Delay after power up
-	_delay_ms(150);
+	//_delay_ms(1000);
 	// Initialize LCD in 4 bit mode
 	LCD_Command(3);
 	_delay_ms(5);
@@ -57,6 +48,7 @@ void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 	LCD_Command(0);
 	LCD_Command(1);
 	_delay_ms(1);
+
 }
 
 // The display is connected through a shift 595 register, the first

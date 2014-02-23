@@ -1,6 +1,7 @@
 #ifndef ADC_H
 #define ADC_H
 
+#include "def.h"
 #include<avr/io.h>
 #include<avr/interrupt.h>
 

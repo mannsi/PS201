@@ -8,13 +8,21 @@ unsigned char ADC_status = 0;
 void ADC_initialize(void)
 {
 	// initialize ADC on the voltage channel
-	ADMUX |= VOLTAGE_MON;
+	ADMUX = 0;
+	BIT_SET(ADMUX,VOLTAGE_MON);
 	ADC_status = ADC_VOLTAGE;
 	// Enable the ADC in interupt mode
-	ADCSRA = (1 << ADEN) | (1 << ADIE);
-	// Set the ADC prescaler to 128 for max
+	
+	ADCSRA = 0;
+	// Enable ADC
+	BIT_SET(ADCSRA,BIT(ADEN));
+	// Enable ADC interupt
+	BIT_SET(ADCSRA,BIT(ADIE));
+	// Set the ADC prescaler to 128 for min
 	// sampling speed
-	ADCSRA |= (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2); 
+	BIT_SET(ADCSRA,BIT(ADPS0));
+	BIT_SET(ADCSRA,BIT(ADPS1));
+	BIT_SET(ADCSRA,BIT(ADPS2));
 }
 
 // The ADC interupt function is automatically triggered

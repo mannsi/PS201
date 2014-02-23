@@ -600,10 +600,16 @@ static void initRegistries()
 	// DAC
 	DDRD |= 1 << PD7;	// DAC chip select
 	DESELECT_DAC;
-	
 
-//	PORTB |= 1 << PB2; 
-//	PORTB |= 1 << PB1;
+	//Display
+	DDRD |= 1 << PD6;	// Display chip select
+	DESELECT_DISPLAY;
+	DDRB |= 1 << PB2;	// Backlight
+	DDRB |= 1 << PB1;	// Contrast
+	DDRD |= 1 << PD5;	// Display enable
+	DISABLE_DISPLAY;
+	PORTB |= 1 << PB2; 
+	PORTB |= 1 << PB1;	
 
 	// Turn off Bias
 	DDRB  |= 1 << PB0;	// Switcher Shutdown
@@ -612,10 +618,10 @@ static void initRegistries()
 	outputIsOn = 0;
 	DISABLE_OUTPUT;
 
-
 	// SPI interface to DAC and DISPLAY
 	DDRB |= 1 << PB3;	// SPI MOSI
 	DDRB |= 1 << PB5;	// SPI SCK
+
 	// Enable SPI, Master, set clock rate fck/16
 	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
 }
