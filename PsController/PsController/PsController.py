@@ -233,9 +233,12 @@ class TabControl(Notebook):
         self.add(self.sequenceTab, text='Sequence')
         self.select(self.sequenceTab)
 
-if __name__ == "__main__":
+def run():
     psFrame = PsController()
     psFrame.connectToDevice()
     psFrame.show()
+
+if __name__ == "__main__":
+    run()
 
     

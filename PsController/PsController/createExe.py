@@ -1,5 +1,6 @@
-from distutils.core import setup
-#from cx_Freeze import setup, Executable
+# TODO Create an InnoSetup script that takes the output produced by this and creates and install file !!!
+
+from cx_Freeze import setup, Executable
 import sys
 
 platFormBase = "Console"
@@ -22,6 +23,6 @@ setup(
         name = "PsController"
         ,version = "0.1"
         ,description = "PsController"
-		,packages=installPackages
-        #,executables = [Executable("PsController.py" , base=platFormBase)]
+		#,packages=installPackages
+        ,executables = [Executable("PsController.py" , base=platFormBase)]
 		)
