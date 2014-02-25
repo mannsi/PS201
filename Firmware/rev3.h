@@ -11,6 +11,7 @@
 #include "SW.h"
 #include "ADC.h"
 #include "USART.h"
+#include "EEPROM.h"
 
 // Shortcuts for the DAC chip select pin
 #define SELECT_DAC PORTD &= ~(1 << PD7)

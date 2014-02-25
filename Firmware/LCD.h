@@ -16,6 +16,12 @@
 #define SELECT_DISPLAY PORTD &= ~(1 << PD6)
 #define DESELECT_DISPLAY PORTD |= (1 << PD6)
 
+#define NUMBEROFMENUITEMS 4
+#define MENU_BACKLIGHT 0
+#define MENU_CONTRAST 1
+#define MENU_STATUS 2
+#define MENU_CALIBRATION 3
+
 void LCD_Initialize(uint8_t backlight, uint8_t contrast);
 void LCD_Write(unsigned char* data);
 void LCD_Cursor(uint8_t row, uint8_t column);
@@ -24,8 +30,12 @@ void LCD_HighLight(void);
 void LCD_NoHighLight(void);
 void LCD_StartScreen(void);
 void LCD_HomeScreen(uint16_t v,uint16_t c, uint8_t outputOn, unsigned char encoderControls);
+unsigned char LCD_MenuScreen(void);
 void LCD_WriteControlArrow(unsigned char);
-int LCD_SetBacklight(uint8_t backlightIntensity);
+
+uint8_t LCD_SetBacklight(uint8_t backlightIntensity);
+uint8_t LCD_SetContrast(uint8_t contrast);
+
 void LCD_OutputOn(void);
 void LCD_OutputOff(void);
 //void LCD_OutputOnOff(void);

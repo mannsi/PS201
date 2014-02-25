@@ -11,8 +11,8 @@ void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 	// controlled by the user.
 	TCCR1A  = (1 << COM1A1)| (1 << COM1B1);	// Enable both osc
 	TCCR1A |= (1 << WGM10) | (1 << WGM12);		// FAST 8 bit PWM
-	OCR1A = contrast;							// Contrast
-	OCR1B = backlight*10;//9;						// Backlight
+	OCR1A = contrast*5;							// Contrast
+	OCR1B = backlight*19;					// Backlight
 	TCCR1B = (1 << CS10);						// START no prescaler
 
 	// Delay after power up
@@ -170,6 +170,115 @@ void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn, unsigne
 	}
 }
 
+unsigned char menuItem[NUMBEROFMENUITEMS][12] = {
+	"Backlight",
+	"Contrast",
+	"Status",
+	"Calibration"};
+	
+
+unsigned char LCD_MenuScreen(void)
+{
+	unsigned char currentItem = 0;
+	unsigned char selectorUpper = 1;
+	unsigned char updateScreen = 1;
+	
+	while(!SW_Check1())
+	{
+		if(updateScreen)
+		{
+			LCD_Clear();
+			if(selectorUpper)
+			{
+				LCD_Cursor(0,2);
+			}
+			else
+			{
+				LCD_Cursor(1,2);
+			}
+			LCD_Write("~");
+			LCD_Cursor(0,3);
+			LCD_Write(menuItem[currentItem]);
+			LCD_Cursor(1,3);
+			if(currentItem == NUMBEROFMENUITEMS - 1)
+			{
+				LCD_Write(menuItem[0]);
+			}
+			else
+			{
+				LCD_Write(menuItem[currentItem + 1]);
+			}
+			updateScreen = 0;
+		}
+
+
+		unsigned char dir = SW_CheckEncoder();
+		//preveous menu item
+		if(SW_Check2() || (dir && dir != ENCODER_CCW))
+		{
+			if(selectorUpper)
+			{
+				updateScreen = 1;
+				if(currentItem == 0)
+				{
+					currentItem = NUMBEROFMENUITEMS-1;
+				}
+				else
+				{
+					currentItem--;
+				}
+			}
+			else
+			{
+				LCD_Cursor(0,2);
+				LCD_Write("~");
+				LCD_Cursor(1,2);
+				LCD_Write(" ");
+				selectorUpper = 1;
+			}
+		}
+		//next menu item
+		if(SW_Check3() || dir == ENCODER_CCW)
+		{
+			if(selectorUpper)
+			{
+				LCD_Cursor(0,2);
+				LCD_Write(" ");
+				LCD_Cursor(1,2);
+				LCD_Write("~");
+				selectorUpper = 0;
+			}
+			else
+			{
+				updateScreen = 1;
+				if(currentItem == NUMBEROFMENUITEMS-1)
+				{
+					currentItem = 0;
+				}
+				else
+				{
+					currentItem++;
+				}
+
+			}
+
+		}
+		//item selected
+		if(SW_Check4())
+		{
+			if(currentItem + 1 - selectorUpper == NUMBEROFMENUITEMS)
+			{
+				return 0;
+			}
+			else
+			{
+				return (currentItem + 1 - selectorUpper);
+			}
+		}
+	}
+	return -1;
+}
+
 void LCD_WriteVoltage(uint16_t voltage)
 {
 	unsigned char voltageArray [10];
@@ -214,12 +323,12 @@ void LCD_WriteControlArrow(unsigned char encoderControls)
 
 }
 
-int LCD_SetBacklight(uint8_t backlightIntensity)
+uint8_t LCD_SetBacklight(uint8_t backlightIntensity)
 {
 	// Write small backlight screen
 	LCD_Clear();
 	LCD_Cursor(0,3);
-	LCD_Write("Backlight");
+	LCD_Write(menuItem[MENU_BACKLIGHT]);
 	LCD_Cursor(1,0);
 	LCD_Write("[              ]");
 	LCD_Cursor(1,1);
@@ -266,6 +375,60 @@ int LCD_SetBacklight(uint8_t backlightIntensity)
 	}
 	return backlightIntensity;
 }
+
+uint8_t LCD_SetContrast(uint8_t contrast)
+{
+	// Write small backlight screen
+	LCD_Clear();
+	LCD_Cursor(0,3);
+	LCD_Write(menuItem[MENU_CONTRAST]);
+	LCD_Cursor(1,0);
+	LCD_Write("[              ]");
+	LCD_Cursor(1,1);
+	int i = contrast;
+	for(i; i>0; i--)
+	{
+		LCD_Write("=");
+	}
+	LCD_Write(">");
+	while(!SW_Check1() && !SW_Check2() && !SW_Check3() && !SW_Check4())
+	{
+		unsigned char dir = SW_CheckEncoder();
+		if(dir)
+		{
+			if(dir == ENCODER_CCW) 	
+			{
+				contrast--;
+			} 
+			else
+			{
+				contrast++;
+			}
+			if(contrast > 20)
+			{
+				contrast = 0;
+			}
+			else if(contrast > 13)
+			{
+				contrast = 13;
+			}
+			else
+			{
+				OCR1A = 5*contrast;
+				LCD_Cursor(1,0);
+				LCD_Write("[              ]");
+				LCD_Cursor(1,1);
+				for(i = contrast; i>0; i--)
+				{
+					LCD_Write("=");
+				}
+				LCD_Write(">");
+			}
+		}
+	}
+	return contrast;
+}
+
 
 // This is exactly like the above function but now
 // we make sure the fifth bit is allways LOW to indicate

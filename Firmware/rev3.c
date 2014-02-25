@@ -3,20 +3,30 @@
 *		DIGITAL PSU REV 3			*			
 *		Fridrik F Gautason			*
 *		Gudbjorn Einarsson			*
-*		Copyright 2013				*
+*		Copyright 2014				*
 *									*
 ************************************/
 
 #include "rev3.h"
 
+// MAGIC NUMBERS
+#define MAXVOLTAGE 200
+#define MAXCURRENT 100
+#define NEGNUM 60000
+#define DACVOLTAGE 10
+#define DACCURRENT 9
+#define NUMADCBITS 1024
+
 // Use uint8_t (unsigned char) for variables that do not have to be 
-// bigger than one byte. Use unsigned int for any other variable.
+// bigger than one byte.
 uint8_t forceUpdate = 0;
-uint8_t firstRun = 1;
+uint8_t updateStartVoltage = 0;
+uint8_t updateStartCurrent = 0;
 uint8_t readyToReceiveCommand = 1;
 uint8_t outputIsOn = 0;
 uint8_t backlightIntensity = 10;
-uint8_t contrast = 50;
+uint8_t contrast = 10;
+// Voltages are in 100's of mV
 uint16_t voltageRead = 0;
 uint16_t currentRead = 0;
 uint16_t preregRead = 0;
@@ -27,12 +37,12 @@ uint16_t currentSet = 0;
 // Delay variables, between read cycles. We do not
 // want to be constantly running the ADC.
 uint16_t readDelay = 10000;
-uint16_t setDelay = 50000; // This would not work with normal int!!
+uint16_t setDelay = 50000; 
 uint16_t delay = 10000;
 
 // Calibration variables
-float voltageRef;	// The ref voltage times 10
-float voltageSetMulti;	// gain*ref/numBits
+float voltageRef;
+float voltageSetMulti;
 float voltageReadMulti;
 float currentSetMulti;
 float currentReadMulti;
@@ -51,6 +61,11 @@ int main(void)
 	
 	LCD_StartScreen();
 	_delay_ms(1000);
+	
+	voltageSet = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
+	currentSet = EEPROM_ReadNum(ADDR_STARTCURRENT);
+	transferToDAC(DACVOLTAGE, voltageSet / voltageSetMulti);
+	transferToDAC(DACCURRENT, currentSet / currentSetMulti);
 	
 	// Start in the home screen with the set values
 	LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
@@ -71,11 +86,45 @@ int main(void)
 			forceUpdate = 1;
 		}
 
-		// If Sw2 is pressed, let the encoder control the backlight
+		// If Sw2 or Sw3 is pressed, we go into menu system
 		if (SW_Check2())
 		{
-			// Go into backlight setting
-			backlightIntensity = LCD_SetBacklight(backlightIntensity);
+			unsigned char menu = LCD_MenuScreen();
+			switch(menu)
+			{
+				case MENU_BACKLIGHT:
+					backlightIntensity = LCD_SetBacklight(backlightIntensity);
+					break;
+				case MENU_CONTRAST:
+					contrast = LCD_SetContrast(contrast);
+					break;
+				case MENU_STATUS:
+					break;
+				case MENU_CALIBRATION:
+					break;
+				default:
+					break;
+			}
+			LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
+		}
+		if (SW_Check3())
+		{
+			unsigned char menu = LCD_MenuScreen();
+			switch(menu)
+			{
+				case MENU_BACKLIGHT:
+					backlightIntensity = LCD_SetBacklight(backlightIntensity);
+					break;
+				case MENU_CONTRAST:
+					contrast = LCD_SetContrast(contrast);
+					break;
+				case MENU_STATUS:
+					break;
+				case MENU_CALIBRATION:
+					break;
+				default:
+					break;
+			}
 			LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
 		}
 
@@ -114,17 +163,20 @@ int main(void)
 					}
 					
 					// Make sure voltage doesn't go under 0
-					// or over 20 Volts.
-					if(voltageSet > 60000)
+					// or over MAX.
+					if(voltageSet > NEGNUM)
 					{
 						voltageSet = 0;
 					}
-					else if(voltageSet > 200)
+					else if(voltageSet > MAXVOLTAGE)
 					{					
-						voltageSet = 200;
+						voltageSet = MAXVOLTAGE;
 					}
 					
-					transferToDAC(10, voltageSet / voltageSetMulti);
+					// Force update of the startVoltage in EEPROM
+					updateStartVoltage = 1;					
+
+					transferToDAC(DACVOLTAGE, voltageSet/voltageSetMulti);
 					LCD_WriteVoltage(voltageSet);
 					break;
 				case CURRENT:
@@ -138,17 +190,20 @@ int main(void)
 					}
 					
 					// Make sure Current doesn't go under 0
-					// or over 1000 mA.
-					if(currentSet > 60000)
+					// or over MAX.
+					if(currentSet > NEGNUM)
 					{
 						currentSet = 0;
 					}
-					else if(currentSet > 100)
+					else if(currentSet > MAXCURRENT)
 					{
-						currentSet = 100;
+						currentSet = MAXCURRENT;
 					}
 					
-					transferToDAC(9, currentSet / currentSetMulti);
+					// Force update of the startCurrent in EEPROM
+					updateStartCurrent = 1;
+
+					transferToDAC(DACCURRENT, currentSet / currentSetMulti);
 					LCD_WriteCurrent(currentSet);
 					break;
 			}
@@ -157,7 +212,8 @@ int main(void)
 		}
 	
 		// if delay is zero we start a ADC conversion cycle
-		// (if it is not reading) 
+		// (if it is not reading). We also update EEPROM values
+		// if required.
 		// otherwise we reduce the delay variable
 		if (delay == 0)
 		{
@@ -166,6 +222,18 @@ int main(void)
 				ADC_status |= ADC_ISREADING;
 				ADC_STARTCONVERSION;
 				sei();
+			}
+			
+			// Also update the EEPROM start values
+			if(updateStartVoltage)
+			{
+				EEPROM_WriteNum(voltageSet,ADDR_STARTVOLTAGE);
+				updateStartVoltage = 0;
+			}
+			if(updateStartCurrent)
+			{
+				EEPROM_WriteNum(currentSet,ADDR_STARTCURRENT);
+				updateStartCurrent = 0;
 			}
 		}
 		else
@@ -226,11 +294,7 @@ int main(void)
 
 			if (ADC_status == ADC_VIN)
 			{	
-			
-				/*
-				Include this if you want to update the device to real values after delay
-				*/
-				if(!firstRun && forceUpdate)
+				if(forceUpdate)
 				{
 					if(outputIsOn)
 					{
@@ -245,7 +309,6 @@ int main(void)
 				}
 			
 				delay = readDelay;
-				firstRun = 0;
 				forceUpdate = 0;
 				readyToReceiveCommand = 1;
 			}
@@ -269,7 +332,6 @@ int main(void)
 						sendNAK();
 						cmd = USART_WRITEALLCOMMANDS;
 						sendcmd(cmd);
-						putchar('\n');
 						break;
 					case USART_WRITEALL:
 						sendACK();
@@ -289,12 +351,13 @@ int main(void)
 					case USART_RECEIVE_VOLTAGE:
 						sendACK();
 						mapToVoltage(&newSetting,data);
-						if(newSetting > 200) break;
+						if(newSetting > MAXVOLTAGE) break;
 						voltageSet = newSetting;
 						LCD_WriteVoltage(voltageSet);
 						delay = setDelay;
 						forceUpdate = 1;
-						transferToDAC(10, voltageSet / voltageSetMulti);
+						updateStartVoltage = 1;
+						transferToDAC(DACVOLTAGE, voltageSet/voltageSetMulti);
 						break;			
 					case USART_SEND_VOLTAGE:
 						sendACK();
@@ -309,12 +372,13 @@ int main(void)
 					case USART_RECEIVE_CURRENT:
 						sendACK();
 						mapToCurrent(&newSetting,data);
-						if(newSetting > 100) break;
+						if(newSetting > MAXCURRENT) break;
 						currentSet = newSetting;
 						LCD_WriteCurrent(currentSet);
 						delay = setDelay;
 						forceUpdate = 1;
-						transferToDAC(9, currentSet / currentSetMulti);
+						updateStartCurrent = 1;
+						transferToDAC(DACCURRENT, currentSet / currentSetMulti);
 						break;			
 					case USART_SEND_CURRENT:
 						sendACK();
@@ -357,26 +421,6 @@ int main(void)
 						data[1] = '\0';
 						
 						sendpacket(cmd,data);
-						break;
-					case USART_WRITEALLCOMMANDS:
-						puts("Writing all commands in ASCII:");
-						puts("Send voltage:");
-						sendcmd(USART_SEND_VOLTAGE);
-						puts("\nchange voltage:");
-						sprintf(data,"10\0");
-						sendpacket(USART_RECEIVE_VOLTAGE,data);
-						puts("\nSend current:");
-						sendcmd(USART_SEND_CURRENT);
-						puts("\nchange current:");
-						sprintf(data,"234\0");
-						sendpacket(USART_RECEIVE_CURRENT,data);
-						puts("\nSend input voltage:");
-						sendcmd(USART_SEND_VIN);
-						puts("\nSend preregulator voltage:");
-						sendcmd(USART_SEND_VPREREG);
-						puts("\nEnable output:");
-						sendcmd(USART_ENABLE_OUTPUT);
-						puts("\n\n\n\n");
 						break;
 					default:
 						break;
@@ -629,9 +673,9 @@ static void initRegistries()
 static void initCalibration()
 {
 	// Calibration variables
-	voltageRef = 25.0;	// The ref voltage times 10
-	voltageSetMulti  = 10.0*voltageRef/1024;	// gain*ref/numBits
-	voltageReadMulti = 11.0*voltageRef/1024;
-	currentSetMulti  = 10/0.2/11*voltageRef/1024;
-	currentReadMulti = 10/0.2/11*voltageRef/1024;
+	voltageRef = 24.0;	// The ref voltage times 10
+	voltageSetMulti  = 10.0*voltageRef/NUMADCBITS;	// gain*ref/numBits
+	voltageReadMulti = 11.0*voltageRef/NUMADCBITS;
+	currentSetMulti  = 10/0.2/11*voltageRef/NUMADCBITS;
+	currentReadMulti = 10/0.2/11*voltageRef/NUMADCBITS;
 }
