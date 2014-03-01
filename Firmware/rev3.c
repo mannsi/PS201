@@ -15,7 +15,7 @@
 #define NEGNUM 60000
 #define DACVOLTAGE 10
 #define DACCURRENT 9
-#define NUMADCBITS 1024
+#define NUMBITS 1024
 
 // Use uint8_t (unsigned char) for variables that do not have to be 
 // bigger than one byte.
@@ -101,6 +101,7 @@ int main(void)
 				case MENU_STATUS:
 					break;
 				case MENU_CALIBRATION:
+					doCalibration();
 					break;
 				default:
 					break;
@@ -121,6 +122,7 @@ int main(void)
 				case MENU_STATUS:
 					break;
 				case MENU_CALIBRATION:
+					doCalibration();
 					break;
 				default:
 					break;
@@ -673,9 +675,90 @@ static void initRegistries()
 static void initCalibration()
 {
 	// Calibration variables
-	voltageRef = 24.0;	// The ref voltage times 10
-	voltageSetMulti  = 10.0*voltageRef/NUMADCBITS;	// gain*ref/numBits
-	voltageReadMulti = 11.0*voltageRef/NUMADCBITS;
-	currentSetMulti  = 10/0.2/11*voltageRef/NUMADCBITS;
-	currentReadMulti = 10/0.2/11*voltageRef/NUMADCBITS;
+	// Read from EEPROM
+	voltageSetMulti  = ((float) EEPROM_ReadNum(ADDR_CALIBRATION))/1000.0;
+	if(voltageSetMulti == 0)
+	{
+		voltageSetMulti = 0.243;
+		EEPROM_WriteNum((uint16_t)voltageSetMulti*1000,ADDR_CALIBRATION);
+	}
+	voltageReadMulti = 11.0*voltageSetMulti/10.0;
+	currentSetMulti  = voltageSetMulti/0.2/11;
+	currentReadMulti = voltageSetMulti/0.2/11;
+}
+
+void doCalibration()
+{
+	uint16_t measuredVoltage = 500;
+	uint16_t voltageCode = 200;
+	unsigned char updateScreen = 1;
+	unsigned char buffer[10];
+
+	disableOutput();
+	LCD_Clear();
+	LCD_Cursor(0,0);
+	LCD_Write("--CALIBRATION-- ");
+	LCD_Cursor(1,0);
+	LCD_Write("Disconnect load ");
+	_delay_ms(1000);
+	LCD_Cursor(1,0);
+	// turn on the output at code 256,
+	// the user then measures the output.
+	transferToDAC(DACVOLTAGE, voltageCode);
+	transferToDAC(DACCURRENT, 10 / currentSetMulti);
+	ENABLE_OUTPUT;
+	LCD_Clear();
+	LCD_Cursor(0,0);
+	LCD_Write("--CALIBRATION-- ");
+	LCD_Cursor(1,0);
+	LCD_Write("Connect meter.  ");
+	_delay_ms(1000);
+	LCD_Cursor(1,0);
+	LCD_Write("Turn knob until ");
+	_delay_ms(1000);
+	LCD_Cursor(1,0);
+	LCD_Write("meter agrees and");
+	_delay_ms(1000);
+	LCD_Cursor(1,0);
+	LCD_Write("hit OK.         ");
+	_delay_ms(1000);
+	LCD_Cursor(1,0);
+	LCD_Write("Voltage:        ");
+	while(!SW_Check1())
+	{
+		if(updateScreen)
+		{
+			LCD_Cursor(1,9);
+			sprintf(buffer,"%i.%2i V",measuredVoltage/100,measuredVoltage%100);
+			LCD_Write(buffer);
+			updateScreen = 0;
+		}
+		
+		unsigned char dir = SW_CheckEncoder();
+		if(SW_Check2() || (dir && dir != ENCODER_CCW))
+		{
+			measuredVoltage++;
+			updateScreen = 1;
+		}
+		if(SW_Check3() || dir == ENCODER_CCW)
+		{
+			measuredVoltage--;
+			updateScreen = 1;
+		}		
+
+		if(SW_Check4())
+		{
+
+			// Now we can calculate the voltageRef
+			voltageSetMulti = ((float) measuredVoltage)/voltageCode;
+			EEPROM_WriteNum(voltageSetMulti*100,ADDR_CALIBRATION);
+			initCalibration();
+			break;
+		}
+	}
+
+	DISABLE_OUTPUT;
+
+	transferToDAC(DACVOLTAGE, voltageSet / voltageSetMulti);
+	transferToDAC(DACCURRENT, currentSet / currentSetMulti);
 }

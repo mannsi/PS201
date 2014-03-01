@@ -52,6 +52,7 @@ void writeToUsb(uint16_t voltage,
 
 static void initRegistries(void);
 static void initCalibration(void);
+void doCalibration(void);
 
 void joinArrays(
 	unsigned char *voltageArray, 
