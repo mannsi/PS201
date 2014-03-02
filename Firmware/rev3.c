@@ -64,8 +64,8 @@ int main(void)
 	
 	voltageSet = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
 	currentSet = EEPROM_ReadNum(ADDR_STARTCURRENT);
-	transferToDAC(DACVOLTAGE, voltageSet / voltageSetMulti);
-	transferToDAC(DACCURRENT, currentSet / currentSetMulti);
+	transferToDAC(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
+	transferToDAC(DACCURRENT,((float)currentSet)/currentSetMulti);
 	
 	// Start in the home screen with the set values
 	LCD_HomeScreen(voltageSet,currentSet,outputIsOn,encoderControls);
@@ -178,7 +178,7 @@ int main(void)
 					// Force update of the startVoltage in EEPROM
 					updateStartVoltage = 1;					
 
-					transferToDAC(DACVOLTAGE, voltageSet/voltageSetMulti);
+					transferToDAC(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
 					LCD_WriteVoltage(voltageSet);
 					break;
 				case CURRENT:
@@ -205,7 +205,7 @@ int main(void)
 					// Force update of the startCurrent in EEPROM
 					updateStartCurrent = 1;
 
-					transferToDAC(DACCURRENT, currentSet / currentSetMulti);
+					transferToDAC(DACCURRENT,((float)currentSet)/currentSetMulti);
 					LCD_WriteCurrent(currentSet);
 					break;
 			}
@@ -359,7 +359,7 @@ int main(void)
 						delay = setDelay;
 						forceUpdate = 1;
 						updateStartVoltage = 1;
-						transferToDAC(DACVOLTAGE, voltageSet/voltageSetMulti);
+						transferToDAC(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
 						break;			
 					case USART_SEND_VOLTAGE:
 						sendACK();
@@ -380,7 +380,7 @@ int main(void)
 						delay = setDelay;
 						forceUpdate = 1;
 						updateStartCurrent = 1;
-						transferToDAC(DACCURRENT, currentSet / currentSetMulti);
+						transferToDAC(DACCURRENT,((float)currentSet)/currentSetMulti);
 						break;			
 					case USART_SEND_CURRENT:
 						sendACK();
@@ -705,7 +705,7 @@ void doCalibration()
 	// turn on the output at code 256,
 	// the user then measures the output.
 	transferToDAC(DACVOLTAGE, voltageCode);
-	transferToDAC(DACCURRENT, 10 / currentSetMulti);
+	transferToDAC(DACCURRENT, 10.0 / currentSetMulti);
 	ENABLE_OUTPUT;
 	LCD_Clear();
 	LCD_Cursor(0,0);
@@ -759,6 +759,6 @@ void doCalibration()
 
 	DISABLE_OUTPUT;
 
-	transferToDAC(DACVOLTAGE, voltageSet / voltageSetMulti);
-	transferToDAC(DACCURRENT, currentSet / currentSetMulti);
+	transferToDAC(DACVOLTAGE, ((float)voltageSet) / voltageSetMulti);
+	transferToDAC(DACCURRENT, ((float)currentSet) / currentSetMulti);
 }
