@@ -1,6 +1,10 @@
-from distutils.core import setup
-#from cx_Freeze import setup, Executable
-import sys
+from ez_setup import use_setuptools
+use_setuptools()
+
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 platFormBase = "Console"
 
@@ -23,5 +27,9 @@ setup(
         ,version = "0.1"
         ,description = "PsController"
 		,packages=installPackages
-        #,executables = [Executable("PsController.py" , base=platFormBase)]
+        ,install_requires=[
+			"APScheduler == 2.1.1",
+			"crcmod == 1.7",
+			"pyserial == 2.7"
+]
 		)

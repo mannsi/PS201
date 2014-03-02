@@ -5,8 +5,8 @@ AppVersion=1.0
 AppVerName=Ps Controller
 AppPublisher=Gudbjorn Einarsson
 DefaultDirName={pf}\Ps Controller\
-DefaultGroupName=FG\Ps Controller
-OutputBaseFilename=PsController setup
+DefaultGroupName=Ps Controller
+OutputBaseFilename=PsController
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
