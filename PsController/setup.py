@@ -6,6 +6,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
+import sys	
 platFormBase = "Console"
 
 #For windows to hide the console window in the back
