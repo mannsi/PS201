@@ -1,5 +1,3 @@
-# TODO Create an InnoSetup script that takes the output produced by this and creates and install file !!!
-
 from cx_Freeze import setup, Executable
 import sys
 
