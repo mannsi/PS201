@@ -19,11 +19,11 @@
 
 // Use uint8_t (unsigned char) for variables that do not have to be 
 // bigger than one byte.
-uint8_t forceUpdate = 0;
 uint8_t updateStartVoltage = 0;
 uint8_t updateStartCurrent = 0;
 uint8_t readyToReceiveCommand = 1;
 uint8_t outputIsOn = 0;
+uint8_t streamIsOn = 0;
 uint8_t backlightIntensity = 10;
 uint8_t contrast = 10;
 // Voltages are in 100's of mV
@@ -81,9 +81,26 @@ int main(void)
 		// If Sw1 is pressed, toggle the output
 		if (SW_Check1())
 		{
-			switchOutput();
+			if(outputIsOn)
+			{
+				disableOutput();
+				if(streamIsOn)
+				{
+					char data[MAXLEN];
+					sendpacket(USART_IS_OUTPUT_ON,"0\0");
+				}
+
+			}
+			else
+			{
+				enableOutput();
+				if(streamIsOn)
+				{
+					char data[MAXLEN];
+					sendpacket(USART_IS_OUTPUT_ON,"1\0");
+				}
+			}
 			delay = setDelay;
-			forceUpdate = 1;
 		}
 
 		// If Sw2 or Sw3 is pressed, we go into menu system
@@ -210,7 +227,6 @@ int main(void)
 					break;
 			}
 			delay = setDelay;
-			forceUpdate = 1;
 		}
 	
 		// if delay is zero we start a ADC conversion cycle
@@ -227,15 +243,30 @@ int main(void)
 			}
 			
 			// Also update the EEPROM start values
+			// here we also write to USB if stream is on.
 			if(updateStartVoltage)
 			{
 				EEPROM_WriteNum(voltageSet,ADDR_STARTVOLTAGE);
 				updateStartVoltage = 0;
+				if(streamIsOn)
+				{
+					char data[MAXLEN];
+					mapVoltage(voltageSet,data);
+					sendpacket(USART_SEND_SET_VOLTAGE,data);
+				}
+
 			}
 			if(updateStartCurrent)
 			{
 				EEPROM_WriteNum(currentSet,ADDR_STARTCURRENT);
 				updateStartCurrent = 0;
+				if(streamIsOn)
+				{
+					char data[MAXLEN];
+					mapCurrent(currentSet,data);
+					sendpacket(USART_SEND_SET_CURRENT,data);
+				}
+
 			}
 		}
 		else
@@ -258,7 +289,16 @@ int main(void)
 					voltageRead = ADC_reading * voltageReadMulti;
 					if(voltageRead != oldValue)
 					{
-						forceUpdate = 1;
+						if(outputIsOn)
+						{
+							LCD_WriteVoltage(voltageRead);
+						}
+						if(streamIsOn)
+						{
+							char data[MAXLEN];
+							mapVoltage(voltageRead,data);
+							sendpacket(USART_SEND_VOLTAGE,data);
+						}
 					}
 					ADC_status = ADC_CURRENT;
 					ADMUX &= 0xF0;
@@ -269,20 +309,49 @@ int main(void)
 					currentRead = ADC_reading * currentReadMulti;
 					if(currentRead != oldValue)
 					{
-						forceUpdate = 1;
+						if(outputIsOn)
+						{
+							LCD_WriteCurrent(currentRead);
+						}
+						if(streamIsOn)
+						{
+							char data[MAXLEN];
+							mapCurrent(currentRead,data);
+							sendpacket(USART_SEND_CURRENT,data);
+						}
 					}
 					ADC_status = ADC_PREREGULATOR;
 					ADMUX &= 0xF0;
 					ADMUX |= PREREG;
 					break;
 				case ADC_PREREGULATOR:
+					oldValue = preregRead;
 					preregRead = ADC_reading * voltageReadMulti;
+					if(preregRead != oldValue)
+					{
+						if(streamIsOn)
+						{
+							char data[MAXLEN];
+							mapVoltage(preregRead,data);
+							sendpacket(USART_SEND_VPREREG,data);
+						}
+					}
 					ADC_status = ADC_VIN;
 					ADMUX &= 0xF0;
 					ADMUX |= VIN_MON;
 					break;
-				case ADC_VIN:		
+				case ADC_VIN:
+					oldValue = vinRead;		
 					vinRead = ADC_reading * voltageReadMulti;
+					if(vinRead != oldValue)
+					{
+						if(streamIsOn)
+						{
+							char data[MAXLEN];
+							mapVoltage(vinRead,data);
+							sendpacket(USART_SEND_VIN,data);
+						}
+					}
 					ADC_status = ADC_VOLTAGE;
 					ADMUX &= 0xF0;
 					ADMUX |= VOLTAGE_MON;
@@ -296,22 +365,7 @@ int main(void)
 
 			if (ADC_status == ADC_VIN)
 			{	
-				if(forceUpdate)
-				{
-					if(outputIsOn)
-					{
-						LCD_WriteCurrent(currentRead);
-						LCD_WriteVoltage(voltageRead);
-					}
-					else
-					{
-						LCD_WriteCurrent(currentSet);
-						LCD_WriteVoltage(voltageSet);
-					}
-				}
-			
 				delay = readDelay;
-				forceUpdate = 0;
 				readyToReceiveCommand = 1;
 			}
 		}
@@ -332,7 +386,7 @@ int main(void)
 				{
 					case USART_NAK:
 						sendNAK();
-						cmd = USART_WRITEALLCOMMANDS;
+						cmd = USART_ENABLE_STREAM;
 						sendcmd(cmd);
 						break;
 					case USART_WRITEALL:
@@ -357,7 +411,6 @@ int main(void)
 						voltageSet = newSetting;
 						LCD_WriteVoltage(voltageSet);
 						delay = setDelay;
-						forceUpdate = 1;
 						updateStartVoltage = 1;
 						transferToDAC(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
 						break;			
@@ -378,7 +431,6 @@ int main(void)
 						currentSet = newSetting;
 						LCD_WriteCurrent(currentSet);
 						delay = setDelay;
-						forceUpdate = 1;
 						updateStartCurrent = 1;
 						transferToDAC(DACCURRENT,((float)currentSet)/currentSetMulti);
 						break;			
@@ -423,6 +475,14 @@ int main(void)
 						data[1] = '\0';
 						
 						sendpacket(cmd,data);
+						break;
+					case USART_ENABLE_STREAM:
+						sendACK();
+						streamIsOn = 1;
+						break;
+					case USART_DISABLE_STREAM:
+						sendACK();
+						streamIsOn = 0;
 						break;
 					default:
 						break;
@@ -471,14 +531,14 @@ void transferToDAC(unsigned char CTRL,uint16_t dacData){
 void writeVoltageToUsb(uint16_t voltage)
 {
 	unsigned char voltageArray [10];
-	mapVoltage(voltage, voltageArray);
+	sprintf(voltageArray,"%i.%i",voltage/10,voltage%10);
 	USART_Transmit(voltageArray);
 }
 
 void writeCurrentToUsb(uint16_t current)
 {
 	unsigned char currentArray [10];
-	mapCurrent(current, currentArray);	
+	sprintf(currentArray,"%i",current);
 	USART_Transmit(currentArray);
 }
 

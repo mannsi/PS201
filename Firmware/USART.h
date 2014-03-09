@@ -40,6 +40,8 @@
 #define USART_HANDSHAKE			(0xA1)
 #define USART_WRITEALL			(0xA5)
 #define USART_WRITEALLCOMMANDS	(0xBB)
+#define USART_ENABLE_STREAM		(0xA2)
+#define USART_DISABLE_STREAM	(0xA3)
 
 void USART_Initialize(void);
 int USART_PutChar(char c, FILE *stream);
