@@ -1,21 +1,21 @@
 from tkinter import *
 from tkinter.ttk import *
-import Control.Controller
-from UI.Dialogs.AboutDialog import *
-from UI.Dialogs.RampDialog import RampDialog
-from UI.Dialogs.DataLoggingDialog import DataLoggingDialog
-from UI.Frames.SequenceLineFrame import SequenceLineFrame
+import PsController.Control.Controller
+from PsController.UI.Dialogs.AboutDialog import *
+from PsController.UI.Dialogs.RampDialog import RampDialog
+from PsController.UI.Dialogs.DataLoggingDialog import DataLoggingDialog
+from PsController.UI.Frames.SequenceLineFrame import SequenceLineFrame
 
 class SequenceTabFrame(Frame):
-    def __init__(self, parent, resetTabM, connected, controller, normalWidgetList):
+    def __init__(self, parent, resetTabM, connected, controller):
         Frame.__init__(self,parent)
         self.parent = parent
         self.resetTabM = resetTabM
-        self.normalWidgetList = normalWidgetList
         self.controller = controller
         self.initalizeView(connected)
-        controller.registerUpdateFunction(self.sequenceDone, Control.Controller.scheduleDoneUpdate) 
-        controller.registerUpdateFunction(self.sequenceLineChanged, Control.Controller.scheduleNewLineUpdate)
+        controller.NotifyScheduleDoneUpdate(self.sequenceDone) 
+        controller.NotifyScheduleLineUpdate(self.sequenceLineChanged)
+        controller.NotifyConnectedUpdate(self.connectedChanged)
     
     def initalizeView(self, connected):
         self.addLinesFrame()
@@ -41,7 +41,6 @@ class SequenceTabFrame(Frame):
         self.btnStart = Button(buttonFrame, text = "Start", state=startButtonState, command=self.start)
         self.btnStart.pack(side=RIGHT)
         buttonFrame.pack(fill='x')
-        self.normalWidgetList.append(self.btnStart) 
      
     def selectLine(self, rowNumber):
         self.sequenceLineFrame.selectLine(rowNumber)  
@@ -54,25 +53,25 @@ class SequenceTabFrame(Frame):
                 if dialog.logWhenValuesChange:
                     if dialog.filePath is not "":
                         scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                                    startingTargetVoltage = currentValues.targetVoltage,
-                                                                    startingTargetCurrent = currentValues.targetCurrent, 
-                                                                    startingOutputOn = currentValues.outputOn,
+                                                                    startingTargetVoltage = self.controller.currentValues.targetVoltage,
+                                                                    startingTargetCurrent = self.controller.currentValues.targetCurrent, 
+                                                                    startingOutputOn = self.controller.currentValues.outputOn,
                                                                     logWhenValuesChange=True,
                                                                     filePath=dialog.filePath)
                 elif dialog.logEveryXSeconds:
                     if dialog.timeInterval:
                         scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
                                                                      useLoggingTimeInterval=True,
-                                                                     startingTargetVoltage = currentValues.targetVoltage,
-                                                                     startingTargetCurrent = currentValues.targetCurrent, 
-                                                                     startingOutputOn = currentValues.outputOn,
+                                                                     startingTargetVoltage = self.controller.currentValues.targetVoltage,
+                                                                     startingTargetCurrent = self.controller.currentValues.targetCurrent, 
+                                                                     startingOutputOn = self.controller.currentValues.outputOn,
                                                                      loggingTimeInterval=dialog.timeInterval,
                                                                      filePath=dialog.filePath)
         else:       
             scheduleStarted = self.controller.startSchedule(self.sequenceLineFrame.getLines(),
-                                                         startingTargetVoltage = currentValues.targetVoltage,
-                                                         startingTargetCurrent = currentValues.targetCurrent, 
-                                                         startingOutputOn = currentValues.outputOn)
+                                                         startingTargetVoltage = self.controller.currentValues.targetVoltage,
+                                                         startingTargetCurrent = self.controller.currentValues.targetCurrent, 
+                                                         startingOutputOn = self.controller.currentValues.outputOn)
         if (scheduleStarted):
             self.btnStop.configure(state = NORMAL)
             self.btnStart.configure(state = DISABLED)
@@ -107,8 +106,16 @@ class SequenceTabFrame(Frame):
                 self.sequenceLineFrame.addLine(l.voltage,l.current,l.timeType,l.duration)
 
     def sequenceDone(self, args):
-      self.selectLine(-1)  
-      self.scheduleStopped()
+        self.selectLine(-1)  
+        self.scheduleStopped()
 
     def sequenceLineChanged(self, rowNumber):
-      self.selectLine(rowNumber)  
+        self.selectLine(rowNumber)  
+
+    def connectedChanged(self, value):
+        connected = value[0]
+        if connected:
+            state = NORMAL
+        else:
+            state = DISABLED
+        self.btnStart.configure(state=state)

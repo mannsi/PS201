@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter.ttk import *
 from .tkBaseDialog import Dialog
 from ..Controls.DecimalEntry import DecimalEntry
-from Model.SequenceLineStruct import SequenceLineStruct
+from PsController.Model.SequenceLineStruct import SequenceLineStruct
 
 class RampDialog(Dialog):
     def body(self, master):   

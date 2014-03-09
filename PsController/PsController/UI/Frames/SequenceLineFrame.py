@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-from UI.Controls.SequenceLine import SequenceLine
+from PsController.UI.Controls.SequenceLine import SequenceLine
 
 
 """

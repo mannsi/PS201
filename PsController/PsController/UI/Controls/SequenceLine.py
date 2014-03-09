@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter.ttk import *
 from .DecimalEntry import DecimalEntry
-from Model.SequenceLineStruct import SequenceLineStruct
+from PsController.Model.SequenceLineStruct import SequenceLineStruct
 
 class SequenceLine():
   def __init__(self, parent, rowNumber, removeLineFunc, voltage=0.0, current=0, timeType='sec', duration=0):

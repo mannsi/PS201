@@ -1,22 +1,17 @@
 from tkinter import *
 from tkinter.ttk import *
-from Control.Controller import Controller
-import Control.Controller
 import logging
 import os
 import tkinter.simpledialog
-from UI.Dialogs.AboutDialog import *
-from UI.Frames.SequenceTabFrame import SequenceTabFrame
-from UI.Frames.StatusTabFrame import StatusTabFrame
-from Model.DeviceValues import DeviceValues
+from PsController.Control.Controller import Controller
+from PsController.UI.Dialogs.AboutDialog import *
+from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
+from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 
 mainWindowSize = '700x400'
 mainWindowTitle = "PS201 Controller"
 
-normalWidgetList = []
-inverseWidgetList = []
 controller = Controller(shouldLog = True, loglevel = logging.ERROR)
-currentValues = DeviceValues()
 
 class PsController():
     def __init__(self):
@@ -28,25 +23,20 @@ class PsController():
       self.topPanel.pack(fill=X)
       self.tabControl = TabControl(self.mainWindow)
       self.tabControl.pack(fill=BOTH, expand=1)
-      btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
-      btnConnect.pack(side=RIGHT)
-      inverseWidgetList.append(btnConnect)
+      self.btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
+      self.btnConnect.pack(side=RIGHT)
       self.addMenuBar()
-      controller.registerUpdateFunction(self.updateConnectedStatus, Control.Controller.connectUpdate)
-      controller.registerUpdateFunction(self.realCurrentUpdate, Control.Controller.realCurrentUpdate)
-      controller.registerUpdateFunction(self.realVoltageUpdate, Control.Controller.realVoltageUpdate)
-      controller.registerUpdateFunction(self.targetCurrentUpdate, Control.Controller.targetCurrentUpdate)
-      controller.registerUpdateFunction(self.targetVoltageUpdate, Control.Controller.targetVoltageUpdate)
-      controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
-      controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
-      controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
+      controller.NotifyConnectedUpdate(self.updateConnectedStatus)
     
     def updateConnectedStatus(self, value):
-        if value == Control.Controller.connectedString:
+        connected = value[0]
+        if connected:
             controller.startAutoUpdate(interval = 1)
-            self.connectedStateChanged(True)
-        elif value == Control.Controller.noDeviceFoundstr:
-            self.connectedStateChanged(False)  
+            state = DISABLED
+        else:
+            state = NORMAL
+
+        self.btnConnect.configure(state=state)
 
     def addMenuBar(self):
       menubar = Menu(self.mainWindow)
@@ -86,52 +76,10 @@ class PsController():
         usbPort = self.selectedUsbPortVar.get()
         self.periodicUiUpdate()
         controller.connect(usbPort, threaded=True)
-    
-    def targetVoltageUpdate(self, newTargetVoltage):
-        global currentValues
-        currentValues.targetVoltage = float(newTargetVoltage)
-
-    def inputVoltageUpdate(self, newInputVoltage):
-        global currentValues
-        currentValues.inputVoltage = float(newInputVoltage)
-    
-    def targetCurrentUpdate(self, newTargetCurrent):
-        global currentValues
-        currentValues.targetCurrent = int(newTargetCurrent)
-    
-    def realVoltageUpdate(self, newRealVoltage):
-        global currentValues
-        currentValues.realVoltage = newRealVoltage
-    
-    def realCurrentUpdate(self, newRealCurrent):
-        global currentValues
-        currentValues.realCurrent = newRealCurrent
-    
-    def outPutOnOffUpdate(self, newOutputOn):
-        global currentValues
-        currentValues.outputOn = newOutputOn
-    
-    def preRegVoltageUpdate(self, preRegVoltage):
-        global currentValues
-        currentValues.preRegVoltage = preRegVoltage
-    
+      
     def periodicUiUpdate(self):
         controller.uiPulse()
         self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
-
-    def connectedStateChanged(self, connected):
-        if connected:
-            state = NORMAL
-            inverseState = DISABLED
-        else:
-            state = DISABLED
-            inverseState = NORMAL
-       
-        for widget in normalWidgetList:
-            widget.configure(state=state)
-       
-        for widget in inverseWidgetList:
-            widget.configure(state=inverseState)
     
     def show(self):
         self.mainWindow.mainloop()
@@ -145,7 +93,6 @@ class _HeaderPanel(Frame):
         self.chkOutputOnVar = IntVar(value=0)
         self.chkOutputOn = Checkbutton(topLinFrame, text = "Output On", variable = self.chkOutputOnVar, state = DISABLED, command = self.outPutOnOff)
         self.chkOutputOn.pack(side=LEFT, anchor=N)
-        normalWidgetList.append(self.chkOutputOn)
         Label(topLinFrame, text="", width=15).pack(side=RIGHT, anchor=N)
         statusPanel = Frame(topLinFrame)
         self.lblStatus = Label(statusPanel, text="Status: ").pack(side=LEFT)
@@ -155,16 +102,22 @@ class _HeaderPanel(Frame):
         topLinFrame.pack(fill=X)
         self.valuesFrame = _ValuesFrame(self)
         self.valuesFrame.pack(pady=10)
-        controller.registerUpdateFunction(self.updateConnectionStatus, Control.Controller.connectUpdate)
-        controller.registerUpdateFunction(self.outPutOnOffUpdate, Control.Controller.outputOnOffUpdate)
+        controller.NotifyConnectedUpdate(self.connectedUpdated)
+        controller.NotifyOutputUpdate(self.outPutOnOffUpdate)
 
     def outPutOnOff(self):
         chkValue = self.chkOutputOnVar.get()
         controller.setOutputOnOff(chkValue, threaded=True)
 
-    def updateConnectionStatus(self, value):
-        connectStatus = value
-        self.lblStatusValueVar.set(connectStatus)
+    def connectedUpdated(self, value):
+        connected = value[0]
+        connectedString = value[1]
+        if connected:
+            state = NORMAL
+        else:
+            state = DISABLED
+        self.chkOutputOn.configure(state=state)
+        self.lblStatusValueVar.set(connectedString)
 
     def outPutOnOffUpdate(self, newOutputOn):
         self.chkOutputOnVar.set(newOutputOn == 1)
@@ -183,7 +136,6 @@ class _ValuesFrame(Frame):
         Label(self, text="(V)").grid(row=0,column=2,sticky=W)
         self.btnSetTargetVoltage = Button(self,text="Set",state=DISABLED,command=self.setTargetVoltage,width=4)
         self.btnSetTargetVoltage.grid(row=0,column=3,sticky=N+S+E,pady=5)
-        normalWidgetList.append(self.btnSetTargetVoltage)
         #Current
         Label(self, text="I", font=(fontName, fontSize)).grid(row=1,column=0)
         self.currentEntryVar = IntVar(None)
@@ -192,11 +144,10 @@ class _ValuesFrame(Frame):
         Label(self, text="(mA)").grid(row=1,column=2,sticky=W)
         self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
         self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
-        normalWidgetList.append(self.btnSetTargetCurrent)
 
-        controller.registerUpdateFunction(self.realCurrentUpdate, Control.Controller.realCurrentUpdate)
-        controller.registerUpdateFunction(self.realVoltageUpdate, Control.Controller.realVoltageUpdate)
-
+        controller.NotifyRealCurrentUpdate(self.realCurrentUpdate)
+        controller.NotifyRealVoltageUpdate(self.realVoltageUpdate)
+        controller.NotifyConnectedUpdate(self.connectedUpdated)
     
     def setTargetCurrent(self,args=None):
         targetCurrent = tkinter.simpledialog.askinteger("Current limit", "Enter new current limit (0-1000mA)",parent=self)
@@ -216,20 +167,29 @@ class _ValuesFrame(Frame):
     def realCurrentUpdate(self, newRealCurrent):
         self.currentEntryVar.set(newRealCurrent)
 
+    def connectedUpdated(self, value):
+        connected = value[0]
+        if connected:
+            state = NORMAL
+        else:
+            state = DISABLED
+        self.btnSetTargetCurrent.configure(state=state)
+        self.btnSetTargetVoltage.configure(state=state)
+
 class TabControl(Notebook):
     def __init__(self, parent):
         self.parent = parent
         Notebook.__init__(self, parent, name='tab control')
         
         self.statusTab = StatusTabFrame(self, controller)
-        self.sequenceTab = SequenceTabFrame(self,self.resetSequenceTab, False, controller, normalWidgetList)
+        self.sequenceTab = SequenceTabFrame(self,self.resetSequenceTab, False, controller)
         
         self.add(self.statusTab, text='Status')
         self.add(self.sequenceTab, text='Sequence')
       
     def resetSequenceTab(self, connected): 
         self.forget(self.sequenceTab) 
-        self.sequenceTab = SequenceTab(self,self.resetSequenceTab, connected)
+        self.sequenceTab = SequenceTabFrame(self,self.resetSequenceTab, False, controller)
         self.add(self.sequenceTab, text='Sequence')
         self.select(self.sequenceTab)
 

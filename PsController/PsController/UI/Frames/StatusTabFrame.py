@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter.ttk import *
-import Control.Controller
-from UI.Dialogs.AboutDialog import *
+import PsController.Control.Controller
+from PsController.UI.Dialogs.AboutDialog import *
 
 class StatusTabFrame(Frame):
     def __init__(self, parent, controller):
@@ -30,10 +30,10 @@ class StatusTabFrame(Frame):
         self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
         self.preRegVoltageEntry.grid(row=3, column=1)
         Label(self, text="(V):").grid(row=3,column=2,sticky=W)
-        self.controller.registerUpdateFunction(self.targetVoltageUpdate, Control.Controller.targetVoltageUpdate)
-        self.controller.registerUpdateFunction(self.inputVoltageUpdate, Control.Controller.inputVoltageUpdate)
-        self.controller.registerUpdateFunction(self.targetCurrentUpdate, Control.Controller.targetCurrentUpdate)
-        self.controller.registerUpdateFunction(self.preRegVoltageUpdate, Control.Controller.preRegVoltageUpdate)
+        self.controller.NotifyTargetVoltageUpdate(self.targetVoltageUpdate)
+        self.controller.NotifyInputVoltageUpdate(self.inputVoltageUpdate)
+        self.controller.NotifyTargetCurrentUpdate(self.targetCurrentUpdate)
+        self.controller.NotifyPreRegVoltageUpdate(self.preRegVoltageUpdate)
 
     def targetVoltageUpdate(self, newTargetVoltage):
         self.voltageEntryVar.set(newTargetVoltage) 

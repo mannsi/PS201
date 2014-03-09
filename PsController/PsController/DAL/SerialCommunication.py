@@ -3,8 +3,8 @@ import logging
 import platform
 import glob
 import threading
-from Model.DeviceResponse import DeviceResponse
-from Utilities.Crc import Crc16
+from PsController.Model.DeviceResponse import DeviceResponse
+from PsController.Utilities.Crc import Crc16
 
 class SerialConnection():
     def __init__(
@@ -52,11 +52,10 @@ class SerialConnection():
         else:
             # Assume Linux or something else
             usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
-            for usbPort in usbList:
-                available.append(usbPort)
-            for port in available:
+            for port in usbList:
                 try:
                     con = serial.Serial(port, self.baudRate, timeout = 0.1)
+                    available.append(usbPort)
                     if self.validConnection(con):
                         defaultPort = con.portstr
                         break
@@ -97,8 +96,7 @@ class SerialConnection():
             logging.debug("Reading message from device. Value: %s" % value)
             return value
         except Exception as e:
-            self.disconnect()
-            logging.exception("Error when reading value with command: ", command)
+            logging.exception("Error when reading value with command: %s ", command)
             raise 
     
     def _getValue(self, serialConnection, command):
@@ -115,7 +113,6 @@ class SerialConnection():
           logging.debug(loggingString)
           self._setValue(self.connection, command, value)
       except Exception as e:
-          self.disconnect()
           logging.exception("Error when setting value with command: ", command, " and value: ", value)
           raise 
     

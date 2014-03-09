@@ -11,6 +11,7 @@ class ThreadHelper():
         intervalScheduler = Scheduler()
         intervalScheduler.start()
         intervalScheduler.add_interval_job(function, seconds=interval, args = args)
+        return intervalScheduler
 
     def runDelayedJob(self, function, firingTime, args):
         delayedScheduler = Scheduler()

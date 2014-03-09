@@ -2,22 +2,20 @@ import logging
 import queue
 import uuid
 from datetime import datetime, timedelta
-from DAL.DataAccess import DataAccess
-from Utilities.ThreadHelper import ThreadHelper
+from PsController.DAL.DataAccess import DataAccess
+from PsController.Utilities.ThreadHelper import ThreadHelper
+from PsController.Model.DeviceValues import DeviceValues
 
-connectedString = "Connected !"
-connectingString = "Connecting ..."
-noDeviceFoundstr= "No device found"
-connectUpdate = "CONNECT"
-realCurrentUpdate = "REALCURRENT"
-realVoltageUpdate = "REALVOLTAGE"
-preRegVoltageUpdate = "PREREGVOLTAGE"
-targetCurrentUpdate = "TARGETCURRENT"
-targetVoltageUpdate = "TARGETVOLTAGE"
-inputVoltageUpdate = "INPUTVOLTAGE"
-outputOnOffUpdate = "OUTPUTONOFF"
-scheduleDoneUpdate = "SCHEDULEDONE"
-scheduleNewLineUpdate = "SCHEDULENEWLINE"
+_connectUpdate = "CONNECT"
+_realCurrentUpdate = "REALCURRENT"
+_realVoltageUpdate = "REALVOLTAGE"
+_preRegVoltageUpdate = "PREREGVOLTAGE"
+_targetCurrentUpdate = "TARGETCURRENT"
+_targetVoltageUpdate = "TARGETVOLTAGE"
+_inputVoltageUpdate = "INPUTVOLTAGE"
+_outputOnOffUpdate = "OUTPUTONOFF"
+_scheduleDoneUpdate = "SCHEDULEDONE"
+_scheduleNewLineUpdate = "SCHEDULENEWLINE"
 
 class Controller():
     def __init__(self, shouldLog = False, loglevel = logging.ERROR):
@@ -30,7 +28,12 @@ class Controller():
         self.threadHelper = ThreadHelper()
         self.updateParameters = {}
         self.connected = False
-      
+        self.currentValues = DeviceValues()
+        self.registerListeners()
+        self.connectedString = "Connected !"
+        self.connectingString = "Connecting ..."
+        self.noDeviceFoundstr= "No device found"
+
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self._connectWorker, [usbPortNumber])
@@ -53,13 +56,19 @@ class Controller():
         if threaded:
             self.threadHelper.runThreadedJob(self._setTargetVoltageWorker, args=[targetVoltage])
         else:
-            self.DataAccess.setTargetVoltage(targetVoltage)
+            try:
+                self.DataAccess.setTargetVoltage(targetVoltage)
+            except Exception as e:
+                self.disconnect()
    
     def setTargetCurrent(self, targetCurrent, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self._setTargetCurrentWorker, args=[targetCurrent])
         else:
-            self.DataAccess.setTargetCurrent(targetCurrent)
+            try:
+                self.DataAccess.setTargetCurrent(targetCurrent)
+            except Exception as e:
+                self.disconnect()
         
     def setOutputOnOff(self, shouldBeOn, threaded=False):
         if threaded:
@@ -67,7 +76,10 @@ class Controller():
                 self.cancelNextGet.put("Cancel")
             self.threadHelper.runThreadedJob(self._setOutputOnOffWorker, args=[shouldBeOn])
         else:
-            self.DataAccess.setOutputOnOff(shouldBeOn)
+            try:
+                self.DataAccess.setOutputOnOff(shouldBeOn)
+            except Exception as e:
+                self.disconnect()
    
     def setLogging(self, shouldLog, loglevel):
         if shouldLog:
@@ -75,11 +87,41 @@ class Controller():
         else:
             logging.propagate = False
    
-    def registerUpdateFunction(self, func, condition):
+    def _registerUpdateFunction(self, func, condition):
         if condition not in self.updateParameters:
             self.updateParameters[condition] = [None,[]] #(Value, list_of_update_functions)
         self.updateParameters[condition][1].append(func)
 
+    def NotifyConnectedUpdate(self, func):
+        self._registerUpdateFunction(func, _connectUpdate)
+
+    def NotifyRealCurrentUpdate(self, func):
+        self._registerUpdateFunction(func, _realCurrentUpdate)
+
+    def NotifyRealVoltageUpdate(self, func):
+        self._registerUpdateFunction(func, _realVoltageUpdate)
+
+    def NotifyPreRegVoltageUpdate(self, func):
+        self._registerUpdateFunction(func, _preRegVoltageUpdate)
+
+    def NotifyTargetCurrentUpdate(self, func):
+        self._registerUpdateFunction(func, _targetCurrentUpdate)
+
+    def NotifyTargetVoltageUpdate(self, func):
+        self._registerUpdateFunction(func, _targetVoltageUpdate)
+
+    def NotifyInputVoltageUpdate(self, func):
+        self._registerUpdateFunction(func, _inputVoltageUpdate)
+
+    def NotifyOutputUpdate(self, func):
+        self._registerUpdateFunction(func, _outputOnOffUpdate)
+
+    def NotifyScheduleDoneUpdate(self, func):
+        self._registerUpdateFunction(func, _scheduleDoneUpdate)
+
+    def NotifyScheduleLineUpdate(self, func):
+        self._registerUpdateFunction(func, _scheduleNewLineUpdate)
+         
     """
     A call to this function lets the controller know that the UI is ready to receive updates
     """
@@ -94,8 +136,12 @@ class Controller():
                     func(updatedValue)
 
     def startAutoUpdate(self, interval):
-        self.threadHelper.runIntervalJob(self._updateValuesWorker, interval)
-      
+        self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateValuesWorker, interval)
+    
+    def stopAutoUpdate(self):
+        if self.autoUpdateScheduler:
+            self.autoUpdateScheduler.shutdown()
+
     def startSchedule(self,
                       lines,
                       startingTargetVoltage,
@@ -149,33 +195,33 @@ class Controller():
             allValues = self.getAllValues()
             if len(allValues) < 7:
                 return     
-            self.queue.put(realVoltageUpdate)
+            self.queue.put(_realVoltageUpdate)
             self.queue.put(allValues[0])      
-            self.queue.put(realCurrentUpdate)
+            self.queue.put(_realCurrentUpdate)
             self.queue.put(allValues[1])      
-            self.queue.put(targetVoltageUpdate)
+            self.queue.put(_targetVoltageUpdate)
             self.queue.put(allValues[2])     
-            self.queue.put(targetCurrentUpdate)
+            self.queue.put(_targetCurrentUpdate)
             self.queue.put(allValues[3])     
-            self.queue.put(preRegVoltageUpdate)
+            self.queue.put(_preRegVoltageUpdate)
             self.queue.put(allValues[4])    
-            self.queue.put(inputVoltageUpdate)
+            self.queue.put(_inputVoltageUpdate)
             self.queue.put(allValues[5]) 
-            self.queue.put(outputOnOffUpdate)
+            self.queue.put(_outputOnOffUpdate)
             self.queue.put(allValues[6])
         except Exception as e:
             self._connectionLost("_updateValuesWorker")      
         
     def _connectWorker(self, usbPortNumber):
-        self.queue.put(connectUpdate)
-        self.queue.put(connectingString)
+        self.queue.put(_connectUpdate)
+        self.queue.put((0, self.connectingString))
         self.connected = self.connect(usbPortNumber)
-        self.queue.put(connectUpdate)
+        self.queue.put(_connectUpdate)
         if self.connected:
-            self.queue.put(connectedString)
+            self.queue.put((1,self.connectedString))
         else:
             print("Connect worker: Connection exception. Failed to connect")
-            self.queue.put(noDeviceFoundstr)
+            self.queue.put((0,self.noDeviceFoundstr))
         
     def _setTargetVoltageWorker(self, targetVoltage):
         try:
@@ -197,8 +243,9 @@ class Controller():
         
     def _connectionLost(self, source):
         logging.debug("Lost connection in %s", source)
-        self.queue.put(connectString)
-        self.queue.put(noDeviceFoundstr)
+        self.queue.put(_connectUpdate)
+        self.queue.put((0,self.noDeviceFoundstr))
+        self.stopAutoUpdate()
         print("connection lost worker. Connection lost in ", source)
    
     def _addJobForLine(self, line, logToDataFile, filePath):
@@ -233,6 +280,37 @@ class Controller():
             fileString += str(realCurrent)
             fileString += "\n"
             myfile.write(fileString)
+
+    def registerListeners(self):
+        self.NotifyRealCurrentUpdate(self.realCurrentUpdate)
+        self.NotifyRealVoltageUpdate(self.realVoltageUpdate)
+        self.NotifyTargetCurrentUpdate(self.targetCurrentUpdate)
+        self.NotifyTargetVoltageUpdate(self.targetVoltageUpdate)
+        self.NotifyInputVoltageUpdate(self.inputVoltageUpdate)
+        self.NotifyOutputUpdate(self.outPutOnOffUpdate)
+        self.NotifyPreRegVoltageUpdate(self.preRegVoltageUpdate)
+
+    def targetVoltageUpdate(self, newTargetVoltage):
+        self.currentValues.targetVoltage = float(newTargetVoltage)
+
+    def inputVoltageUpdate(self, newInputVoltage):
+        self.currentValues.inputVoltage = float(newInputVoltage)
+    
+    def targetCurrentUpdate(self, newTargetCurrent):
+        self.currentValues.targetCurrent = int(newTargetCurrent)
+    
+    def realVoltageUpdate(self, newRealVoltage):
+        self.currentValues.realVoltage = newRealVoltage
+    
+    def realCurrentUpdate(self, newRealCurrent):
+        self.currentValues.realCurrent = newRealCurrent
+    
+    def outPutOnOffUpdate(self, newOutputOn):
+        self.currentValues.outputOn = newOutputOn
+    
+    def preRegVoltageUpdate(self, preRegVoltage):
+        self.currentValues.preRegVoltage = preRegVoltage
+    
     
     
       
