@@ -33,6 +33,7 @@ class Controller():
         self.connectedString = "Connected !"
         self.connectingString = "Connecting ..."
         self.noDeviceFoundstr= "No device found"
+        self.lostConnection = "Lost connection"
 
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
@@ -247,7 +248,7 @@ class Controller():
     def _connectionLost(self, source):
         logging.debug("Lost connection in %s", source)
         self.queue.put(_connectUpdate)
-        self.queue.put((0,self.noDeviceFoundstr))
+        self.queue.put((0,self.lostConnection))
         self.stopAutoUpdate()
         print("connection lost worker. Connection lost in ", source)
    
