@@ -113,7 +113,7 @@ class SerialConnection():
           logging.debug(loggingString)
           self._setValue(self.connection, command, value)
       except Exception as e:
-          logging.exception("Error when setting value with command: ", command, " and value: ", value)
+          logging.exception("Error when setting value with command: %s ", command, " and value: %s ", value)
           raise 
     
     def _setValue(self, serialConnection, command, value): 

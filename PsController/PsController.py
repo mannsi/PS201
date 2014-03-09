@@ -15,23 +15,30 @@ controller = Controller(shouldLog = True, loglevel = logging.ERROR)
 
 class PsController():
     def __init__(self):
-      self.guiRefreshRate = 200
-      self.mainWindow = Tk()
-      self.mainWindow.title(mainWindowTitle)
-      self.mainWindow.geometry(mainWindowSize)
-      self.topPanel = _HeaderPanel(self.mainWindow)
-      self.topPanel.pack(fill=X)
-      self.tabControl = TabControl(self.mainWindow)
-      self.tabControl.pack(fill=BOTH, expand=1)
-      self.btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
-      self.btnConnect.pack(side=RIGHT)
-      self.addMenuBar()
-      controller.NotifyConnectedUpdate(self.updateConnectedStatus)
+        self.guiRefreshRate = 200
+        self.mainWindow = Tk()
+        self.mainWindow.title(mainWindowTitle)
+        self.mainWindow.geometry(mainWindowSize)
+        self.topPanel = _HeaderPanel(self.mainWindow)
+        self.topPanel.pack(fill=X)
+        self.tabControl = TabControl(self.mainWindow)
+        self.tabControl.pack(fill=BOTH, expand=1)
+        self.btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
+        self.btnConnect.pack(side=RIGHT)
+        
+        self.numOfRefreshPerSecVar = IntVar(value=1)
+        self.numOfRefreshPerSec = Entry(self.mainWindow, textvariable=self.numOfRefreshPerSecVar, width=10)
+        self.numOfRefreshPerSec.pack(side=RIGHT)
+
+        Label(self.mainWindow, text="Refresh per sec").pack(side=RIGHT)
+        
+        self.addMenuBar()
+        controller.NotifyConnectedUpdate(self.updateConnectedStatus)
     
     def updateConnectedStatus(self, value):
         connected = value[0]
         if connected:
-            controller.startAutoUpdate(interval = 1)
+            controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get())
             state = DISABLED
         else:
             state = NORMAL
@@ -195,7 +202,7 @@ class TabControl(Notebook):
 
 def run():
     psFrame = PsController()
-    psFrame.connectToDevice()
+    #psFrame.connectToDevice()
     psFrame.show()
 
 if __name__ == "__main__":

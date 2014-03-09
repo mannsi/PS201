@@ -250,7 +250,6 @@ class Controller():
         self.queue.put(_connectUpdate)
         self.queue.put((0,self.lostConnection))
         self.stopAutoUpdate()
-        print("connection lost worker. Connection lost in ", source)
    
     def _addJobForLine(self, line, logToDataFile, filePath):
         self.queue.put(scheduleNewLineUpdate)
