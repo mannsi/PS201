@@ -213,14 +213,16 @@ class Controller():
             self._connectionLost("_updateValuesWorker")      
         
     def _connectWorker(self, usbPortNumber):
-        self.queue.put(_connectUpdate)
-        self.queue.put((0, self.connectingString))
-        self.connected = self.connect(usbPortNumber)
-        self.queue.put(_connectUpdate)
-        if self.connected:
-            self.queue.put((1,self.connectedString))
-        else:
-            print("Connect worker: Connection exception. Failed to connect")
+        try:
+            self.queue.put(_connectUpdate)
+            self.queue.put((0, self.connectingString))
+            self.connected = self.connect(usbPortNumber)
+            self.queue.put(_connectUpdate)
+            if self.connected:
+                self.queue.put((1,self.connectedString))
+            else:
+                self.queue.put((0,self.noDeviceFoundstr))
+        except:
             self.queue.put((0,self.noDeviceFoundstr))
         
     def _setTargetVoltageWorker(self, targetVoltage):

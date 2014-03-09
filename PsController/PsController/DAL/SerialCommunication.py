@@ -55,7 +55,7 @@ class SerialConnection():
             for port in usbList:
                 try:
                     con = serial.Serial(port, self.baudRate, timeout = 0.1)
-                    available.append(usbPort)
+                    available.append(port)
                     if self.validConnection(con):
                         defaultPort = con.portstr
                         break
