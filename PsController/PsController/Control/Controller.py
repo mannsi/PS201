@@ -223,6 +223,7 @@ class Controller():
             else:
                 self.queue.put((0,self.noDeviceFoundstr))
         except:
+            self.queue.put(_connectUpdate)
             self.queue.put((0,self.noDeviceFoundstr))
         
     def _setTargetVoltageWorker(self, targetVoltage):
