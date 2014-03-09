@@ -12,7 +12,7 @@ OutputBaseFilename=PsController
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: PsController\build\exe.win32-3.3\*; DestDir:{app}; Flags: recursesubdirs
+Source: build\exe.win32-3.3\*; DestDir:{app}; Flags: recursesubdirs
 
 [Icons]
 Name: {commondesktop}\Ps Controller; Filename: {app}\PsController.exe; Tasks: desktopicon
