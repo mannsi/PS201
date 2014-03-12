@@ -1,6 +1,0 @@
-1. Install python 3.3
-2. Install pySerial module. I downloaded it directly from the source forge site
-3. Install python3-tk module. I used apt get
-4. [Only needed for deployment]Install cx_Freeze. I did a number of things here but I think that it is enough to do apt-get install cx-freeze. 
-    (I also dl an .rpm from their site and used the Alien program to convert it to a debian package that I then installed. 
-     My problem though was that I needed to include the install folder in the PYTHONPATH (export PYTHONPATH=/usr/lib/python3.3/site-packages) )
