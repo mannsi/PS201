@@ -1,10 +1,12 @@
 import logging
 import queue
 import uuid
+import time
 from datetime import datetime, timedelta
 from PsController.DAL.DataAccess import DataAccess
 from PsController.Utilities.ThreadHelper import ThreadHelper
 from PsController.Model.DeviceValues import DeviceValues
+import PsController.DAL.Constants as dataConstants
 
 _connectUpdate = "CONNECT"
 _realCurrentUpdate = "REALCURRENT"
@@ -136,8 +138,15 @@ class Controller():
                 for func in updateFunctions:
                     func(updatedValue)
 
-    def startAutoUpdate(self, interval):
-        self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateValuesWorker, interval)
+    def startAutoUpdate(self, interval, updateType):
+        if updateType == 0:
+            # Polling updates
+            self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateAllValuesWorker, interval)
+        elif updateType == 1:
+            # Streaming updates
+            self.DataAccess.startStream()
+            self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
+            self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
     
     def stopAutoUpdate(self):
         if self.autoUpdateScheduler:
@@ -188,7 +197,7 @@ class Controller():
         self.queue.put(uuid.uuid4()) # Add a random UUID to fake a change event
         self.threadHelper.stopSchedule()
 
-    def _updateValuesWorker(self):
+    def _updateAllValuesWorker(self):
         try:
             if self.cancelNextGet.qsize() != 0:
                 self.cancelNextGet.get()
@@ -211,8 +220,47 @@ class Controller():
             self.queue.put(_outputOnOffUpdate)
             self.queue.put(allValues[6])
         except Exception as e:
-            self._connectionLost("_updateValuesWorker")      
-        
+            self._connectionLost("_updateValuesAllWorker")      
+       
+    def _updateStreamValueWorker(self):
+        try:
+            #print("Running update to fetch stream data. Time: ", datetime.now())
+            commandDataList = self.DataAccess.getStreamValues()
+            for pair in commandDataList:
+                command = pair[0]
+                value = pair[1]
+                if command == dataConstants.deviceWriteRealVoltage:
+                    #print("Got real voltage update, value: ", float(value))
+                    self.queue.put(_realVoltageUpdate)
+                    self.queue.put(float(value))
+                elif command == dataConstants.deviceWriteRealCurrent:
+                    #print("Got real current update, value: ", float(value))
+                    self.queue.put(_realCurrentUpdate)      
+                    self.queue.put(float(value))
+                elif command == dataConstants.deviceWritePreRegulatorVoltage:
+                    #print("Got prereg voltage update, value: ", float(value))
+                    self.queue.put(_preRegVoltageUpdate)      
+                    self.queue.put(float(value))
+                elif command == dataConstants.deviceWriteTargetVoltage:
+                    #print("Got target voltage update, value: ", float(value))
+                    self.queue.put(_targetVoltageUpdate)      
+                    self.queue.put(float(value))
+                elif command == dataConstants.deviceWriteTargetCurrent:
+                    #print("Got target current update, value: ", float(value))
+                    self.queue.put(_targetCurrentUpdate)      
+                    self.queue.put(float(value))
+                elif command == dataConstants.deviceWriteIsOutputOn:
+                    #print("Got input voltage update, value: ", float(value))
+                    self.queue.put(_outputOnOffUpdate)      
+                    self.queue.put(bool(value))
+                elif command == dataConstants.deviceWriteInputVoltage:
+                    #print("Got input voltage update, value: ", float(value))
+                    self.queue.put(_inputVoltageUpdate)      
+                    self.queue.put(float(value))
+        except Exception as e:
+            self._connectionLost("_updateStreamValueWorker")      
+                
+             
     def _connectWorker(self, usbPortNumber):
         try:
             self.queue.put(_connectUpdate)

@@ -1,32 +1,26 @@
 import logging
 from .SerialCommunication import SerialConnection
-
-_deviceWriteRealVoltage = b'\xd0'
-_deviceWriteRealCurrent = b'\xd1'
-_deviceWritePreRegulatorVoltage = b'\xd3'
-_deviceReadTargetVoltage = b'\xc0'
-_deviceReadTargetCurrent = b'\xc1'
-_deviceWriteTargetVoltage = b'\xe0'
-_deviceWriteTargetCurrent = b'\xe1'
-_deviceTurnOnOutput = b'\xc2'
-_deviceTurnOffOutput = b'\xc3'
-_deviceIsOutputOn = b'\xc4'
-_handshakeSignal = b'\xa0'
-_programId = b'\xa1'
-_deviceWriteAll = b'\xa5'
-_startChar = b'\x7E'
-_acknowledgeSignal = b'\x06'
-_notAcknowledgeSignal = b'\x15'
+from .DeviceResponse import DeviceResponse
+import PsController.DAL.Constants as dataConstants
+from PsController.Model.DeviceValues import DeviceValues
 
 class DataAccess():
     def __init__(self):
         self.connection = SerialConnection(
             baudrate = 9600,
             timeout = 0.1,
-            handshakeSignal=_deviceWriteRealVoltage,
-            startChar=_startChar,
-            acknowledgeSignal=_acknowledgeSignal,
-            notAcknowledgeSignal=_notAcknowledgeSignal)
+            handshakeSignal=dataConstants.deviceWriteRealVoltage,
+            startChar=dataConstants.startChar,
+            acknowledgeSignal=dataConstants.acknowledgeSignal,
+            notAcknowledgeSignal=dataConstants.notAcknowledgeSignal)
+        self.deviceRespondCommands = [dataConstants.deviceWriteRealVoltage,
+                             dataConstants.deviceWriteRealCurrent,
+                             dataConstants.deviceWritePreRegulatorVoltage,
+                             dataConstants.deviceWriteTargetVoltage,
+                             dataConstants.deviceWriteTargetCurrent,
+                             dataConstants.deviceWriteIsOutputOn,
+                             dataConstants.deviceWriteInputVoltage
+                             ]
 
     def connect(self, usbPortNumber):
         try:
@@ -55,47 +49,66 @@ class DataAccess():
         return self.connection.getUsbPorts()
 
     def getAllValues(self):
-        values = self.connection.getValue(_deviceWriteAll)
-        while not values:
-            values = self.connection.getValue(_deviceWriteAll)
+        serialValues = self.connection.getValue(dataConstants.deviceWriteAll)
+        while not serialValues:
+            serialValues = self.connection.getValue(dataConstants.deviceWriteAll)
+        values = DeviceResponse.fromSerialValue(serialValues, dataConstants.startChar).data
         splitValues = values.split(";") 
         floatValues = [float(value) for value in splitValues]
         return floatValues
 
     def getRealVoltage(self):
-        return float(self.connection.getValue(_deviceWriteRealCurrent))
+        value = _getValueFromDevice(dataConstants.deviceWriteRealCurrent)
+        return float(value)
 
     def getRealCurrent(self):
-        return float(self.connection.getValue(_deviceWriteRealVoltage))
+        value = _getValueFromDevice(dataConstants.deviceWriteRealVoltage)
+        return float(value)
 
     def getPreRegulatorVoltage(self):
-        return float(self.connection.getValue(_deviceWritePreRegulatorVoltage))
+        value = _getValueFromDevice(dataConstants.deviceWritePreRegulatorVoltage)
+        return float(value)
 
     def getTargetVoltage(self):
-        value = self.connection.getValue(_deviceWriteTargetVoltage)
-        count = 0
-        while value is "":
-            count += 1
-            value = self.connection.getValue(_deviceWriteTargetVoltage)
+        value = _getValueFromDevice(dataConstants.deviceWriteTargetVoltage)
         return float(value)
 
     def getTargetCurrent(self):
-        return float(self.connection.getValue(_deviceWriteTargetCurrent))
+        value = _getValueFromDevice(dataConstants.deviceWriteTargetCurrent)
+        return float(value)
 
     def getDeviceIsOn(self):
-        return bool(self.connection.getValue(_deviceIsOutputOn))
+        value = _getValueFromDevice(dataConstants.deviceWriteIsOutputOn)
+        return bool(value)
 
     def setTargetVoltage(self, targetVoltage):
-        self.connection.setValue(_deviceReadTargetVoltage, targetVoltage)
+        self.connection.setValue(dataConstants.deviceReadTargetVoltage, targetVoltage)
 
     def setTargetCurrent(self, targetCurrent):
-        self.connection.setValue(_deviceReadTargetCurrent, targetCurrent)
+        self.connection.setValue(dataConstants.deviceReadTargetCurrent, targetCurrent)
       
     def setOutputOnOff(self, shouldBeOn):
         if shouldBeOn:
-            deviceCommand = _deviceTurnOnOutput
+            deviceCommand = dataConstants.deviceTurnOnOutput
         else:
-            deviceCommand = _deviceTurnOffOutput
+            deviceCommand = dataConstants.deviceTurnOffOutput
         self.connection.setValue(deviceCommand)
 
+    def getStreamValues(self):
+        serialResponse = self.connection.getValue()
+        if not serialResponse: return []
+        commandDataList = DeviceResponse.fromSerialStreamValue(serialResponse, dataConstants.startChar)
+        commandDataList = self._filterOnlyCommands(commandDataList)
+        return commandDataList
+
+    def startStream(self):
+        self.connection.setValue(dataConstants.deviceStartStream)
+
+    def _getValueFromDevice(self, command):
+        serialValue = self.connection.getValue(command)
+        value = DeviceResponse.fromSerialValue(serialValue, dataConstants.startChar).data
+        return value
+
+    def _filterOnlyCommands(self, commandDataList):
+        return [x for x in commandDataList if x[0] in self.deviceRespondCommands]
   

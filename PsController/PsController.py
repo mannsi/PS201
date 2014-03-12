@@ -29,21 +29,28 @@ class PsController():
         self.numOfRefreshPerSecVar = IntVar(value=1)
         self.numOfRefreshPerSec = Entry(self.mainWindow, textvariable=self.numOfRefreshPerSecVar, width=10)
         self.numOfRefreshPerSec.pack(side=RIGHT)
-
         Label(self.mainWindow, text="Refresh per sec").pack(side=RIGHT)
         
+        self.updateTypeCmb = Combobox(values=["Polling","Streaming"])
+        self.updateTypeCmb.pack(side=RIGHT)
+        self.updateTypeCmb.current(newindex=0)
+        Label(self.mainWindow, text="Update type").pack(side=RIGHT)
+
         self.addMenuBar()
         controller.NotifyConnectedUpdate(self.updateConnectedStatus)
     
     def updateConnectedStatus(self, value):
         connected = value[0]
         if connected:
-            controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get())
+            type = self.updateTypeCmb.current()
+            controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=type)
             state = DISABLED
         else:
             state = NORMAL
 
         self.btnConnect.configure(state=state)
+        self.numOfRefreshPerSec.configure(state=state)
+        self.updateTypeCmb.configure(state=state)
 
     def addMenuBar(self):
       menubar = Menu(self.mainWindow)

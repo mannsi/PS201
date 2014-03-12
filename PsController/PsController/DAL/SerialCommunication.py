@@ -3,7 +3,6 @@ import logging
 import platform
 import glob
 import threading
-from PsController.Model.DeviceResponse import DeviceResponse
 from PsController.Utilities.Crc import Crc16
 
 class SerialConnection():
@@ -66,8 +65,8 @@ class SerialConnection():
     def validConnection(self, connection):
         try:
             self._sendCommandToDevice(connection, self.handshakeSignal, '')
-            serialResponse = connection.read(2)
-            return len(serialResponse) == 2 and serialResponse[1:2] == self.acknowledgementSignal
+            serialResponse = connection.read(6)
+            return len(serialResponse) == 6 and serialResponse[1:2] == self.acknowledgementSignal
         except Exception as e:
             return False 
     
@@ -89,7 +88,7 @@ class SerialConnection():
     def disconnect(self):
         self.connection.close()
     
-    def getValue(self, command):
+    def getValue(self, command=""):
         logging.debug("Sending command to device. Command: %s" % command)
         try:
             value = self._getValue(self.connection,command)
@@ -101,11 +100,12 @@ class SerialConnection():
     
     def _getValue(self, serialConnection, command):
         with self.processLock:
-            self._sendCommandToDevice(serialConnection, command,'')   
-            response = self._readDeviceReponse(serialConnection)
-        return response.data
+            if command:
+                self._sendCommandToDevice(serialConnection, command,'')   
+            serialResponse = self._readDeviceReponse(serialConnection)
+        return serialResponse
     
-    def setValue(self, command, value = None):
+    def setValue(self, command, value = ""):
       try:
           loggingString = "Sending command to device. Command:%s" % command
           if value:
@@ -134,6 +134,4 @@ class SerialConnection():
 
     def _readDeviceReponse(self,serialConnection):
         serialResponse = serialConnection.readline()
-        response = DeviceResponse()
-        response.fromSerialValue(serialResponse, self.startChar)
-        return response
+        return serialResponse
