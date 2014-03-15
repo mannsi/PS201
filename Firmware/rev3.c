@@ -197,6 +197,12 @@ int main(void)
 
 					transferToDAC(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
 					LCD_WriteVoltage(voltageSet);
+					if(streamIsOn)
+					{
+						char data[MAXLEN];
+						mapVoltage(voltageSet,data);
+						sendpacket(USART_SEND_SET_VOLTAGE,data);
+					}
 					break;
 				case CURRENT:
 					if(encoderTurnDirection == ENCODER_CCW) 	
@@ -224,6 +230,12 @@ int main(void)
 
 					transferToDAC(DACCURRENT,((float)currentSet)/currentSetMulti);
 					LCD_WriteCurrent(currentSet);
+					if(streamIsOn)
+					{
+						char data[MAXLEN];
+						mapCurrent(currentSet,data);
+						sendpacket(USART_SEND_SET_CURRENT,data);
+					}
 					break;
 			}
 			delay = setDelay;
@@ -248,25 +260,11 @@ int main(void)
 			{
 				EEPROM_WriteNum(voltageSet,ADDR_STARTVOLTAGE);
 				updateStartVoltage = 0;
-				if(streamIsOn)
-				{
-					char data[MAXLEN];
-					mapVoltage(voltageSet,data);
-					sendpacket(USART_SEND_SET_VOLTAGE,data);
-				}
-
 			}
 			if(updateStartCurrent)
 			{
 				EEPROM_WriteNum(currentSet,ADDR_STARTCURRENT);
 				updateStartCurrent = 0;
-				if(streamIsOn)
-				{
-					char data[MAXLEN];
-					mapCurrent(currentSet,data);
-					sendpacket(USART_SEND_SET_CURRENT,data);
-				}
-
 			}
 		}
 		else
