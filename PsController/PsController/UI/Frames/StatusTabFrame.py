@@ -30,10 +30,10 @@ class StatusTabFrame(Frame):
         self.preRegVoltageEntry = Entry(self, textvariable=self.preRegVoltageEntryVar,width=8,state='readonly',font=(fontName, fontSize))
         self.preRegVoltageEntry.grid(row=3, column=1)
         Label(self, text="(V):").grid(row=3,column=2,sticky=W)
-        self.controller.NotifyTargetVoltageUpdate(self.targetVoltageUpdate)
-        self.controller.NotifyInputVoltageUpdate(self.inputVoltageUpdate)
-        self.controller.NotifyTargetCurrentUpdate(self.targetCurrentUpdate)
-        self.controller.NotifyPreRegVoltageUpdate(self.preRegVoltageUpdate)
+        self.controller.notifyTargetVoltageUpdate(self.targetVoltageUpdate)
+        self.controller.notifyInputVoltageUpdate(self.inputVoltageUpdate)
+        self.controller.notifyTargetCurrentUpdate(self.targetCurrentUpdate)
+        self.controller.notifyPreRegVoltageUpdate(self.preRegVoltageUpdate)
 
     def targetVoltageUpdate(self, newTargetVoltage):
         self.voltageEntryVar.set(newTargetVoltage) 

@@ -8,10 +8,12 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 
+debugging = True
+
 mainWindowSize = '700x400'
 mainWindowTitle = "PS201 Controller"
 
-controller = Controller(shouldLog = True, loglevel = logging.ERROR)
+controller = Controller()
 
 class PsController():
     def __init__(self):
@@ -23,34 +25,74 @@ class PsController():
         self.topPanel.pack(fill=X)
         self.tabControl = TabControl(self.mainWindow)
         self.tabControl.pack(fill=BOTH, expand=1)
-        self.btnConnect = Button(self.mainWindow, text = "Connect", command = lambda: self.connectToDevice())
+        
+        if debugging:
+            debugFrame = Frame(self.mainWindow)
+
+            self.numOfRefreshPerSecVar = IntVar(value=2)
+            self.numOfRefreshPerSec = Entry(debugFrame, textvariable=self.numOfRefreshPerSecVar, width=10)
+            self.numOfRefreshPerSec.pack(side=RIGHT)
+            Label(debugFrame, text="Refresh per sec").pack(side=RIGHT)
+        
+            self.updateTypeCmb = Combobox(debugFrame,values=["Polling","Streaming"])
+            self.updateTypeCmb.pack(side=RIGHT)
+            self.updateTypeCmb.current(newindex=0)
+            Label(debugFrame, text="Update type").pack(side=RIGHT)
+
+            self.loggingCmb = Combobox(debugFrame, values=["Error","Details"])
+            self.loggingCmb.bind("<<ComboboxSelected>>", self._logging_sel_changed)
+            self.loggingCmb.pack(side=RIGHT)
+            self.loggingCmb.current(newindex=0)
+            Label(debugFrame, text="Logging").pack(side=RIGHT)
+
+            self.btnUpdateAll = Button(debugFrame, text = "Refresh", command = self.debugRefreshValues)
+            self.btnUpdateAll.pack(side=RIGHT)
+
+            self.chkAutoVar = IntVar(value=0)
+            self.chkAuto = Checkbutton(debugFrame, text = "Auto", variable = self.chkAutoVar, command = self.debugSwitchAutoMode)
+            self.chkAuto.pack(side=RIGHT)
+
+            debugFrame.pack(fill=X)
+
+        self.btnConnect = Button(self.mainWindow, text = "Connect", command = self.connectToDevice)
         self.btnConnect.pack(side=RIGHT)
-        
-        self.numOfRefreshPerSecVar = IntVar(value=1)
-        self.numOfRefreshPerSec = Entry(self.mainWindow, textvariable=self.numOfRefreshPerSecVar, width=10)
-        self.numOfRefreshPerSec.pack(side=RIGHT)
-        Label(self.mainWindow, text="Refresh per sec").pack(side=RIGHT)
-        
-        self.updateTypeCmb = Combobox(values=["Polling","Streaming"])
-        self.updateTypeCmb.pack(side=RIGHT)
-        self.updateTypeCmb.current(newindex=0)
-        Label(self.mainWindow, text="Update type").pack(side=RIGHT)
 
         self.addMenuBar()
-        controller.NotifyConnectedUpdate(self.updateConnectedStatus)
+        controller.notifyConnectedUpdate(self.updateConnectedStatus)
     
+    def debugRefreshValues(self):
+        if controller.connected:
+            controller._updateAllValuesWorker()
+
+    def debugSwitchAutoMode(self):
+        chkValue = self.chkAutoVar.get()
+        if controller.connected:
+            if chkValue:
+                self.startAutoUpdate()
+            else:
+                controller.stopAutoUpdate()
+
     def updateConnectedStatus(self, value):
         connected = value[0]
         if connected:
-            type = self.updateTypeCmb.current()
-            controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=type)
+            if self.chkAutoVar.get():
+                self.startAutoUpdate()
             state = DISABLED
         else:
             state = NORMAL
 
         self.btnConnect.configure(state=state)
-        self.numOfRefreshPerSec.configure(state=state)
-        self.updateTypeCmb.configure(state=state)
+        if debugging:
+            self.numOfRefreshPerSec.configure(state=state)
+            self.updateTypeCmb.configure(state=state)
+
+    def startAutoUpdate(self):
+        if debugging:
+                type = self.updateTypeCmb.current()
+                controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=type)
+        else:
+            pass
+            controller.startAutoUpdate(interval = 1/3, updateType=0)
 
     def addMenuBar(self):
       menubar = Menu(self.mainWindow)
@@ -71,6 +113,7 @@ class PsController():
     
       self.mainWindow.config(menu=menubar)
     
+    # TODO have the default port stuff be async
     def buildUsbPortMenu(self):
       self.submenu.delete(0, END)
       (avilableUsbPorts, defaultUsbPort) = controller.getAvailableUsbPorts()
@@ -95,6 +138,13 @@ class PsController():
         controller.uiPulse()
         self.mainWindow.after(self.guiRefreshRate, self.periodicUiUpdate)
     
+    def _logging_sel_changed(self, widget):
+        selectedIndex = self.loggingCmb.current()
+        if selectedIndex == 0:
+            controller.setLogging(logging.ERROR)
+        elif selectedIndex == 1:
+            controller.setLogging(logging.DEBUG)
+
     def show(self):
         self.mainWindow.mainloop()
 
@@ -116,8 +166,8 @@ class _HeaderPanel(Frame):
         topLinFrame.pack(fill=X)
         self.valuesFrame = _ValuesFrame(self)
         self.valuesFrame.pack(pady=10)
-        controller.NotifyConnectedUpdate(self.connectedUpdated)
-        controller.NotifyOutputUpdate(self.outPutOnOffUpdate)
+        controller.notifyConnectedUpdate(self.connectedUpdated)
+        controller.notifyOutputUpdate(self.outPutOnOffUpdate)
 
     def outPutOnOff(self):
         chkValue = self.chkOutputOnVar.get()
@@ -159,9 +209,9 @@ class _ValuesFrame(Frame):
         self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
         self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
 
-        controller.NotifyRealCurrentUpdate(self.realCurrentUpdate)
-        controller.NotifyRealVoltageUpdate(self.realVoltageUpdate)
-        controller.NotifyConnectedUpdate(self.connectedUpdated)
+        controller.notifyRealCurrentUpdate(self.realCurrentUpdate)
+        controller.notifyRealVoltageUpdate(self.realVoltageUpdate)
+        controller.notifyConnectedUpdate(self.connectedUpdated)
     
     def setTargetCurrent(self,args=None):
         targetCurrent = tkinter.simpledialog.askinteger("Current limit", "Enter new current limit (0-1000mA)",parent=self)

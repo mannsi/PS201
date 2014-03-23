@@ -27,7 +27,7 @@ class ThreadHelper():
             self.runIntervalJob(fileLoggingFunction, loggingTimeInterval, [filePath])
       
     def stopSchedule(self):
-        self.scheduleScheduler.shutdown()
+        self.scheduleScheduler.shutdown(wait = False)
       
 
   

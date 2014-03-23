@@ -2,11 +2,15 @@ import logging
 import queue
 import uuid
 import time
+import threading
 from datetime import datetime, timedelta
-from PsController.DAL.DataAccess import DataAccess
+from PsController.DAL.SerialDataAccess import DataAccess
 from PsController.Utilities.ThreadHelper import ThreadHelper
 from PsController.Model.DeviceValues import DeviceValues
-import PsController.DAL.Constants as dataConstants
+from PsController.Model.Constants import *
+from PsController.DAL.SerialConnection import SerialConnection
+from PsController.Utilities.Crc import Crc16
+from PsController.Utilities.DeviceResponse import DeviceCommunication
 
 _connectUpdate = "CONNECT"
 _realCurrentUpdate = "REALCURRENT"
@@ -16,141 +20,208 @@ _targetCurrentUpdate = "TARGETCURRENT"
 _targetVoltageUpdate = "TARGETVOLTAGE"
 _inputVoltageUpdate = "INPUTVOLTAGE"
 _outputOnOffUpdate = "OUTPUTONOFF"
-_scheduleDoneUpdate = "SCHEDULEDONE"
-_scheduleNewLineUpdate = "SCHEDULENEWLINE"
+_scheduleDoneUpdate = "SCHEDULEDONE" 
+_scheduleNewLineUpdate = "SCHEDULENEWLINE" 
 
 class Controller():
-    def __init__(self, shouldLog = False, loglevel = logging.ERROR):
-        if shouldLog:
-            logging.basicConfig(format='%(asctime)s %(message)s', filename='PS200.log', level=loglevel)
-        
-        self.DataAccess = DataAccess()
+    def __init__(self):
+        self.logger = None
+        self.setLogging(logging.ERROR)
+        self.connection = self._createConnection()
+        self.DataAccess = DataAccess(self.connection, self.logger)
         self.queue = queue.Queue()
-        self.cancelNextGet = queue.Queue()
         self.threadHelper = ThreadHelper()
         self.updateParameters = {}
         self.connected = False
         self.currentValues = DeviceValues()
-        self.registerListeners()
+        self._registerListeners()
+        self.dataAccessLock = threading.Lock()
         self.connectedString = "Connected !"
         self.connectingString = "Connecting ..."
         self.noDeviceFoundstr= "No device found"
+        self.noUsbPortSelected = "No usb port selected"
         self.lostConnection = "Lost connection"
 
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self._connectWorker, [usbPortNumber])
         else:
-            return self.DataAccess.connect(usbPortNumber)
-    
+            try:
+                self.connection.connect(usbPortNumber)
+                return True
+            except Exception as e:
+                self.logger.error("Device not found on given port")
+                self.logger.exception(e)
+                return False
+
     def disconnect(self):
-        self.DataAccess.disconnect()
+        self.connection.disconnect()
     
+    def setLogging(self, logLevel):
+        if not self.logger:
+            self.logger = logging.getLogger("PS201Logger")
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            fileHandler = logging.FileHandler("PS201.log")      
+            fileHandler.setFormatter(formatter)
+            self.logger.addHandler(fileHandler)
+            printHandler = logging.StreamHandler()
+            printHandler.setFormatter(formatter)
+            self.logger.addHandler(printHandler)
+
+            # Overwhelming when this is set to debug
+            logging.getLogger("apscheduler.scheduler").setLevel(logging.ERROR) 
+
+        self.logger.setLevel(logLevel)
+
+    # TODO this func should not manage the default port. The PsController should register for a default port update. This function should run a threaded job that 
+    # finds the default port and puts it in the queue
     def getAvailableUsbPorts(self):
-        return self.DataAccess.getAvailableUsbPorts()
-   
-    def getDeviceUsbPort(self, availableUsbPorts):
-      return self.DataAccess.detectDevicePort()
-    
-    def getAllValues(self):
-        return self.DataAccess.getAllValues()
-        
+        defaultPort = ""
+        usbPorts = self.connection.availableConnections()
+        for port in usbPorts:
+            if self.connection.deviceOnPort(port):
+                defaultPort = port
+                break
+        return (usbPorts, defaultPort)
+
     def setTargetVoltage(self, targetVoltage, threaded=False):
         if threaded:
-            self.threadHelper.runThreadedJob(self._setTargetVoltageWorker, args=[targetVoltage])
+            self.threadHelper.runThreadedJob(self.setTargetVoltage, args=[targetVoltage])
         else:
             try:
-                self.DataAccess.setTargetVoltage(targetVoltage)
+                with self.dataAccessLock:
+                    self.DataAccess.sendValueToDevice(READ_TARGET_VOLTAGE,targetVoltage)
+                    self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
             except Exception as e:
-                self.disconnect()
+                self._connectionLost()
+                self.logger.exception("Error when setting target voltage")
    
     def setTargetCurrent(self, targetCurrent, threaded=False):
         if threaded:
-            self.threadHelper.runThreadedJob(self._setTargetCurrentWorker, args=[targetCurrent])
+            self.threadHelper.runThreadedJob(self.setTargetCurrent, args=[targetCurrent])
         else:
             try:
-                self.DataAccess.setTargetCurrent(targetCurrent)
+                with self.dataAccessLock:
+                    self.DataAccess.sendValueToDevice(READ_TARGET_CURRENT,targetCurrent)
+                    self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
             except Exception as e:
-                self.disconnect()
+                self._connectionLost()
+                self.logger.exception("Error when setting target current")
         
     def setOutputOnOff(self, shouldBeOn, threaded=False):
         if threaded:
-            if self.cancelNextGet.qsize() == 0:
-                self.cancelNextGet.put("Cancel")
-            self.threadHelper.runThreadedJob(self._setOutputOnOffWorker, args=[shouldBeOn])
+            self.threadHelper.runThreadedJob(self.setOutputOnOff, args=[shouldBeOn])
         else:
             try:
-                self.DataAccess.setOutputOnOff(shouldBeOn)
+                setValue = TURN_OFF_OUTPUT
+                if shouldBeOn:
+                    setValue = TURN_ON_OUTPUT
+                with self.dataAccessLock:   
+                    self.DataAccess.sendValueToDevice(setValue, shouldBeOn)
+                    self._checkDeviceForAcknowledgement(setValue)
             except Exception as e:
-                self.disconnect()
+                self._connectionLost()
+                self.logger.exception("Error when output on/off")
    
-    def setLogging(self, shouldLog, loglevel):
-        if shouldLog:
-            logging.basicConfig(level=loglevel)
-        else:
-            logging.propagate = False
-   
-    def _registerUpdateFunction(self, func, condition):
-        if condition not in self.updateParameters:
-            self.updateParameters[condition] = [None,[]] #(Value, list_of_update_functions)
-        self.updateParameters[condition][1].append(func)
-
-    def NotifyConnectedUpdate(self, func):
+    """
+    Runs the func function when connection status is updated through auto update
+    """
+    def notifyConnectedUpdate(self, func):
         self._registerUpdateFunction(func, _connectUpdate)
 
-    def NotifyRealCurrentUpdate(self, func):
+    """
+    Runs the func function when real current value changes through auto update
+    """
+    def notifyRealCurrentUpdate(self, func):
         self._registerUpdateFunction(func, _realCurrentUpdate)
 
-    def NotifyRealVoltageUpdate(self, func):
+    """
+    Runs the func function when real voltage value changes through auto update
+    """
+    def notifyRealVoltageUpdate(self, func):
         self._registerUpdateFunction(func, _realVoltageUpdate)
-
-    def NotifyPreRegVoltageUpdate(self, func):
+    
+    """
+    Runs the func function when pre reg voltage value changes through auto update
+    """
+    def notifyPreRegVoltageUpdate(self, func):
         self._registerUpdateFunction(func, _preRegVoltageUpdate)
 
-    def NotifyTargetCurrentUpdate(self, func):
+    """
+    Runs the func function when target current value changes through auto update
+    """
+    def notifyTargetCurrentUpdate(self, func):
         self._registerUpdateFunction(func, _targetCurrentUpdate)
 
-    def NotifyTargetVoltageUpdate(self, func):
+    """
+    Runs the func function when target voltage value changes through auto update
+    """
+    def notifyTargetVoltageUpdate(self, func):
         self._registerUpdateFunction(func, _targetVoltageUpdate)
 
-    def NotifyInputVoltageUpdate(self, func):
+    """
+    Runs the func function when input voltage value changes through auto update
+    """
+    def notifyInputVoltageUpdate(self, func):
         self._registerUpdateFunction(func, _inputVoltageUpdate)
 
-    def NotifyOutputUpdate(self, func):
+    """
+    Runs the func function when output setting changes through auto update
+    """
+    def notifyOutputUpdate(self, func):
         self._registerUpdateFunction(func, _outputOnOffUpdate)
 
-    def NotifyScheduleDoneUpdate(self, func):
+    """
+    Runs the func function when a schedule finishes
+    """
+    def notifyScheduleDoneUpdate(self, func):
         self._registerUpdateFunction(func, _scheduleDoneUpdate)
 
-    def NotifyScheduleLineUpdate(self, func):
+    """
+    Runs the func function when the currently running schedule line finishes
+    """
+    def notifyScheduleLineUpdate(self, func):
         self._registerUpdateFunction(func, _scheduleNewLineUpdate)
          
     """
     A call to this function lets the controller know that the UI is ready to receive updates
     """
     def uiPulse(self):
-        while self.queue.qsize():
-            updateCondition = self.queue.get(0)
-            updatedValue = self.queue.get(0)
-            value, updateFunctions = self.updateParameters[updateCondition]
-            if value != updatedValue:
-                self.updateParameters[updateCondition][0] = updatedValue
-                for func in updateFunctions:
-                    func(updatedValue)
+        try:
+            while self.queue.qsize():
+                updateCondition = self.queue.get(0)
+                updatedValue = self.queue.get(0)
+                value, updateFunctions = self.updateParameters[updateCondition]
+                if value != updatedValue:
+                    self.updateParameters[updateCondition][0] = updatedValue
+                    for func in updateFunctions:
+                        func(updatedValue)
+        except Exception as e:
+            self.logger.exception(e)
+            self.queue.queue.clear()
 
     def startAutoUpdate(self, interval, updateType):
         if updateType == 0:
             # Polling updates
+            with self.dataAccessLock:
+                self.connection.clearBuffer()
+                self.DataAccess.sendValueToDevice(STOP_STREAM,'')
+                self._checkDeviceForAcknowledgement(STOP_STREAM)
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateAllValuesWorker, interval)
         elif updateType == 1:
             # Streaming updates
-            self.DataAccess.startStream()
-            self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
+            with self.dataAccessLock:
+                self.DataAccess.sendValueToDevice(START_STREAM, '')
+                self._checkDeviceForAcknowledgement(START_STREAM)
+                self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
     
     def stopAutoUpdate(self):
         if self.autoUpdateScheduler:
-            self.autoUpdateScheduler.shutdown()
+            try:
+                self.autoUpdateScheduler.shutdown(wait = False)
+            except Exception as e:
+                self.logger.exception(e)
 
     def startSchedule(self,
                       lines,
@@ -193,17 +264,85 @@ class Controller():
         return True
    
     def stopSchedule(self):
-        self.queue.put(scheduleDoneUpdate)
+        self.queue.put(_scheduleDoneUpdate)
         self.queue.put(uuid.uuid4()) # Add a random UUID to fake a change event
         self.threadHelper.stopSchedule()
+        self._resetScheduleLineParameter()
+
+    def _resetScheduleLineParameter(self):
+        self.updateParameters[_scheduleNewLineUpdate][0] = -1
+
+    def getAllValues(self):
+        try:
+            deviceValue = self._getValueFromDevice(WRITE_ALL)
+            if not deviceValue: return
+            allValues = [float(x) for x in deviceValue.split(";")]
+            return allValues
+        except Exception as e:
+            self._connectionLost()      
+            self.logger.exception(e)
+
+    def getRealVoltage(self):
+        value = self._getValueFromDevice(WRITE_REAL_VOLTAGE)
+        if value is None: return None
+        return float(value)
+
+    def getRealCurrent(self):
+        value = self._getValueFromDevice(WRITE_REAL_CURRENT)
+        if value is None: return None
+        return float(value)
+    
+    def getPreRegulatorVoltage(self):
+        value = self._getValueFromDevice(WRITE_PREREGULATOR_VOLTAGE)
+        if value is None: return None
+        return float(value)
+    
+    def getTargetVoltage(self):
+        value = self._getValueFromDevice(WRITE_TARGET_VOLTAGE)
+        if value is None: return None
+        return float(value)
+    
+    def getTargetCurrent(self):
+        value = self._getValueFromDevice(WRITE_TARGET_CURRENT)
+        if value is None: return None
+        return float(value)
+    
+    def getDeviceIsOn(self):
+        value = self._getValueFromDevice(WRITE_IS_OUTPUT_ON)
+        if value is None: return None
+        return bool(value)
+
+    def _getValueFromDevice(self, command):
+        try:
+            with self.dataAccessLock:
+                self.DataAccess.sendValueToDevice(command)
+                acknowledgement = self.DataAccess.getResponseFromDevice()
+                self._verifyAcknowledgement(acknowledgement, command, data='')
+                response = self.DataAccess.getResponseFromDevice()
+                self._verifyResponse(response, command, data='')
+            return response.data
+        except Exception as e:
+            self.logger.exception(e)
+            self._connectionLost()
+            return None
+
+    def _createConnection(self):
+        return SerialConnection(
+            baudrate = 9600,
+            timeout = 0.1,
+            logger = self.logger,
+            idMessage = self._getDeviceIdMessage(),
+            deviceVerificationFunc = self._deviceIdResponseFunction)
+
+    def _registerUpdateFunction(self, func, condition):
+        if condition not in self.updateParameters:
+            self.updateParameters[condition] = [None,[]] #(Value, list_of_update_functions)
+        self.updateParameters[condition][1].append(func)
 
     def _updateAllValuesWorker(self):
         try:
-            if self.cancelNextGet.qsize() != 0:
-                self.cancelNextGet.get()
-                return
             allValues = self.getAllValues()
-            if len(allValues) < 7:
+            if allValues is None or len(allValues) < 7:
                 return     
             self.queue.put(_realVoltageUpdate)
             self.queue.put(allValues[0])      
@@ -220,47 +359,48 @@ class Controller():
             self.queue.put(_outputOnOffUpdate)
             self.queue.put(allValues[6])
         except Exception as e:
-            self._connectionLost("_updateValuesAllWorker")      
-       
+            self._connectionLost()      
+            self.logger.exception(e)
+      
     def _updateStreamValueWorker(self):
         try:
-            #print("Running update to fetch stream data. Time: ", datetime.now())
-            commandDataList = self.DataAccess.getStreamValues()
+            respondList = []
+            with self.dataAccessLock:
+                response = self.DataAccess.getResponseFromDevice()
+                while response:
+                    respondList.append()
+                    response = self.DataAccess.getResponseFromDevice()
+            if not respondList: return
+            commandDataList = [(x.command, x.data) for x in respondList]
+            if commandDataList is None: return
             for pair in commandDataList:
                 command = pair[0]
                 value = pair[1]
-                if command == dataConstants.deviceWriteRealVoltage:
-                    #print("Got real voltage update, value: ", float(value))
+                if command == WRITE_REAL_VOLTAGE:
                     self.queue.put(_realVoltageUpdate)
                     self.queue.put(float(value))
-                elif command == dataConstants.deviceWriteRealCurrent:
-                    #print("Got real current update, value: ", float(value))
+                elif command == WRITE_REAL_CURRENT:
                     self.queue.put(_realCurrentUpdate)      
                     self.queue.put(float(value))
-                elif command == dataConstants.deviceWritePreRegulatorVoltage:
-                    #print("Got prereg voltage update, value: ", float(value))
+                elif command == WRITE_PREREGULATOR_VOLTAGE:
                     self.queue.put(_preRegVoltageUpdate)      
                     self.queue.put(float(value))
-                elif command == dataConstants.deviceWriteTargetVoltage:
-                    #print("Got target voltage update, value: ", float(value))
+                elif command == WRITE_TARGET_VOLTAGE:
                     self.queue.put(_targetVoltageUpdate)      
                     self.queue.put(float(value))
-                elif command == dataConstants.deviceWriteTargetCurrent:
-                    #print("Got target current update, value: ", float(value))
+                elif command == WRITE_TARGET_CURRENT:
                     self.queue.put(_targetCurrentUpdate)      
                     self.queue.put(float(value))
-                elif command == dataConstants.deviceWriteIsOutputOn:
-                    #print("Got input voltage update, value: ", float(value))
+                elif command == WRITE_IS_OUTPUT_ON:
                     self.queue.put(_outputOnOffUpdate)      
-                    self.queue.put(bool(value))
-                elif command == dataConstants.deviceWriteInputVoltage:
-                    #print("Got input voltage update, value: ", float(value))
+                    self.queue.put(float(value))
+                elif command == WRITE_INPUT_VOLTAGE:
                     self.queue.put(_inputVoltageUpdate)      
                     self.queue.put(float(value))
         except Exception as e:
-            self._connectionLost("_updateStreamValueWorker")      
-                
-             
+            self._connectionLost()      
+            self.logger.exception(e)
+                            
     def _connectWorker(self, usbPortNumber):
         try:
             self.queue.put(_connectUpdate)
@@ -270,47 +410,33 @@ class Controller():
             if self.connected:
                 self.queue.put((1,self.connectedString))
             else:
-                self.queue.put((0,self.noDeviceFoundstr))
+                if usbPortNumber:
+                    self.queue.put((0,self.noDeviceFoundstr))
+                else:
+                    self.queue.put((0,self.noUsbPortSelected))
         except:
             self.queue.put(_connectUpdate)
             self.queue.put((0,self.noDeviceFoundstr))
         
-    def _setTargetVoltageWorker(self, targetVoltage):
-        try:
-            self.setTargetVoltage(targetVoltage)
-        except Exception as e:
-            self._connectionLost("set target voltage worker")
-   
-    def _setTargetCurrentWorker(self, targetCurrent):
-        try:
-            self.setTargetCurrent(targetCurrent)
-        except Exception as e:
-            self._connectionLost("set target current worker")
-        
-    def _setOutputOnOffWorker(self, shouldBeOn):
-        try:
-            self.setOutputOnOff(shouldBeOn)
-        except Exception as e:
-            self._connectionLost("set output on/off worker")    
-        
-    def _connectionLost(self, source):
-        logging.debug("Lost connection in %s", source)
-        self.queue.put(_connectUpdate)
-        self.queue.put((0,self.lostConnection))
-        self.stopAutoUpdate()
+    def _connectionLost(self):
+        if self.connected:
+            self.queue.put(_connectUpdate)
+            self.queue.put((0,self.lostConnection))
+            self.disconnect()
+            self.stopAutoUpdate()
    
     def _addJobForLine(self, line, logToDataFile, filePath):
-        self.queue.put(scheduleNewLineUpdate)
+        self.queue.put(_scheduleNewLineUpdate)
         self.queue.put(line.rowNumber)
-        self._setTargetVoltageWorker(line.getVoltage())
-        self._setTargetCurrentWorker(line.getCurrent())
+        self.setTargetVoltage(line.getVoltage())
+        self.setTargetCurrent(line.getCurrent())
             
         if logToDataFile:
             self._logValuesToFile(filePath)
    
     def _resetDevice(self, startingTargetVoltage, startingTargetCurrent, startingOutputOn):
-        self._setTargetVoltageWorker(startingTargetVoltage)
-        self._setTargetCurrentWorker(startingTargetCurrent)
+        self.setTargetVoltage(startingTargetVoltage)
+        self.setTargetCurrent(startingTargetCurrent)
         self.setOutputOnOff(startingOutputOn)
         self.stopSchedule()
    
@@ -320,6 +446,7 @@ class Controller():
         
     def _logValuesToFile(self,filePath):
         allValues = self.getAllValues()
+        if allValues is None: return
         listOfValues = allValues.split(";")      
         realVoltage = listOfValues[0]
         realCurrent = listOfValues[1]
@@ -332,36 +459,96 @@ class Controller():
             fileString += "\n"
             myfile.write(fileString)
 
-    def registerListeners(self):
-        self.NotifyRealCurrentUpdate(self.realCurrentUpdate)
-        self.NotifyRealVoltageUpdate(self.realVoltageUpdate)
-        self.NotifyTargetCurrentUpdate(self.targetCurrentUpdate)
-        self.NotifyTargetVoltageUpdate(self.targetVoltageUpdate)
-        self.NotifyInputVoltageUpdate(self.inputVoltageUpdate)
-        self.NotifyOutputUpdate(self.outPutOnOffUpdate)
-        self.NotifyPreRegVoltageUpdate(self.preRegVoltageUpdate)
+    def _registerListeners(self):
+        self.notifyRealCurrentUpdate(self._realCurrentUpdate)
+        self.notifyRealVoltageUpdate(self._realVoltageUpdate)
+        self.notifyTargetCurrentUpdate(self._targetCurrentUpdate)
+        self.notifyTargetVoltageUpdate(self._targetVoltageUpdate)
+        self.notifyInputVoltageUpdate(self._inputVoltageUpdate)
+        self.notifyOutputUpdate(self._outPutOnOffUpdate)
+        self.notifyPreRegVoltageUpdate(self._preRegVoltageUpdate)
 
-    def targetVoltageUpdate(self, newTargetVoltage):
+    def _targetVoltageUpdate(self, newTargetVoltage):
         self.currentValues.targetVoltage = float(newTargetVoltage)
 
-    def inputVoltageUpdate(self, newInputVoltage):
+    def _inputVoltageUpdate(self, newInputVoltage):
         self.currentValues.inputVoltage = float(newInputVoltage)
     
-    def targetCurrentUpdate(self, newTargetCurrent):
+    def _targetCurrentUpdate(self, newTargetCurrent):
         self.currentValues.targetCurrent = int(newTargetCurrent)
     
-    def realVoltageUpdate(self, newRealVoltage):
+    def _realVoltageUpdate(self, newRealVoltage):
         self.currentValues.realVoltage = newRealVoltage
     
-    def realCurrentUpdate(self, newRealCurrent):
+    def _realCurrentUpdate(self, newRealCurrent):
         self.currentValues.realCurrent = newRealCurrent
     
-    def outPutOnOffUpdate(self, newOutputOn):
+    def _outPutOnOffUpdate(self, newOutputOn):
         self.currentValues.outputOn = newOutputOn
     
-    def preRegVoltageUpdate(self, preRegVoltage):
+    def _preRegVoltageUpdate(self, preRegVoltage):
         self.currentValues.preRegVoltage = preRegVoltage
+
+    def _checkDeviceForAcknowledgement(self, command, data=''):
+        try:
+            deviceResponse = self.DataAccess.getResponseFromDevice()
+            self._verifyAcknowledgement(deviceResponse, command, data)
+        except Exception as e:
+            self.logger.exception(e)
+            self._connectionLost()
+
+    def _verifyResponse(self, response, command, data):
+        self._verifyCrcCode(response, command, data)
+
+    def _verifyAcknowledgement(self, acknowledgementResponse, command, data):
+        if not acknowledgementResponse:
+            raise Exception("No response from device")
+            self._logSendingDataToDevice(command, data)
+        if acknowledgementResponse.command == NOTACKNOWLEDGE:
+            self._logTransmissionError("Received NAK from device", command, data, acknowledgementResponse)
+        elif acknowledgementResponse.command != ACKNOWLEDGE:
+            self._logTransmissionError("Received neither AK nor NAK from device", command, data, acknowledgementResponse)
+        else:
+            self._verifyCrcCode(acknowledgementResponse, command, data)
+
+    def _logTransmissionError(self, errorMessage, sendingCommand, sendingData, response):
+        self.logger.error(errorMessage)
+        self._logSendingDataToDevice(sendingCommand, sendingData)
+        self._logReceivingDeviceData(response)
+ 
+    def _logSendingDataToDevice(self, command, data):
+        sendingData = DeviceCommunication.toSerial(command, data)
+        self.logger.error("Data sent to device: %s" % sendingData)
+
+    def _logReceivingDeviceData(self, deviceResponse):
+        self.logger.error("Data received from device: %s" % deviceResponse.serialResponse)
+
+    def _printableSerialData(self, serialData):
+        hexlist = [format(x, 'x') for x in serialData]
+        zeroPrefixedList = ['0{0}'.format(x) for x in hexlist]
+
+        return '-'.join(zeroPrefixedList)
+
+    def _verifyCrcCode(self,response, command, data):
+        """ 
+        Take data from the responses and create crc code like I was sending them
+        to the device. Then compare the generated crc code with the crc code from device
+        """
+        expectedCrcCode = Crc16.create(response.command, response.rawData) 
+        if response.crc != expectedCrcCode:
+            self._logTransmissionError("Unexpected crc code from device", command, data, response)
+    """
+    Gives the messages needed to send to device to verify that device is using a given port
+    """
+    def _getDeviceIdMessage(self):
+        return DeviceCommunication.toSerial(HANDSHAKE, data='')
     
-    
-    
-      
+    """
+    Function used to verify an id response from device, i.e. if the reponse come from our device or not
+    """
+    def _deviceIdResponseFunction(self, serialResponse):
+        try:      
+            reseponse = DeviceCommunication.fromSerial(serialResponse)
+            return reseponse.command == ACKNOWLEDGE
+        except Exception as e:
+            return False 

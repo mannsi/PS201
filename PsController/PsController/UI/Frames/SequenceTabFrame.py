@@ -13,9 +13,9 @@ class SequenceTabFrame(Frame):
         self.resetTabM = resetTabM
         self.controller = controller
         self.initalizeView(connected)
-        controller.NotifyScheduleDoneUpdate(self.sequenceDone) 
-        controller.NotifyScheduleLineUpdate(self.sequenceLineChanged)
-        controller.NotifyConnectedUpdate(self.connectedChanged)
+        controller.notifyScheduleDoneUpdate(self.sequenceDone) 
+        controller.notifyScheduleLineUpdate(self.sequenceLineChanged)
+        controller.notifyConnectedUpdate(self.connectedChanged)
     
     def initalizeView(self, connected):
         self.addLinesFrame()

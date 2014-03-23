@@ -35,15 +35,6 @@ class DecimalEntry(Entry):
       return initialValue
     
     def OnValidate(self, d, i, P, s, S, v, V, W):
-        #print("OnValidate:")
-        #print("d='%s'" % d)
-        #print("i='%s'" % i)
-        #print("P='%s'" % P)
-        #print("s='%s'" % s)
-        #print("S='%s'" % S)
-        #print("v='%s'" % v)
-        #print("V='%s'" % V)
-        #print("W='%s'" % W)
       if P == "":
         return True
       if S == "." and self.maxDecimals == 0:
