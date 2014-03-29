@@ -517,11 +517,11 @@ class Controller():
         self._logReceivingDeviceData(response)
  
     def _logSendingDataToDevice(self, command, data):
-        sendingData = DeviceCommunication.toSerial(command, data)
-        self.logger.error("Data sent to device: %s" % sendingData)
+        sendingData = DeviceCommunication.toReadableSerial(command, data)
+        self.logger.error("Data sent to device: %s" % ''.join(sendingData))
 
     def _logReceivingDeviceData(self, deviceResponse):
-        self.logger.error("Data received from device: %s" % deviceResponse.readableSerial)
+        self.logger.error("Data received from device: %s" % ''.join(deviceResponse.readableSerial))
 
     def _verifyCrcCode(self,response, command, data):
         """ 

@@ -30,6 +30,12 @@ class DeviceCommunication:
         byteArray.append(START)
         return byteArray
 
+    @classmethod
+    def toReadableSerial(cls, command, data):
+        serialValue = cls.toSerial(command,data)
+        response = cls.fromSerial(serialValue)
+        return response.readableSerial
+
     """
     Returns a device responses
     """
