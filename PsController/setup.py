@@ -13,7 +13,7 @@ setup(
         name = "PsController"
         ,version = "0.1"
         ,description = "PsController"
-		,packages=installPackages
+		,packages=find_packages()
         ,install_requires=[
 			"APScheduler == 2.1.1",
 			"crcmod == 1.7",
