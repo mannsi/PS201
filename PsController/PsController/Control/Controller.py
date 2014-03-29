@@ -521,13 +521,7 @@ class Controller():
         self.logger.error("Data sent to device: %s" % sendingData)
 
     def _logReceivingDeviceData(self, deviceResponse):
-        self.logger.error("Data received from device: %s" % deviceResponse.serialResponse)
-
-    def _printableSerialData(self, serialData):
-        hexlist = [format(x, 'x') for x in serialData]
-        zeroPrefixedList = ['0{0}'.format(x) for x in hexlist]
-
-        return '-'.join(zeroPrefixedList)
+        self.logger.error("Data received from device: %s" % deviceResponse.readableSerial)
 
     def _verifyCrcCode(self,response, command, data):
         """ 

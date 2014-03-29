@@ -1,5 +1,6 @@
 import crcmod.predefined
 from PsController.Model.Constants import *
+from PsController.Model.Settings import *
 
 class Crc16:
     @classmethod
@@ -10,7 +11,7 @@ class Crc16:
         crc16.update(bytes([len(binaryData)]))
         crc16.update(binaryData)
         unescapedHexCrc = cls._getHexListFromInt(crc16.crcValue)
-        escapedIntCrcCode = cls._escapeCrcCode(unescapedHexCrc, [START, ESCAPE])
+        escapedIntCrcCode = cls._escapeCrcCode(unescapedHexCrc, charactersToEscape)
         return escapedIntCrcCode
 
     @staticmethod

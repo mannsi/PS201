@@ -1,14 +1,15 @@
 from PsController.Model.Constants import *
 from PsController.Utilities.Crc import Crc16
 
-class DeviceValues:
+class DeviceResponse:
     def __init__(self):
         self.start = 0
         self.command = 0
         self.dataLength = 0
         self.data = ""
-        self.crc = [] # list of hex values
+        self.crc = [] # list of int values
         self.serialResponse  = bytearray()
+        self.readableSerial = [] 
 
 class DeviceCommunication:   
     @classmethod
@@ -32,10 +33,9 @@ class DeviceCommunication:
     """
     Returns a device responses
     """
-    @staticmethod
-    def fromSerial(serialValue):
-        deviceResponseList = []
-        response = DeviceValues()
+    @classmethod
+    def fromSerial(cls,serialValue):
+        response = DeviceResponse()
         response.start = serialValue[0]
         response.command = serialValue[1]
         response.dataLength = serialValue[2]
@@ -54,4 +54,23 @@ class DeviceCommunication:
                 raise Exception("End char missing. Received %s" % serialValue)
         response.end = serialValue[index]
         response.serialResponse = serialValue
+        cls._setReadableSerialValue(response)
         return response
+
+    @classmethod
+    def _setReadableSerialValue(cls,response):
+        response.readableSerial.append(cls._printableHex(response.start))
+        response.readableSerial.append(cls._printableHex(response.command))
+        response.readableSerial.append(cls._printableHex(response.dataLength))
+        if response.rawData:
+            response.readableSerial.append(response.rawData)
+        for crc in response.crc:
+            response.readableSerial.append(cls._printableHex(crc))
+        response.readableSerial.append(cls._printableHex(response.end))
+
+    @staticmethod
+    def _printableHex(intValue):
+        hexString = format(intValue, 'x')
+        if len(hexString) == 1:
+            hexString = '0' + hexString
+        return  hexString
