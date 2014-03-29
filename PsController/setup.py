@@ -1,27 +1,13 @@
 from ez_setup import use_setuptools
 use_setuptools()
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
-
+from setuptools import setup, find_packages
+"""
 import sys	
 platFormBase = "Console"
-
 #For windows to hide the console window in the back
 if (sys.platform == "win32"):
     platFormBase = "Win32GUI"
-
-installPackages = ['PsController'
-		,'PsController.Control'
-		,'PsController.DAL'
-		,'PsController.Model'
-		,'PsController.UI.Controls'
-		,'PsController.UI.Dialogs'
-		,'PsController.UI.Frames'
-		,'PsController.Utilities'
-		]
+"""
 
 setup(
         name = "PsController"
@@ -33,4 +19,9 @@ setup(
 			"crcmod == 1.7",
 			"pyserial == 2.7"
 ]
+        ,entry_points = {
+        'console_scripts': [
+            'PsController = PsController.PsController:run'
+        ]
+    }
 		)
