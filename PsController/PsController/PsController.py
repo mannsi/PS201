@@ -10,7 +10,7 @@ from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 
 debugging = True
 
-mainWindowSize = '700x400'
+mainWindowSize = '800x400'
 mainWindowTitle = "PS201 Controller"
 
 controller = Controller()
