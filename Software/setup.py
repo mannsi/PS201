@@ -19,9 +19,10 @@ setup(
 			"crcmod == 1.7",
 			"pyserial == 2.7"
 ]
+	,scripts =["psControllerMain.py"]
         ,entry_points = {
         'console_scripts': [
-            'PsController = PsController.PsController:run'
+            'PsController = psControllerMain:run'
         ]
     }
 		)
