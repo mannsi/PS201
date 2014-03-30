@@ -8,15 +8,13 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 
-debugging = True
-
 mainWindowSize = '800x400'
 mainWindowTitle = "PS201 Controller"
 
 controller = Controller()
 
 class PsController():
-    def __init__(self):
+    def __init__(self, debugging):
         self.guiRefreshRate = 200
         self.mainWindow = Tk()
         self.mainWindow.title(mainWindowTitle)
@@ -25,8 +23,9 @@ class PsController():
         self.topPanel.pack(fill=X)
         self.tabControl = TabControl(self.mainWindow)
         self.tabControl.pack(fill=BOTH, expand=1)
-        
-        if debugging:
+        self.debugging = debugging
+
+        if self.debugging:
             debugFrame = Frame(self.mainWindow)
 
             self.numOfRefreshPerSecVar = IntVar(value=2)
@@ -82,12 +81,12 @@ class PsController():
             state = NORMAL
 
         self.btnConnect.configure(state=state)
-        if debugging:
+        if self.debugging:
             self.numOfRefreshPerSec.configure(state=state)
             self.updateTypeCmb.configure(state=state)
 
     def startAutoUpdate(self):
-        if debugging:
+        if self.debugging:
                 type = self.updateTypeCmb.current()
                 controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=type)
         else:
@@ -257,12 +256,12 @@ class TabControl(Notebook):
         self.add(self.sequenceTab, text='Sequence')
         self.select(self.sequenceTab)
 
-def run():
-    psFrame = PsController()
+def run(isDebugMode):
+    psFrame = PsController(isDebugMode)
     #psFrame.connectToDevice()
     psFrame.show()
 
 if __name__ == "__main__":
-    run()
+    run(False)
 
     
