@@ -1,13 +1,6 @@
 from ez_setup import use_setuptools
 use_setuptools()
 from setuptools import setup, find_packages
-"""
-import sys	
-platFormBase = "Console"
-#For windows to hide the console window in the back
-if (sys.platform == "win32"):
-    platFormBase = "Win32GUI"
-"""
 
 setup(
         name = "PsController"
