@@ -20,7 +20,7 @@ class SerialConnection():
         self.deviceVerificationFunc = deviceVerificationFunc
         
     """
-    Get a availableUsbPorts
+    Get available usb ports
     """
     def availableConnections(self):
         system_name = platform.system()

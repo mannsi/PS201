@@ -48,7 +48,7 @@ class PsController():
             self.btnUpdateAll.pack(side=RIGHT)
 
             self.chkAutoVar = IntVar(value=0)
-            self.chkAuto = Checkbutton(debugFrame, text = "Auto", variable = self.chkAutoVar, command = self.debugSwitchAutoMode)
+            self.chkAuto = Checkbutton(debugFrame, text = "Auto update", variable = self.chkAutoVar, command = self.debugSwitchAutoMode)
             self.chkAuto.pack(side=RIGHT)
 
             debugFrame.pack(fill=X)
@@ -58,6 +58,7 @@ class PsController():
 
         self.addMenuBar()
         controller.notifyConnectedUpdate(self.updateConnectedStatus)
+        controller.notifyDefaultUsbPortUpdate(self.defaultPortUpdate)
     
     def debugRefreshValues(self):
         if controller.connected:
@@ -94,43 +95,45 @@ class PsController():
             controller.startAutoUpdate(interval = 1/3, updateType=0)
 
     def addMenuBar(self):
-      menubar = Menu(self.mainWindow)
+        menubar = Menu(self.mainWindow)
     
-      fileMenu = Menu(menubar, tearoff=0)
-      menubar.add_cascade(label="File", menu=fileMenu)
-      fileMenu.add_command(label="Exit", command=self.mainWindow.quit)
+        fileMenu = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=fileMenu)
+        fileMenu.add_command(label="Exit", command=self.mainWindow.quit)
       
-      toolsMenu = Menu(menubar, tearoff=0)
-      menubar.add_cascade(label="Tools", menu=toolsMenu)
-      self.submenu = Menu(toolsMenu,tearoff=0)
-      self.buildUsbPortMenu()
-      toolsMenu.add_cascade(label='Usb port', menu=self.submenu, underline=0)
+        toolsMenu = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tools", menu=toolsMenu)
+        self.submenu = Menu(toolsMenu,tearoff=0)
+        self.buildUsbPortMenu(threaded=True)
+        toolsMenu.add_cascade(label='Usb port', menu=self.submenu, underline=0)
       
-      editmenu = Menu(menubar, tearoff=0)
-      editmenu.add_command(label="About",command=self.aboutDialog)
-      menubar.add_cascade(label="Help", menu=editmenu)
+        editmenu = Menu(menubar, tearoff=0)
+        editmenu.add_command(label="About",command=self.aboutDialog)
+        menubar.add_cascade(label="Help", menu=editmenu)
     
-      self.mainWindow.config(menu=menubar)
+        self.mainWindow.config(menu=menubar)
+
+    def buildUsbPortMenu(self, threaded=False):
+        self.submenu.delete(0, END)
+        availableUsbPorts = controller.getAvailableUsbPorts()
+        defaultUsbPort = controller.getDeviceUsbPort(availableUsbPorts, threaded)
+        self.selectedUsbPortVar = StringVar()
+        for port in availableUsbPorts:
+            self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPortVar)
+            if defaultUsbPort == port:
+                self.selectedUsbPortVar.set(port)
+                break     
+        self.submenu.add_separator()    
+        self.submenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
     
-    # TODO have the default port stuff be async
-    def buildUsbPortMenu(self):
-      self.submenu.delete(0, END)
-      (avilableUsbPorts, defaultUsbPort) = controller.getAvailableUsbPorts()
-      self.selectedUsbPortVar = StringVar()
-      for port in avilableUsbPorts:
-        self.submenu.add_radiobutton(label=port,value=port,var=self.selectedUsbPortVar)
-        if defaultUsbPort == port:
-          self.selectedUsbPortVar.set(port)
-          
-      self.submenu.add_separator()    
-      self.submenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
-    
+    def defaultPortUpdate(self, port):
+        self.selectedUsbPortVar.set(port)
+
     def aboutDialog(self):
-      dialog = AboutDialog(self.mainWindow,title="About",showCancel=False)
+        dialog = AboutDialog(self.mainWindow,title="About",showCancel=False)
     
     def connectToDevice(self):
         usbPort = self.selectedUsbPortVar.get()
-        self.periodicUiUpdate()
         controller.connect(usbPort, threaded=True)
       
     def periodicUiUpdate(self):
@@ -145,6 +148,7 @@ class PsController():
             controller.setLogging(logging.DEBUG)
 
     def show(self):
+        self.periodicUiUpdate()
         self.mainWindow.mainloop()
 
 class _HeaderPanel(Frame):

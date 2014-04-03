@@ -22,6 +22,7 @@ _inputVoltageUpdate = "INPUTVOLTAGE"
 _outputOnOffUpdate = "OUTPUTONOFF"
 _scheduleDoneUpdate = "SCHEDULEDONE" 
 _scheduleNewLineUpdate = "SCHEDULENEWLINE" 
+_defaultUsbPortUpdate = "DEFAULTUSBPORT"
 
 class Controller():
     def __init__(self):
@@ -47,6 +48,9 @@ class Controller():
             self.threadHelper.runThreadedJob(self._connectWorker, [usbPortNumber])
         else:
             try:
+                if usbPortNumber == '' or usbPortNumber == None:
+                    self.logger.debug("Empty usb port given")
+                    return False
                 self.connection.connect(usbPortNumber)
                 return True
             except Exception as e:
@@ -73,16 +77,22 @@ class Controller():
 
         self.logger.setLevel(logLevel)
 
-    # TODO this func should not manage the default port. The PsController should register for a default port update. This function should run a threaded job that 
-    # finds the default port and puts it in the queue
     def getAvailableUsbPorts(self):
         defaultPort = ""
         usbPorts = self.connection.availableConnections()
-        for port in usbPorts:
-            if self.connection.deviceOnPort(port):
-                defaultPort = port
-                break
-        return (usbPorts, defaultPort)
+        return usbPorts
+
+    def getDeviceUsbPort(self, allUsbPorts=None, threaded=False):
+        if threaded:
+            self.threadHelper.runThreadedJob(self._getDeviceUsbPortWorker, args=[allUsbPorts])
+            return None
+        else:
+            if not allUsbPorts:
+                allUsbPorts = self.connection.availableConnections()
+            for port in usbPorts:
+                if self.connection.deviceOnPort(port):
+                    return port
+            return None
 
     def setTargetVoltage(self, targetVoltage, threaded=False):
         if threaded:
@@ -90,6 +100,9 @@ class Controller():
         else:
             try:
                 with self.dataAccessLock:
+                    if not self.connected:
+                        self.logger.debug("Trying to set voltage when not connected to device")
+                        return
                     self.DataAccess.sendValueToDevice(READ_TARGET_VOLTAGE,targetVoltage)
                     self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
             except Exception as e:
@@ -102,6 +115,9 @@ class Controller():
         else:
             try:
                 with self.dataAccessLock:
+                    if not self.connected:
+                        self.logger.debug("Trying to set current when not connected to device")
+                        return
                     self.DataAccess.sendValueToDevice(READ_TARGET_CURRENT,targetCurrent)
                     self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
             except Exception as e:
@@ -117,6 +133,9 @@ class Controller():
                 if shouldBeOn:
                     setValue = TURN_ON_OUTPUT
                 with self.dataAccessLock:   
+                    if not self.connected:
+                        self.logger.debug("Trying to set output when not connected to device")
+                        return
                     self.DataAccess.sendValueToDevice(setValue, shouldBeOn)
                     self._checkDeviceForAcknowledgement(setValue)
             except Exception as e:
@@ -184,6 +203,12 @@ class Controller():
         self._registerUpdateFunction(func, _scheduleNewLineUpdate)
          
     """
+    Runs the func function when the default usb port is updated 
+    """
+    def notifyDefaultUsbPortUpdate(self, func):
+        self._registerUpdateFunction(func, _defaultUsbPortUpdate)
+         
+    """
     A call to this function lets the controller know that the UI is ready to receive updates
     """
     def uiPulse(self):
@@ -204,6 +229,9 @@ class Controller():
         if updateType == 0:
             # Polling updates
             with self.dataAccessLock:
+                if not self.connected:
+                    self.logger.debug("Trying to start polling auto update when not connected to device")
+                    return
                 self.connection.clearBuffer()
                 self.DataAccess.sendValueToDevice(STOP_STREAM,'')
                 self._checkDeviceForAcknowledgement(STOP_STREAM)
@@ -211,6 +239,9 @@ class Controller():
         elif updateType == 1:
             # Streaming updates
             with self.dataAccessLock:
+                if not self.connected:
+                    self.logger.debug("Trying to start streaming auto update when not connected to device")
+                    return
                 self.DataAccess.sendValueToDevice(START_STREAM, '')
                 self._checkDeviceForAcknowledgement(START_STREAM)
                 self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
@@ -315,6 +346,9 @@ class Controller():
     def _getValueFromDevice(self, command):
         try:
             with self.dataAccessLock:
+                if not self.connected:
+                    self.logger.debug("Trying to get value with command:", command ,"when not connected to device")
+                    return None
                 self.DataAccess.sendValueToDevice(command)
                 acknowledgement = self.DataAccess.getResponseFromDevice()
                 self._verifyAcknowledgement(acknowledgement, command, data='')
@@ -338,6 +372,22 @@ class Controller():
         if condition not in self.updateParameters:
             self.updateParameters[condition] = [None,[]] #(Value, list_of_update_functions)
         self.updateParameters[condition][1].append(func)
+
+    def _getDeviceUsbPortWorker(self, allUsbPorts):
+        try:
+            if not allUsbPorts:
+                allUsbPorts = self.connection.availableConnections()
+            defaultPort = None
+            for port in allUsbPorts:
+                if self.connection.deviceOnPort(port):
+                    defaultPort =  port
+                    break
+            if defaultPort:
+                self.queue.put(_defaultUsbPortUpdate)
+                self.queue.put(defaultPort) 
+        except Exception as e:
+            self._connectionLost()      
+            self.logger.exception(e)
 
     def _updateAllValuesWorker(self):
         try:
@@ -366,6 +416,9 @@ class Controller():
         try:
             respondList = []
             with self.dataAccessLock:
+                if not self.connected:
+                    self.logger.debug("Trying to get stream values when not connected to device")
+                    return
                 response = self.DataAccess.getResponseFromDevice()
                 while response:
                     respondList.append()
@@ -404,16 +457,18 @@ class Controller():
     def _connectWorker(self, usbPortNumber):
         try:
             self.queue.put(_connectUpdate)
-            self.queue.put((0, self.connectingString))
+            if usbPortNumber == '' or usbPortNumber is None:
+                self.logger.debug("No usb port given")
+                self.queue.put((0,self.noUsbPortSelected))
+                return
+            else:
+                self.queue.put((0, self.connectingString))
             self.connected = self.connect(usbPortNumber)
             self.queue.put(_connectUpdate)
             if self.connected:
                 self.queue.put((1,self.connectedString))
             else:
-                if usbPortNumber:
-                    self.queue.put((0,self.noDeviceFoundstr))
-                else:
-                    self.queue.put((0,self.noUsbPortSelected))
+                self.queue.put((0,self.noDeviceFoundstr))         
         except:
             self.queue.put(_connectUpdate)
             self.queue.put((0,self.noDeviceFoundstr))
