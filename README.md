@@ -7,10 +7,6 @@ The PS201 is an adjustable power supply hardware project. See the 'Hardware deta
 hardware while Software stores a Python 3 module called PsController that allows to control the hardware via USB cable.
 The PsController software runs both and Windows and Linux (and should run on Mac but is untested) and requires Python 3.3+
 
-Up and running
-------
-Until the hardware is released there is not much you can do to get started. Without the hardware the software is vapourware.  
-
 Release date
 ------
 Currently there is no decided release date
