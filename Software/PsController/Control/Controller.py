@@ -24,24 +24,25 @@ _scheduleDoneUpdate = "SCHEDULEDONE"
 _scheduleNewLineUpdate = "SCHEDULENEWLINE" 
 _defaultUsbPortUpdate = "DEFAULTUSBPORT"
 
+_CONNECTED_STRING = "Connected !"
+_CONNECTING_STRING = "Connecting ..."
+_NO_DEVICE_FOUND_STRING= "No device found"
+_NO_USBPORT_SELECTED_STRING = "No usb port selected"
+_LOST_CONNECTION_STRING = "Lost connection"
+
 class Controller():
     def __init__(self):
         self.logger = None
         self.setLogging(logging.ERROR)
-        self.connection = self._createConnection()
-        self.DataAccess = DataAccess(self.connection, self.logger)
+        self.connectionLock = threading.Lock()
         self.queue = queue.Queue()
         self.threadHelper = ThreadHelper()
         self.updateParameters = {}
         self.connected = False
         self.currentValues = DeviceValues()
+        self.connection = self._createConnection()
+        self.connection.notifyOnConnectionLost(self._connectionLost)
         self._registerListeners()
-        self.dataAccessLock = threading.Lock()
-        self.connectedString = "Connected !"
-        self.connectingString = "Connecting ..."
-        self.noDeviceFoundstr= "No device found"
-        self.noUsbPortSelected = "No usb port selected"
-        self.lostConnection = "Lost connection"
 
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
@@ -51,15 +52,17 @@ class Controller():
                 if usbPortNumber == '' or usbPortNumber == None:
                     self.logger.debug("Empty usb port given")
                     return False
-                self.connection.connect(usbPortNumber)
-                return True
+                with self.connectionLock:
+                    self.connection.connect(usbPortNumber)
+                    return self.connection.connected
             except Exception as e:
                 self.logger.error("Device not found on given port")
                 self.logger.exception(e)
                 return False
 
     def disconnect(self):
-        self.connection.disconnect()
+        with self.connectionLock:
+            self.connection.disconnect()
     
     def setLogging(self, logLevel):
         if not self.logger:
@@ -79,7 +82,8 @@ class Controller():
 
     def getAvailableUsbPorts(self):
         defaultPort = ""
-        usbPorts = self.connection.availableConnections()
+        with self.connectionLock:
+            usbPorts = self.connection.availableConnections()
         return usbPorts
 
     def getDeviceUsbPort(self, allUsbPorts=None, threaded=False):
@@ -87,60 +91,49 @@ class Controller():
             self.threadHelper.runThreadedJob(self._getDeviceUsbPortWorker, args=[allUsbPorts])
             return None
         else:
-            if not allUsbPorts:
-                allUsbPorts = self.connection.availableConnections()
-            for port in usbPorts:
-                if self.connection.deviceOnPort(port):
-                    return port
-            return None
+            with self.connectionLock:
+                if not allUsbPorts:
+                    allUsbPorts = self.connection.availableConnections()
+                for port in usbPorts:
+                    if self.connection.deviceOnPort(port):
+                        return port
+                return None
 
     def setTargetVoltage(self, targetVoltage, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.setTargetVoltage, args=[targetVoltage])
         else:
-            try:
-                with self.dataAccessLock:
-                    if not self.connected:
-                        self.logger.debug("Trying to set voltage when not connected to device")
-                        return
-                    self.DataAccess.sendValueToDevice(READ_TARGET_VOLTAGE,targetVoltage)
-                    self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
-            except Exception as e:
-                self._connectionLost()
-                self.logger.exception("Error when setting target voltage")
+            with self.connectionLock:
+                if not self.connected:
+                    self.logger.debug("Trying to set voltage when not connected to device")
+                    return
+                DataAccess.sendValueToDevice(self.connection, READ_TARGET_VOLTAGE,targetVoltage)
+                self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
    
     def setTargetCurrent(self, targetCurrent, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.setTargetCurrent, args=[targetCurrent])
         else:
-            try:
-                with self.dataAccessLock:
-                    if not self.connected:
-                        self.logger.debug("Trying to set current when not connected to device")
-                        return
-                    self.DataAccess.sendValueToDevice(READ_TARGET_CURRENT,targetCurrent)
-                    self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
-            except Exception as e:
-                self._connectionLost()
-                self.logger.exception("Error when setting target current")
+            with self.connectionLock:
+                if not self.connected:
+                    self.logger.debug("Trying to set current when not connected to device")
+                    return
+                DataAccess.sendValueToDevice(self.connection, READ_TARGET_CURRENT,targetCurrent)
+                self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
         
     def setOutputOnOff(self, shouldBeOn, threaded=False):
         if threaded:
             self.threadHelper.runThreadedJob(self.setOutputOnOff, args=[shouldBeOn])
         else:
-            try:
-                setValue = TURN_OFF_OUTPUT
-                if shouldBeOn:
-                    setValue = TURN_ON_OUTPUT
-                with self.dataAccessLock:   
-                    if not self.connected:
-                        self.logger.debug("Trying to set output when not connected to device")
-                        return
-                    self.DataAccess.sendValueToDevice(setValue, shouldBeOn)
-                    self._checkDeviceForAcknowledgement(setValue)
-            except Exception as e:
-                self._connectionLost()
-                self.logger.exception("Error when output on/off")
+            setValue = TURN_OFF_OUTPUT
+            if shouldBeOn:
+                setValue = TURN_ON_OUTPUT
+            with self.connectionLock:   
+                if not self.connected:
+                    self.logger.debug("Trying to set output when not connected to device")
+                    return
+                DataAccess.sendValueToDevice(self.connection,setValue, shouldBeOn)
+                self._checkDeviceForAcknowledgement(setValue)
    
     """
     Runs the func function when connection status is updated through auto update
@@ -228,21 +221,21 @@ class Controller():
     def startAutoUpdate(self, interval, updateType):
         if updateType == 0:
             # Polling updates
-            with self.dataAccessLock:
+            with self.connectionLock:
                 if not self.connected:
                     self.logger.debug("Trying to start polling auto update when not connected to device")
                     return
                 self.connection.clearBuffer()
-                self.DataAccess.sendValueToDevice(STOP_STREAM,'')
+                DataAccess.sendValueToDevice(self.connection,STOP_STREAM,'')
                 self._checkDeviceForAcknowledgement(STOP_STREAM)
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateAllValuesWorker, interval)
         elif updateType == 1:
             # Streaming updates
-            with self.dataAccessLock:
+            with self.connectionLock:
                 if not self.connected:
                     self.logger.debug("Trying to start streaming auto update when not connected to device")
                     return
-                self.DataAccess.sendValueToDevice(START_STREAM, '')
+                DataAccess.sendValueToDevice(self.connection,START_STREAM, '')
                 self._checkDeviceForAcknowledgement(START_STREAM)
                 self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
@@ -309,8 +302,7 @@ class Controller():
             if not deviceValue: return
             allValues = [float(x) for x in deviceValue.split(";")]
             return allValues
-        except Exception as e:
-            self._connectionLost()      
+        except Exception as e:     
             self.logger.exception(e)
 
     def getRealVoltage(self):
@@ -345,19 +337,18 @@ class Controller():
 
     def _getValueFromDevice(self, command):
         try:
-            with self.dataAccessLock:
+            with self.connectionLock:
                 if not self.connected:
                     self.logger.debug("Trying to get value with command:", command ,"when not connected to device")
                     return None
-                self.DataAccess.sendValueToDevice(command)
-                acknowledgement = self.DataAccess.getResponseFromDevice()
+                DataAccess.sendValueToDevice(self.connection,command)
+                acknowledgement = DataAccess.getResponseFromDevice(self.connection)
                 self._verifyAcknowledgement(acknowledgement, command, data='')
-                response = self.DataAccess.getResponseFromDevice()
+                response = DataAccess.getResponseFromDevice(self.connection)
                 self._verifyResponse(response, command, data='')
             return response.data
         except Exception as e:
             self.logger.exception(e)
-            self._connectionLost()
             return None
 
     def _createConnection(self):
@@ -375,18 +366,18 @@ class Controller():
 
     def _getDeviceUsbPortWorker(self, allUsbPorts):
         try:
-            if not allUsbPorts:
-                allUsbPorts = self.connection.availableConnections()
-            defaultPort = None
-            for port in allUsbPorts:
-                if self.connection.deviceOnPort(port):
-                    defaultPort =  port
-                    break
+            with self.connectionLock:
+                if not allUsbPorts:
+                    allUsbPorts = self.connection.availableConnections()
+                defaultPort = None
+                for port in allUsbPorts:
+                    if self.connection.deviceOnPort(port):
+                        defaultPort =  port
+                        break
             if defaultPort:
                 self.queue.put(_defaultUsbPortUpdate)
                 self.queue.put(defaultPort) 
-        except Exception as e:
-            self._connectionLost()      
+        except Exception as e: 
             self.logger.exception(e)
 
     def _updateAllValuesWorker(self):
@@ -408,21 +399,20 @@ class Controller():
             self.queue.put(allValues[5]) 
             self.queue.put(_outputOnOffUpdate)
             self.queue.put(allValues[6])
-        except Exception as e:
-            self._connectionLost()      
+        except Exception as e:    
             self.logger.exception(e)
       
     def _updateStreamValueWorker(self):
         try:
             respondList = []
-            with self.dataAccessLock:
+            with self.connectionLock:
                 if not self.connected:
                     self.logger.debug("Trying to get stream values when not connected to device")
                     return
-                response = self.DataAccess.getResponseFromDevice()
+                response = DataAccess.getResponseFromDevice(self.connection)
                 while response:
                     respondList.append()
-                    response = self.DataAccess.getResponseFromDevice()
+                    response = DataAccess.getResponseFromDevice(self.connection)
             if not respondList: return
             commandDataList = [(x.command, x.data) for x in respondList]
             if commandDataList is None: return
@@ -450,8 +440,7 @@ class Controller():
                 elif command == WRITE_INPUT_VOLTAGE:
                     self.queue.put(_inputVoltageUpdate)      
                     self.queue.put(float(value))
-        except Exception as e:
-            self._connectionLost()      
+        except Exception as e:    
             self.logger.exception(e)
                             
     def _connectWorker(self, usbPortNumber):
@@ -459,26 +448,24 @@ class Controller():
             self.queue.put(_connectUpdate)
             if usbPortNumber == '' or usbPortNumber is None:
                 self.logger.debug("No usb port given")
-                self.queue.put((0,self.noUsbPortSelected))
+                self.queue.put((0,_NO_USBPORT_SELECTED_STRING))
                 return
             else:
-                self.queue.put((0, self.connectingString))
+                self.queue.put((0, _CONNECTING_STRING))
             self.connected = self.connect(usbPortNumber)
             self.queue.put(_connectUpdate)
             if self.connected:
-                self.queue.put((1,self.connectedString))
+                self.queue.put((1,_CONNECTED_STRING))
             else:
-                self.queue.put((0,self.noDeviceFoundstr))         
+                self.queue.put((0,_NO_DEVICE_FOUND_STRING))         
         except:
             self.queue.put(_connectUpdate)
-            self.queue.put((0,self.noDeviceFoundstr))
+            self.queue.put((0,_NO_DEVICE_FOUND_STRING))
         
     def _connectionLost(self):
-        if self.connected:
-            self.queue.put(_connectUpdate)
-            self.queue.put((0,self.lostConnection))
-            self.disconnect()
-            self.stopAutoUpdate()
+        self.connected = False
+        self.queue.put(_connectUpdate)
+        self.queue.put((0,_LOST_CONNECTION_STRING))
    
     def _addJobForLine(self, line, logToDataFile, filePath):
         self.queue.put(_scheduleNewLineUpdate)
@@ -522,6 +509,7 @@ class Controller():
         self.notifyInputVoltageUpdate(self._inputVoltageUpdate)
         self.notifyOutputUpdate(self._outPutOnOffUpdate)
         self.notifyPreRegVoltageUpdate(self._preRegVoltageUpdate)
+        self.notifyConnectedUpdate(self._connectionUpdate)
 
     def _targetVoltageUpdate(self, newTargetVoltage):
         self.currentValues.targetVoltage = float(newTargetVoltage)
@@ -544,13 +532,16 @@ class Controller():
     def _preRegVoltageUpdate(self, preRegVoltage):
         self.currentValues.preRegVoltage = preRegVoltage
 
+    def _connectionUpdate(self, connected):
+        if not connected:
+            self.stopAutoUpdate()
+
     def _checkDeviceForAcknowledgement(self, command, data=''):
         try:
-            deviceResponse = self.DataAccess.getResponseFromDevice()
+            deviceResponse = DataAccess.getResponseFromDevice(self.connection)
             self._verifyAcknowledgement(deviceResponse, command, data)
         except Exception as e:
             self.logger.exception(e)
-            self._connectionLost()
 
     def _verifyResponse(self, response, command, data):
         self._verifyCrcCode(response, command, data)
@@ -586,6 +577,7 @@ class Controller():
         expectedCrcCode = Crc16.create(response.command, response.rawData) 
         if response.crc != expectedCrcCode:
             self._logTransmissionError("Unexpected crc code from device", command, data, response)
+    
     """
     Gives the messages needed to send to device to verify that device is using a given port
     """
