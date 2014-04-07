@@ -53,8 +53,8 @@ class Controller():
                     self.logger.debug("Empty usb port given")
                     return False
                 with self.connectionLock:
-                    self.connection.connect(usbPortNumber)
-                    return self.connection.connected
+                    self.connected = self.connection.connect(usbPortNumber)
+                    return self.connected
             except Exception as e:
                 self.logger.error("Device not found on given port")
                 self.logger.exception(e)
@@ -94,7 +94,7 @@ class Controller():
             with self.connectionLock:
                 if not allUsbPorts:
                     allUsbPorts = self.connection.availableConnections()
-                for port in usbPorts:
+                for port in allUsbPorts:
                     if self.connection.deviceOnPort(port):
                         return port
                 return None
@@ -215,7 +215,6 @@ class Controller():
                     for func in updateFunctions:
                         func(updatedValue)
         except Exception as e:
-            self.logger.exception(e)
             self.queue.queue.clear()
 
     def startAutoUpdate(self, interval, updateType):
@@ -298,10 +297,20 @@ class Controller():
 
     def getAllValues(self):
         try:
-            deviceValue = self._getValueFromDevice(WRITE_ALL)
-            if not deviceValue: return
-            allValues = [float(x) for x in deviceValue.split(";")]
-            return allValues
+            deviceResponse = self._getValueFromDevice(WRITE_ALL)
+            if not deviceResponse: return
+            splitValues = [float(x) for x in deviceResponse.split(";")]
+            if len(splitValues) < 7: return None
+            deviceValues = DeviceValues()
+            deviceValues.realVoltage = splitValues[0]
+            deviceValues.realCurrent = splitValues[1]
+            deviceValues.targetVoltage = splitValues[2]
+            deviceValues.targetCurrent = splitValues[3] 
+            deviceValues.preRegVoltage = splitValues[4]
+            deviceValues.inputVoltage =  splitValues[5]
+            deviceValues.outputOn = splitValues[6]
+
+            return deviceValues
         except Exception as e:     
             self.logger.exception(e)
 
@@ -330,6 +339,11 @@ class Controller():
         if value is None: return None
         return float(value)
     
+    def getInputVoltage(self):
+        value = self._getValueFromDevice(WRITE_INPUT_VOLTAGE)
+        if value is None: return None
+        return float(value)
+
     def getDeviceIsOn(self):
         value = self._getValueFromDevice(WRITE_IS_OUTPUT_ON)
         if value is None: return None
@@ -382,23 +396,22 @@ class Controller():
 
     def _updateAllValuesWorker(self):
         try:
-            allValues = self.getAllValues()
-            if allValues is None or len(allValues) < 7:
-                return     
+            deviceValues = self.getAllValues()
+            if deviceValues is None: return     
             self.queue.put(_realVoltageUpdate)
-            self.queue.put(allValues[0])      
+            self.queue.put(deviceValues.realVoltage)      
             self.queue.put(_realCurrentUpdate)
-            self.queue.put(allValues[1])      
+            self.queue.put(deviceValues.realCurrent)      
             self.queue.put(_targetVoltageUpdate)
-            self.queue.put(allValues[2])     
+            self.queue.put(deviceValues.targetVoltage)     
             self.queue.put(_targetCurrentUpdate)
-            self.queue.put(allValues[3])     
+            self.queue.put(deviceValues.targetCurrent)     
             self.queue.put(_preRegVoltageUpdate)
-            self.queue.put(allValues[4])    
+            self.queue.put(deviceValues.preRegVoltage)    
             self.queue.put(_inputVoltageUpdate)
-            self.queue.put(allValues[5]) 
+            self.queue.put(deviceValues.inputVoltage) 
             self.queue.put(_outputOnOffUpdate)
-            self.queue.put(allValues[6])
+            self.queue.put(deviceValues.outputOn)
         except Exception as e:    
             self.logger.exception(e)
       
@@ -487,17 +500,14 @@ class Controller():
         self.threadHelper.runIntervalJob(function = self._logValuesToFile, interval=loggingTimeInterval, args=[filePath])
         
     def _logValuesToFile(self,filePath):
-        allValues = self.getAllValues()
-        if allValues is None: return
-        listOfValues = allValues.split(";")      
-        realVoltage = listOfValues[0]
-        realCurrent = listOfValues[1]
+        deviceValues = self.getAllValues()
+        if allValues is None: return    
         with open(filePath, "a") as myfile:
             fileString = str(datetime.now()) 
             fileString += "\t"  
-            fileString += str(realVoltage)
+            fileString += str(deviceValues.realVoltage)
             fileString += "\t"  
-            fileString += str(realCurrent)
+            fileString += str(deviceValues.realCurrent)
             fileString += "\n"
             myfile.write(fileString)
 
@@ -567,7 +577,10 @@ class Controller():
         self.logger.error("Data sent to device: %s" % ''.join(sendingData))
 
     def _logReceivingDeviceData(self, deviceResponse):
-        self.logger.error("Data received from device: %s" % ''.join(deviceResponse.readableSerial))
+        try:
+            self.logger.error("Data received from device: %s" % ''.join(deviceResponse.readableSerial))
+        except Exception as e:
+            pass
 
     def _verifyCrcCode(self,response, command, data):
         """ 

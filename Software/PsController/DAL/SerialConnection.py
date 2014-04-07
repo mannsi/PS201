@@ -49,6 +49,7 @@ class SerialConnection():
     def connect(self, usbPort):
         self.connection = serial.Serial(usbPort, self.baudRate, timeout = self.timeout)
         self.connected = True
+        return self.connected
     
     def disconnect(self):
         self.connection.close()
