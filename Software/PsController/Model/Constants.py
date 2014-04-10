@@ -12,8 +12,8 @@ FLIP = int('0x20', 16) # Used to escape chars
 """
 These are device commands. All commands are assumed to be performed by the device
 """
-WRITE_REAL_VOLTAGE = int('0xd0', 16)
-WRITE_REAL_CURRENT = int('0xd1', 16)
+WRITE_OUTPUT_VOLTAGE = int('0xd0', 16)
+WRITE_OUTPUT_CURRENT = int('0xd1', 16)
 WRITE_INPUT_VOLTAGE = int('0xd2', 16)
 WRITE_PREREGULATOR_VOLTAGE = int('0xd3', 16)
 WRITE_ALL = int('0xa5', 16)

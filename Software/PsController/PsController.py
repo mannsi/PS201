@@ -212,8 +212,8 @@ class _ValuesFrame(Frame):
         self.btnSetTargetCurrent = Button(self,text="Set",state=DISABLED,command=self.setTargetCurrent,width=4)
         self.btnSetTargetCurrent.grid(row=1,column=3,sticky=N+S,pady=5)
 
-        controller.notifyRealCurrentUpdate(self.realCurrentUpdate)
-        controller.notifyRealVoltageUpdate(self.realVoltageUpdate)
+        controller.notifyOutputCurrentUpdate(self.outputCurrentUpdate)
+        controller.notifyOutputVoltageUpdate(self.outputVoltageUpdate)
         controller.notifyConnectedUpdate(self.connectedUpdated)
     
     def setTargetCurrent(self,args=None):
@@ -228,11 +228,11 @@ class _ValuesFrame(Frame):
             if (targetVoltage > 0 and targetVoltage <= 20):
                 controller.setTargetVoltage(targetVoltage, threaded=True)        
 
-    def realVoltageUpdate(self, newRealVoltage):
-        self.voltageEntryVar.set(newRealVoltage)
+    def outputVoltageUpdate(self, newOutputVoltage):
+        self.voltageEntryVar.set(newOutputVoltage)
     
-    def realCurrentUpdate(self, newRealCurrent):
-        self.currentEntryVar.set(newRealCurrent)
+    def outputCurrentUpdate(self, newOutputCurrent):
+        self.currentEntryVar.set(newOutputCurrent)
 
     def connectedUpdated(self, value):
         connected = value[0]

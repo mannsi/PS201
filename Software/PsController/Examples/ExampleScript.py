@@ -23,8 +23,8 @@ def setValues():
 def getIndividualValues():
     connected = connect()
     if connected:
-        outputVoltage = controller.getRealVoltage()
-        outputCurrent = controller.getRealCurrent()
+        outputVoltage = controller.getOutputVoltage()
+        outputCurrent = controller.getOutputlCurrent()
         targetVoltage = controller.getTargetVoltage()
         targetCurrent = controller.getTargetCurrent()
         inputVoltage = controller.getInputVoltage()
@@ -35,8 +35,8 @@ def getAllValues():
     connected = connect()
     if connected:
         deviceValues = controller.getAllValues()
-        outputVoltage = deviceValues.realVoltage
-        outputCurrent = deviceValues.realCurrent
+        outputVoltage = deviceValues.outputVoltage
+        outputCurrent = deviceValues.outputCurrent
         targetVoltage = deviceValues.targetVoltage
         targetCurrent = deviceValues.targetCurrent
         inputVoltage = deviceValues.inputVoltage

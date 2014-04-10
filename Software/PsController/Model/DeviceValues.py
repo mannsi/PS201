@@ -5,6 +5,6 @@ class DeviceValues:
         self.targetVoltage = 0
         self.targetCurrent = 0
         self.inputVoltage = 0
-        self.realVoltage = 0
-        self.realCurrent = 0
+        self.outputVoltage = 0
+        self.outputCurrent = 0
         self.preRegVoltage = 0

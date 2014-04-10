@@ -13,8 +13,8 @@ from PsController.Utilities.Crc import Crc16
 from PsController.Utilities.DeviceResponse import DeviceCommunication
 
 _connectUpdate = "CONNECT"
-_realCurrentUpdate = "REALCURRENT"
-_realVoltageUpdate = "REALVOLTAGE"
+_outputCurrentUpdate = "OUTPUTCURRENT"
+_outputVoltageUpdate = "OUTPUTVOLTAGE"
 _preRegVoltageUpdate = "PREREGVOLTAGE"
 _targetCurrentUpdate = "TARGETCURRENT"
 _targetVoltageUpdate = "TARGETVOLTAGE"
@@ -142,16 +142,16 @@ class Controller():
         self._registerUpdateFunction(func, _connectUpdate)
 
     """
-    Runs the func function when real current value changes through auto update
+    Runs the func function when output current value changes through auto update
     """
-    def notifyRealCurrentUpdate(self, func):
-        self._registerUpdateFunction(func, _realCurrentUpdate)
+    def notifyOutputCurrentUpdate(self, func):
+        self._registerUpdateFunction(func, _outputCurrentUpdate)
 
     """
-    Runs the func function when real voltage value changes through auto update
+    Runs the func function when output voltage value changes through auto update
     """
-    def notifyRealVoltageUpdate(self, func):
-        self._registerUpdateFunction(func, _realVoltageUpdate)
+    def notifyOutputVoltageUpdate(self, func):
+        self._registerUpdateFunction(func, _outputVoltageUpdate)
     
     """
     Runs the func function when pre reg voltage value changes through auto update
@@ -302,8 +302,8 @@ class Controller():
             splitValues = [float(x) for x in deviceResponse.split(";")]
             if len(splitValues) < 7: return None
             deviceValues = DeviceValues()
-            deviceValues.realVoltage = splitValues[0]
-            deviceValues.realCurrent = splitValues[1]
+            deviceValues.outputVoltage = splitValues[0]
+            deviceValues.outputCurrent = splitValues[1]
             deviceValues.targetVoltage = splitValues[2]
             deviceValues.targetCurrent = splitValues[3] 
             deviceValues.preRegVoltage = splitValues[4]
@@ -314,13 +314,13 @@ class Controller():
         except Exception as e:     
             self.logger.exception(e)
 
-    def getRealVoltage(self):
-        value = self._getValueFromDevice(WRITE_REAL_VOLTAGE)
+    def getOutputVoltage(self):
+        value = self._getValueFromDevice(WRITE_OUTPUT_VOLTAGE)
         if value is None: return None
         return float(value)
 
-    def getRealCurrent(self):
-        value = self._getValueFromDevice(WRITE_REAL_CURRENT)
+    def getOutputlCurrent(self):
+        value = self._getValueFromDevice(WRITE_OUTPUT_CURRENT)
         if value is None: return None
         return float(value)
     
@@ -398,10 +398,10 @@ class Controller():
         try:
             deviceValues = self.getAllValues()
             if deviceValues is None: return     
-            self.queue.put(_realVoltageUpdate)
-            self.queue.put(deviceValues.realVoltage)      
-            self.queue.put(_realCurrentUpdate)
-            self.queue.put(deviceValues.realCurrent)      
+            self.queue.put(_outputVoltageUpdate)
+            self.queue.put(deviceValues.outputVoltage)
+            self.queue.put(_outputCurrentUpdate)
+            self.queue.put(deviceValues.outputCurrent)
             self.queue.put(_targetVoltageUpdate)
             self.queue.put(deviceValues.targetVoltage)     
             self.queue.put(_targetCurrentUpdate)
@@ -432,11 +432,11 @@ class Controller():
             for pair in commandDataList:
                 command = pair[0]
                 value = pair[1]
-                if command == WRITE_REAL_VOLTAGE:
-                    self.queue.put(_realVoltageUpdate)
+                if command == WRITE_OUTPUT_VOLTAGE:
+                    self.queue.put(_outputVoltageUpdate)
                     self.queue.put(float(value))
-                elif command == WRITE_REAL_CURRENT:
-                    self.queue.put(_realCurrentUpdate)      
+                elif command == WRITE_OUTPUT_CURRENT:
+                    self.queue.put(_outputCurrentUpdate)
                     self.queue.put(float(value))
                 elif command == WRITE_PREREGULATOR_VOLTAGE:
                     self.queue.put(_preRegVoltageUpdate)      
@@ -505,15 +505,15 @@ class Controller():
         with open(filePath, "a") as myfile:
             fileString = str(datetime.now()) 
             fileString += "\t"  
-            fileString += str(deviceValues.realVoltage)
+            fileString += str(deviceValues.outputVoltage)
             fileString += "\t"  
-            fileString += str(deviceValues.realCurrent)
+            fileString += str(deviceValues.outputCurrent)
             fileString += "\n"
             myfile.write(fileString)
 
     def _registerListeners(self):
-        self.notifyRealCurrentUpdate(self._realCurrentUpdate)
-        self.notifyRealVoltageUpdate(self._realVoltageUpdate)
+        self.notifyOutputCurrentUpdate(self._outputCurrentUpdate)
+        self.notifyOutputVoltageUpdate(self._outputVoltageUpdate)
         self.notifyTargetCurrentUpdate(self._targetCurrentUpdate)
         self.notifyTargetVoltageUpdate(self._targetVoltageUpdate)
         self.notifyInputVoltageUpdate(self._inputVoltageUpdate)
@@ -530,11 +530,11 @@ class Controller():
     def _targetCurrentUpdate(self, newTargetCurrent):
         self.currentValues.targetCurrent = int(newTargetCurrent)
     
-    def _realVoltageUpdate(self, newRealVoltage):
-        self.currentValues.realVoltage = newRealVoltage
+    def _outputVoltageUpdate(self, newOutputlVoltage):
+        self.currentValues.outputVoltage = newOutputlVoltage
     
-    def _realCurrentUpdate(self, newRealCurrent):
-        self.currentValues.realCurrent = newRealCurrent
+    def _outputCurrentUpdate(self, newOutputCurrent):
+        self.currentValues.outputCurrent = newOutputCurrent
     
     def _outPutOnOffUpdate(self, newOutputOn):
         self.currentValues.outputOn = newOutputOn
