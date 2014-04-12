@@ -14,7 +14,7 @@ Currently there is no decided release date
 Software installation and execution
 ------
 The easiest way to install is to run `sudo python3 Software/setup.py`. Note that this will try to download and install python dependencies so a network connection is probably needed (see the setup.py file for dependencies).
-After install you can run the software with `sudo PsController`
+After install you can run the software with `PsController`
 
 Hardware details
 ------
