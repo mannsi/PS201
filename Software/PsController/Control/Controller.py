@@ -107,7 +107,7 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to set voltage when not connected to device")
                     return
-                DataAccess.sendValueToDevice(self.connection, READ_TARGET_VOLTAGE,targetVoltage)
+                self._sendValueToDevice(READ_TARGET_VOLTAGE,targetVoltage)
                 self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
    
     def setTargetCurrent(self, targetCurrent, threaded=False):
@@ -118,7 +118,7 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to set current when not connected to device")
                     return
-                DataAccess.sendValueToDevice(self.connection, READ_TARGET_CURRENT,targetCurrent)
+                self._sendValueToDevice(READ_TARGET_CURRENT, targetCurrent)
                 self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
         
     def setOutputOnOff(self, shouldBeOn, threaded=False):
@@ -132,7 +132,7 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to set output when not connected to device")
                     return
-                DataAccess.sendValueToDevice(self.connection,setValue, shouldBeOn)
+                self._sendValueToDevice(setValue, shouldBeOn)
                 self._checkDeviceForAcknowledgement(setValue)
    
     """
@@ -225,7 +225,7 @@ class Controller():
                     self.logger.debug("Trying to start polling auto update when not connected to device")
                     return
                 self.connection.clearBuffer()
-                DataAccess.sendValueToDevice(self.connection,STOP_STREAM,'')
+                self._sendValueToDevice(STOP_STREAM)
                 self._checkDeviceForAcknowledgement(STOP_STREAM)
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateAllValuesWorker, interval)
         elif updateType == 1:
@@ -234,7 +234,7 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to start streaming auto update when not connected to device")
                     return
-                DataAccess.sendValueToDevice(self.connection,START_STREAM, '')
+                self._sendValueToDevice(START_STREAM)
                 self._checkDeviceForAcknowledgement(START_STREAM)
                 self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
@@ -325,7 +325,7 @@ class Controller():
         return float(value)
 
     def getPreRegulatorVoltage(self):
-        value = self._getValueFromDevice(WRITE_PREREGULATOR_VOLTAGE)
+        value = self._getValueFromDevice(WRITE_PRE_REGULATOR_VOLTAGE)
         if value is None: return None
         return float(value)
     
@@ -355,10 +355,10 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to get value with command:", command ,"when not connected to device")
                     return None
-                DataAccess.sendValueToDevice(self.connection,command)
-                acknowledgement = DataAccess.getResponseFromDevice(self.connection)
+                self._sendValueToDevice(command)
+                acknowledgement = self._getDeviceResponse()
                 self._verifyAcknowledgement(acknowledgement, command, data='')
-                response = DataAccess.getResponseFromDevice(self.connection)
+                response = self._getDeviceResponse()
                 self._verifyResponse(response, command, data='')
             return response.data
         except Exception as e:
@@ -422,10 +422,10 @@ class Controller():
                 if not self.connected:
                     self.logger.debug("Trying to get stream values when not connected to device")
                     return
-                response = DataAccess.getResponseFromDevice(self.connection)
+                response = self._getDeviceResponse()
                 while response:
                     respondList.append(response)
-                    response = DataAccess.getResponseFromDevice(self.connection)
+                    response = self._getDeviceResponse()
             if not respondList: return
             commandDataList = [(x.command, x.data) for x in respondList]
             if commandDataList is None: return
@@ -438,7 +438,7 @@ class Controller():
                 elif command == WRITE_OUTPUT_CURRENT:
                     self.queue.put(_outputCurrentUpdate)
                     self.queue.put(float(value))
-                elif command == WRITE_PREREGULATOR_VOLTAGE:
+                elif command == WRITE_PRE_REGULATOR_VOLTAGE:
                     self.queue.put(_preRegVoltageUpdate)      
                     self.queue.put(float(value))
                 elif command == WRITE_TARGET_VOLTAGE:
@@ -548,7 +548,7 @@ class Controller():
 
     def _checkDeviceForAcknowledgement(self, command, data=''):
         try:
-            deviceResponse = DataAccess.getResponseFromDevice(self.connection)
+            deviceResponse = self._getDeviceResponse()
             self._verifyAcknowledgement(deviceResponse, command, data)
         except Exception as e:
             self.logger.exception(e)
@@ -558,8 +558,8 @@ class Controller():
 
     def _verifyAcknowledgement(self, acknowledgementResponse, command, data):
         if not acknowledgementResponse:
-            raise Exception("No response from device")
             self._logSendingDataToDevice(command, data)
+            raise Exception("No response from device")
         if acknowledgementResponse.command == NOTACKNOWLEDGE:
             self._logTransmissionError("Received NAK from device", command, data, acknowledgementResponse)
         elif acknowledgementResponse.command != ACKNOWLEDGE:
@@ -603,4 +603,12 @@ class Controller():
             reseponse = DeviceCommunication.fromSerial(serialResponse)
             return reseponse.command == ACKNOWLEDGE
         except Exception as e:
-            return False 
+            return False
+
+    def _getDeviceResponse(self):
+        return DataAccess.getResponseFromDevice(self.connection)
+
+    def _sendValueToDevice(self, command, data=''):
+        logString = "Sending command '" + readableCommand(command) + "' with data '" + data + "' to device"
+        self.logger.debug(logString)
+        DataAccess.sendValueToDevice(self.connection,command, data)
