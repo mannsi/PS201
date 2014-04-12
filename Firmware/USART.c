@@ -98,6 +98,7 @@ int USART_IsReceivingData()
 // Decode character by character from serial
 static uint8_t DecodeChar(uint8_t *c, FILE *stream)
 {
+	*c = fgetc(stream);
 	// If we get the escape character we xor the NEXT char in the stream
 	// with the FLIPBIT char
 	if (*c == USART_ESC)
@@ -106,7 +107,6 @@ static uint8_t DecodeChar(uint8_t *c, FILE *stream)
 	}
 	// Remember to put end char in the string if we get the 
 	// end char signal
-	*c = fgetc(stream);
 	if (*c == USART_END)
 	{
 		*c = '\0';
