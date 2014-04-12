@@ -8,6 +8,8 @@ ACKNOWLEDGE = int('0x06', 16) # Device send this as command if it acknowledged t
 NOTACKNOWLEDGE = int('0x15', 16) # Device send this as command if it did not acknowledged the last command
 ESCAPE = int('0x7d', 16) # Indicates that the next char is an escaped char
 FLIP = int('0x20', 16) # Used to escape chars
+NEW_LINE = int('0x0a', 16)
+RETURN = int('0x0d', 16)
 
 """
 These are device commands. All commands are assumed to be performed by the device
@@ -26,3 +28,4 @@ TURN_ON_OUTPUT = int('0xc2', 16)
 TURN_OFF_OUTPUT = int('0xc3', 16)
 START_STREAM = int('0xa2', 16)
 STOP_STREAM = int('0xa3', 16)
+
