@@ -21,6 +21,8 @@
 #define USART_START				(0x7E)
 #define USART_END				(0x7E)
 #define USART_FLIPBIT			(0x20)
+#define USART_RETURN			(0x0D)
+#define USART_NEWLINE			(0x0A)
 
 #define USART_ACK				(0x06)
 #define USART_NAK				(0x15)

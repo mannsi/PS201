@@ -95,17 +95,22 @@ int USART_IsReceivingData()
 
 }
 
+// Decode character by character from serial
 static uint8_t DecodeChar(uint8_t *c, FILE *stream)
 {
+	// If we get the escape character we xor the NEXT char in the stream
+	// with the FLIPBIT char
+	if (*c == USART_ESC)
+	{
+		*c = (USART_FLIPBIT ^ fgetc(stream));
+	}
+	// Remember to put end char in the string if we get the 
+	// end char signal
 	*c = fgetc(stream);
 	if (*c == USART_END)
 	{
 		*c = '\0';
 		return 1;
-	}
-	if (*c == USART_ESC)
-	{
-		*c = (USART_FLIPBIT ^ fgetc(stream));
 	}
 	return 0;
 }
@@ -208,12 +213,24 @@ uint8_t USART_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen, FILE *stream)
 
 static void EncodeChar(uint8_t c, FILE *stream)
 {
+	// We escape special characters by sending first the ESC char
+	// and then xoring the character to be sent with the FLIPBIT char.
 	if (c == USART_END)
 	{
 		putc(USART_ESC,stream);
 		putc(USART_FLIPBIT ^ c,stream);
 	}
 	else if (c == USART_ESC)
+	{
+		putc(USART_ESC,stream);
+		putc(USART_FLIPBIT ^ c,stream);
+	}
+	else if (c == USART_RETURN)
+	{
+		putc(USART_ESC,stream);
+		putc(USART_FLIPBIT ^ c,stream);
+	}
+	else if (c == USART_NEWLINE)
 	{
 		putc(USART_ESC,stream);
 		putc(USART_FLIPBIT ^ c,stream);
