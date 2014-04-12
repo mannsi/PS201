@@ -42,13 +42,14 @@ class SerialConnection():
                 con = serial.Serial(port, self.baudRate, timeout = 0.01)
                 available.append(con.portstr)
                 con.close()
-            except serial.SerialException:
+            except serial.SerialException as e:
                 pass
         return available
     
     def connect(self, usbPort):
-        self.connection = serial.Serial(usbPort, self.baudRate, timeout = self.timeout)
-        self.connected = True
+        self.connected = self.deviceOnPort(usbPort)
+        if self.connected:
+            self.connection = serial.Serial(usbPort, self.baudRate, timeout = self.timeout)
         return self.connected
     
     def disconnect(self):
