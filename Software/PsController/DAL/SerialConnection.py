@@ -127,7 +127,7 @@ class SerialConnection():
 
     def _notifyConnectionLost(self):
         for func in self.connectNotificationFunctionlist:
-            func(self.connected)
+            func()
     
 
 

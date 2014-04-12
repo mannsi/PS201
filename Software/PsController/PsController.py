@@ -8,7 +8,7 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 
-mainWindowSize = '800x400'
+mainWindowSize = '650x400'
 mainWindowTitle = "PS201 Controller"
 
 controller = Controller()
@@ -26,6 +26,7 @@ class PsController():
         self.debugging = debugging
 
         if self.debugging:
+            self.mainWindow.geometry('900x400')
             debugFrame = Frame(self.mainWindow)
 
             self.numOfRefreshPerSecVar = IntVar(value=2)
