@@ -99,18 +99,19 @@ int USART_IsReceivingData()
 static uint8_t DecodeChar(uint8_t *c, FILE *stream)
 {
 	*c = fgetc(stream);
+	// Remember to put end char in the string if we get the 
+	// end char signal. THIS WILL NOT BE ESCAPED!
+	if (*c == USART_END)
+	{
+		*c = '\0';
+		return 1;
+	}
+
 	// If we get the escape character we xor the NEXT char in the stream
 	// with the FLIPBIT char
 	if (*c == USART_ESC)
 	{
 		*c = (USART_FLIPBIT ^ fgetc(stream));
-	}
-	// Remember to put end char in the string if we get the 
-	// end char signal
-	if (*c == USART_END)
-	{
-		*c = '\0';
-		return 1;
 	}
 	return 0;
 }
