@@ -424,7 +424,7 @@ class Controller():
                     return
                 response = DataAccess.getResponseFromDevice(self.connection)
                 while response:
-                    respondList.append()
+                    respondList.append(response)
                     response = DataAccess.getResponseFromDevice(self.connection)
             if not respondList: return
             commandDataList = [(x.command, x.data) for x in respondList]
