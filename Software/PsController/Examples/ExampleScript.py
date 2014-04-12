@@ -2,6 +2,7 @@ from PsController.Control.Controller import Controller
 
 controller = Controller()
 
+
 def connect():
     if controller.connected:
         return True
@@ -14,22 +15,25 @@ def connect():
         print("Connected")
     return connected
 
+
 def setValues():
     connected = connect()
     if connected:
-        controller.setTargetCurrent(200) # 200 mA
-        controller.setTargetVoltage(2) # 2 V
+        controller.setTargetCurrent(200)  # 200 mA
+        controller.setTargetVoltage(2)  # 2 V
+
 
 def getIndividualValues():
     connected = connect()
     if connected:
         outputVoltage = controller.getOutputVoltage()
-        outputCurrent = controller.getOutputlCurrent()
+        outputCurrent = controller.getOutputCurrent()
         targetVoltage = controller.getTargetVoltage()
         targetCurrent = controller.getTargetCurrent()
         inputVoltage = controller.getInputVoltage()
         preRegVoltage = controller.getPreRegulatorVoltage()
         deviceOn = controller.getDeviceIsOn()
+
 
 def getAllValues():
     connected = connect()

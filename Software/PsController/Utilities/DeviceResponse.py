@@ -69,7 +69,7 @@ class DeviceCommunication:
         response.readableSerial.append(cls._printableHex(response.command))
         response.readableSerial.append(cls._printableHex(response.dataLength))
         if response.rawData:
-            response.readableSerial.append(response.rawData)
+            response.readableSerial.append(response.rawData.decode("utf-8"))
         for crc in response.crc:
             response.readableSerial.append(cls._printableHex(crc))
         response.readableSerial.append(cls._printableHex(response.end))

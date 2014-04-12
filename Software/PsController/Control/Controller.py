@@ -319,11 +319,11 @@ class Controller():
         if value is None: return None
         return float(value)
 
-    def getOutputlCurrent(self):
+    def getOutputCurrent(self):
         value = self._getValueFromDevice(WRITE_OUTPUT_CURRENT)
         if value is None: return None
         return float(value)
-    
+
     def getPreRegulatorVoltage(self):
         value = self._getValueFromDevice(WRITE_PREREGULATOR_VOLTAGE)
         if value is None: return None
@@ -501,7 +501,7 @@ class Controller():
         
     def _logValuesToFile(self,filePath):
         deviceValues = self.getAllValues()
-        if allValues is None: return    
+        if deviceValues is None: return
         with open(filePath, "a") as myfile:
             fileString = str(datetime.now()) 
             fileString += "\t"  
@@ -577,10 +577,7 @@ class Controller():
         self.logger.error("Data sent to device: %s" % ''.join(sendingData))
 
     def _logReceivingDeviceData(self, deviceResponse):
-        try:
-            self.logger.error("Data received from device: %s" % ''.join(deviceResponse.readableSerial))
-        except Exception as e:
-            pass
+        self.logger.error("Data received from device: %s" % ''.join(deviceResponse.readableSerial))
 
     def _verifyCrcCode(self,response, command, data):
         """ 
@@ -589,7 +586,8 @@ class Controller():
         """
         expectedCrcCode = Crc16.create(response.command, response.rawData) 
         if response.crc != expectedCrcCode:
-            self._logTransmissionError("Unexpected crc code from device", command, data, response)
+            errorText = "Unexpected crc code from device. Got ", response.crc, " but expected ", expectedCrcCode
+            self._logTransmissionError(errorText, command, data, response)
     
     """
     Gives the messages needed to send to device to verify that device is using a given port
