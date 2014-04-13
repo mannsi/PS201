@@ -63,8 +63,8 @@ class RampDialog(Dialog):
         current = ramp.startingCurrent
         for i in range(ramp.numSteps):
             line = SequenceLineStruct()
-            line.current = current
-            line.voltage = voltage
+            line.current = int(10 * round(current/10))
+            line.voltage = round(voltage, 1)
             line.duration = timeIncrement
             line.timeType = ramp.timeType
             lines.append(line)

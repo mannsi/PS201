@@ -29,8 +29,8 @@ class SequenceTabFrame(Frame):
         self.btnLinearRamping.pack(side=LEFT)
         
         self.logToFileVar = IntVar(value=0)
-        self.logToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
-        self.logToFile.pack(side=LEFT)
+        self.chkLogToFile = Checkbutton(buttonFrame, text = "Log to file", variable = self.logToFileVar)
+        self.chkLogToFile.pack(side=LEFT)
         
         if connected:
             startButtonState = NORMAL
@@ -78,6 +78,7 @@ class SequenceTabFrame(Frame):
             self.btnClearLines.configure(state = DISABLED)
             self.btnAdd.configure(state = DISABLED)
             self.btnLinearRamping.configure(state = DISABLED)
+            self.chkLogToFile.configure(state = DISABLED)
         
     def stop(self):
         self.controller.stopSchedule()
@@ -87,6 +88,7 @@ class SequenceTabFrame(Frame):
         self.btnClearLines.configure(state = NORMAL)
         self.btnAdd.configure(state = NORMAL)
         self.btnLinearRamping.configure(state = NORMAL)
+        self.chkLogToFile.configure(state = NORMAL)
         self.btnStop.configure(state = DISABLED)
       
     def addLine(self):
