@@ -24,7 +24,8 @@ _scheduleDoneUpdate = "SCHEDULEDONE"
 _scheduleNewLineUpdate = "SCHEDULENEWLINE" 
 _defaultUsbPortUpdate = "DEFAULTUSBPORT"
 
-_CONNECTED_STRING = "Connected !"
+_CONNECTED_STRING = "Connected"
+_DISCONNECTED_STRING = "Disconnected"
 _CONNECTING_STRING = "Connecting ..."
 _NO_DEVICE_FOUND_STRING= "No device found"
 _NO_USBPORT_SELECTED_STRING = "No usb port selected"
@@ -63,6 +64,24 @@ class Controller():
     def disconnect(self):
         with self.connectionLock:
             self.connection.disconnect()
+
+        # Notify UI of the disconnect update
+        self.queue.put(_connectUpdate)
+        self.queue.put((0, _DISCONNECTED_STRING))
+        self.queue.put(_outputVoltageUpdate)
+        self.queue.put(0.0)
+        self.queue.put(_outputCurrentUpdate)
+        self.queue.put(0)
+        self.queue.put(_targetVoltageUpdate)
+        self.queue.put(0.0)
+        self.queue.put(_targetCurrentUpdate)
+        self.queue.put(0)
+        self.queue.put(_preRegVoltageUpdate)
+        self.queue.put(0.0)
+        self.queue.put(_inputVoltageUpdate)
+        self.queue.put(0.0)
+        self.queue.put(_outputOnOffUpdate)
+        self.queue.put(0)
     
     def setLogging(self, logLevel):
         if not self.logger:
@@ -397,7 +416,8 @@ class Controller():
     def _updateAllValuesWorker(self):
         try:
             deviceValues = self.getAllValues()
-            if deviceValues is None: return     
+            if deviceValues is None:
+                return
             self.queue.put(_outputVoltageUpdate)
             self.queue.put(deviceValues.outputVoltage)
             self.queue.put(_outputCurrentUpdate)

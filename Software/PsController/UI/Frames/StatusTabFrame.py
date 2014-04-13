@@ -42,7 +42,7 @@ class StatusTabFrame(Frame):
         self.voltageInputEntryVar.set(newInputVoltage)
 
     def targetCurrentUpdate(self, newTargetCurrent):
-        self.currentEntryVar.set(newTargetCurrent)
+        self.currentEntryVar.set(int(newTargetCurrent))
 
     def preRegVoltageUpdate(self, preRegVoltage):
         self.preRegVoltageEntryVar.set(preRegVoltage)

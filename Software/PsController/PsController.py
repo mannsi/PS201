@@ -55,6 +55,9 @@ class PsController():
 
             debugFrame.pack(fill=X)
 
+        self.btnDisconnect = Button(self.mainWindow, text = "Disconnect", command = self.disconnectFromDevice, state=DISABLED)
+        self.btnDisconnect.pack(side=RIGHT)
+
         self.btnConnect = Button(self.mainWindow, text = "Connect", command = self.connectToDevice)
         self.btnConnect.pack(side=RIGHT)
 
@@ -78,10 +81,12 @@ class PsController():
         connected = value[0]
         if connected:
             self.startAutoUpdate()
-            state = DISABLED
+            self.btnConnect.configure(state=DISABLED)
+            self.btnDisconnect.configure(state=NORMAL)
         else:
-            state = NORMAL
-        self.btnConnect.configure(state=state)
+            controller.stopAutoUpdate()
+            self.btnConnect.configure(state=NORMAL)
+            self.btnDisconnect.configure(state=DISABLED)
 
     def startAutoUpdate(self):
         if self.debugging:
@@ -132,6 +137,9 @@ class PsController():
     def connectToDevice(self):
         usbPort = self.selectedUsbPortVar.get()
         controller.connect(usbPort, threaded=True)
+
+    def disconnectFromDevice(self):
+        controller.disconnect()
       
     def periodicUiUpdate(self):
         controller.uiPulse()
@@ -231,7 +239,7 @@ class _ValuesFrame(Frame):
         self.voltageEntryVar.set(newOutputVoltage)
     
     def outputCurrentUpdate(self, newOutputCurrent):
-        self.currentEntryVar.set(newOutputCurrent)
+        self.currentEntryVar.set(int(newOutputCurrent))
 
     def connectedUpdated(self, value):
         connected = value[0]
