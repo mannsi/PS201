@@ -560,10 +560,10 @@ class Controller():
         if not acknowledgementResponse:
             self._logSendingDataToDevice(command, data)
             raise Exception("No response from device")
-        if acknowledgementResponse.command == NOTACKNOWLEDGE:
-            self._logTransmissionError("Received NAK from device", command, data, acknowledgementResponse)
+        if acknowledgementResponse.command == NOT_ACKNOWLEDGE:
+            self._logTransmissionError("Received 'NOT ACKNOWLEDGE' from device", command, data, acknowledgementResponse)
         elif acknowledgementResponse.command != ACKNOWLEDGE:
-            self._logTransmissionError("Received neither AK nor NAK from device", command, data, acknowledgementResponse)
+            self._logTransmissionError("Received neither 'ACKNOWLEDGE' nor 'NOT ACKNOWLEDGE' from device", command, data, acknowledgementResponse)
         else:
             self._verifyCrcCode(acknowledgementResponse, command, data)
 
@@ -596,19 +596,26 @@ class Controller():
         return DeviceCommunication.toSerial(HANDSHAKE, data='')
     
     """
-    Function used to verify an id response from device, i.e. if the reponse come from our device or not
+    Function used to verify an id response from device, i.e. if the response come from our device or not
     """
     def _deviceIdResponseFunction(self, serialResponse):
         try:      
-            reseponse = DeviceCommunication.fromSerial(serialResponse)
-            return reseponse.command == ACKNOWLEDGE
+            response = DeviceCommunication.fromSerial(serialResponse)
+            self.logger.debug("Received %s", readableConstant(response.command))
+            return response.command == ACKNOWLEDGE
         except Exception as e:
+            self.logger.debug("Did not receive an ACKNOWLEDGE response")
             return False
 
     def _getDeviceResponse(self):
-        return DataAccess.getResponseFromDevice(self.connection)
+        deviceResponse = DataAccess.getResponseFromDevice(self.connection)
+        if deviceResponse is not None:
+            logString = "Got response command '" + readableConstant(deviceResponse.command) + "' with data '" \
+                        + deviceResponse.data + "' from device"
+            self.logger.debug(logString)
+        return deviceResponse
 
     def _sendValueToDevice(self, command, data=''):
-        logString = "Sending command '" + readableCommand(command) + "' with data '" + data + "' to device"
+        logString = "Sending command '" + readableConstant(command) + "' with data '" + data + "' to device"
         self.logger.debug(logString)
         DataAccess.sendValueToDevice(self.connection,command, data)

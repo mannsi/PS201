@@ -1,13 +1,13 @@
 """
 Special device function constants
 """
-HANDSHAKE = int('0xa0', 16) # Send this to device as command and get PROGRAMID back as command if device responds
-PROGRAMID = int('0xa1', 16) # The command that device repsonds with if given HANDSHAKE command
-START = int('0x7e', 16) # This is the first and last part of the device serial response
-ACKNOWLEDGE = int('0x06', 16) # Device send this as command if it acknowledged the last command
-NOTACKNOWLEDGE = int('0x15', 16) # Device send this as command if it did not acknowledged the last command
-ESCAPE = int('0x7d', 16) # Indicates that the next char is an escaped char
-FLIP = int('0x20', 16) # Used to escape chars
+HANDSHAKE = int('0xa0', 16)  # Send this to device as command and get PROGRAMID back as command if device responds
+PROGRAM_ID = int('0xa1', 16)  # The command that device repsonds with if given HANDSHAKE command
+START = int('0x7e', 16)  # This is the first and last part of the device serial response
+ACKNOWLEDGE = int('0x06', 16)  # Device send this as command if it acknowledged the last command
+NOT_ACKNOWLEDGE = int('0x15', 16)  # Device send this as command if it did not acknowledged the last command
+ESCAPE = int('0x7d', 16)  # Indicates that the next char is an escaped char
+FLIP = int('0x20', 16)  # Used to escape chars
 NEW_LINE = int('0x0a', 16)
 RETURN = int('0x0d', 16)
 
@@ -30,7 +30,7 @@ START_STREAM = int('0xa2', 16)
 STOP_STREAM = int('0xa3', 16)
 
 
-def readableCommand(command):
+def readableConstant(command):
     if command == WRITE_OUTPUT_VOLTAGE:
         return "Write output voltage"
     elif command == WRITE_OUTPUT_CURRENT:
@@ -59,3 +59,7 @@ def readableCommand(command):
         return "Start stream"
     elif command == STOP_STREAM:
         return "Stop stream"
+    elif command == ACKNOWLEDGE:
+        return "ACKNOWLEDGE"
+    elif command == NOT_ACKNOWLEDGE:
+        return "NOT_ACKNOWLEDGE"

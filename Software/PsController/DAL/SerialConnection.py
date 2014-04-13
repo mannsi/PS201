@@ -63,34 +63,33 @@ class SerialConnection():
         self.connection.flushInput()
 
     def deviceOnPort(self, usbPort):
-        tempConnection = serial.Serial(usbPort, self.baudRate, timeout = self.timeout)
+        tempConnection = serial.Serial(usbPort, self.baudRate, timeout=self.timeout)
         self._sendToDevice(tempConnection,self.idMessage)
         deviceResponse = self._readDeviceReponse(tempConnection)
+        logString = "Checking if device is on port " + usbPort
+        self.logger.debug(logString)
         return self.deviceVerificationFunc(deviceResponse)
 
     def notifyOnConnectionLost(self, func):
         self.connectNotificationFunctionlist.append(func)
 
-    def get(self, sendingData=""):
-        if not self.connected: return
+    def get(self):
+        if not self.connected:
+            return
         try:
-            if sendingData:
-                self._sendToDevice(self.connection, sendingData)
             serialResponse = self._readDeviceReponse(self.connection)
-            logString = "Received:  %s" % serialResponse
-            if sendingData:
-                logString = "Sent: %s" % sendingData
+            logString = "Serial data received:  %s" % serialResponse
             self.logger.debug(logString)
             return serialResponse
         except Exception as e:
-            self.logger.exception("Error when reading value from device. Data being sent is: %s ", sendingData)
+            self.logger.exception("Error when reading value from device. Serial value received: %s ", serialResponse)
             self.connected = False 
             self._notifyConnectionLost()
     
     def set(self, sendingData):
         if not self.connected: return
         try:
-            self.logger.debug("Sending data to device. Data:%s" % sendingData)
+            self.logger.debug("Serial data sent:%s" % sendingData)
             self._sendToDevice(self.connection, sendingData)
         except Exception as e:
             self.logger.exception("Error when setting value with data: %s ", sendingData)
