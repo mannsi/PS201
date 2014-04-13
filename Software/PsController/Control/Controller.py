@@ -616,6 +616,6 @@ class Controller():
         return deviceResponse
 
     def _sendValueToDevice(self, command, data=''):
-        logString = "Sending command '" + readableConstant(command) + "' with data '" + data + "' to device"
+        logString = "Sending command '" + readableConstant(command) + "' with data '" + str(data) + "' to device"
         self.logger.info(logString)
         DataAccess.sendValueToDevice(self.connection,command, data)
