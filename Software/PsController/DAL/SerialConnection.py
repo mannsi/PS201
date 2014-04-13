@@ -67,7 +67,7 @@ class SerialConnection():
         self._sendToDevice(tempConnection,self.idMessage)
         deviceResponse = self._readDeviceReponse(tempConnection)
         logString = "Checking if device is on port " + usbPort
-        self.logger.debug(logString)
+        self.logger.info(logString)
         return self.deviceVerificationFunc(deviceResponse)
 
     def notifyOnConnectionLost(self, func):

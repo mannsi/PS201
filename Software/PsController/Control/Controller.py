@@ -50,7 +50,7 @@ class Controller():
         else:
             try:
                 if usbPortNumber == '' or usbPortNumber == None:
-                    self.logger.debug("Empty usb port given")
+                    self.logger.info("Empty usb port given")
                     return False
                 with self.connectionLock:
                     self.connected = self.connection.connect(usbPortNumber)
@@ -105,7 +105,7 @@ class Controller():
         else:
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to set voltage when not connected to device")
+                    self.logger.info("Trying to set voltage when not connected to device")
                     return
                 self._sendValueToDevice(READ_TARGET_VOLTAGE,targetVoltage)
                 self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
@@ -116,7 +116,7 @@ class Controller():
         else:
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to set current when not connected to device")
+                    self.logger.info("Trying to set current when not connected to device")
                     return
                 self._sendValueToDevice(READ_TARGET_CURRENT, targetCurrent)
                 self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
@@ -130,7 +130,7 @@ class Controller():
                 setValue = TURN_ON_OUTPUT
             with self.connectionLock:   
                 if not self.connected:
-                    self.logger.debug("Trying to set output when not connected to device")
+                    self.logger.info("Trying to set output when not connected to device")
                     return
                 self._sendValueToDevice(setValue, shouldBeOn)
                 self._checkDeviceForAcknowledgement(setValue)
@@ -222,7 +222,7 @@ class Controller():
             # Polling updates
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to start polling auto update when not connected to device")
+                    self.logger.info("Trying to start polling auto update when not connected to device")
                     return
                 self.connection.clearBuffer()
                 self._sendValueToDevice(STOP_STREAM)
@@ -232,7 +232,7 @@ class Controller():
             # Streaming updates
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to start streaming auto update when not connected to device")
+                    self.logger.info("Trying to start streaming auto update when not connected to device")
                     return
                 self._sendValueToDevice(START_STREAM)
                 self._checkDeviceForAcknowledgement(START_STREAM)
@@ -353,7 +353,7 @@ class Controller():
         try:
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to get value with command:", command ,"when not connected to device")
+                    self.logger.info("Trying to get value with command:", command ,"when not connected to device")
                     return None
                 self._sendValueToDevice(command)
                 acknowledgement = self._getDeviceResponse()
@@ -420,7 +420,7 @@ class Controller():
             respondList = []
             with self.connectionLock:
                 if not self.connected:
-                    self.logger.debug("Trying to get stream values when not connected to device")
+                    self.logger.info("Trying to get stream values when not connected to device")
                     return
                 response = self._getDeviceResponse()
                 while response:
@@ -460,7 +460,7 @@ class Controller():
         try:
             self.queue.put(_connectUpdate)
             if usbPortNumber == '' or usbPortNumber is None:
-                self.logger.debug("No usb port given")
+                self.logger.info("No usb port given")
                 self.queue.put((0,_NO_USBPORT_SELECTED_STRING))
                 return
             else:
@@ -601,10 +601,10 @@ class Controller():
     def _deviceIdResponseFunction(self, serialResponse):
         try:      
             response = DeviceCommunication.fromSerial(serialResponse)
-            self.logger.debug("Received %s", readableConstant(response.command))
+            self.logger.info("Received %s", readableConstant(response.command))
             return response.command == ACKNOWLEDGE
         except Exception as e:
-            self.logger.debug("Did not receive an ACKNOWLEDGE response")
+            self.logger.info("Did not receive an ACKNOWLEDGE response")
             return False
 
     def _getDeviceResponse(self):
@@ -612,10 +612,10 @@ class Controller():
         if deviceResponse is not None:
             logString = "Got response command '" + readableConstant(deviceResponse.command) + "' with data '" \
                         + deviceResponse.data + "' from device"
-            self.logger.debug(logString)
+            self.logger.info(logString)
         return deviceResponse
 
     def _sendValueToDevice(self, command, data=''):
         logString = "Sending command '" + readableConstant(command) + "' with data '" + data + "' to device"
-        self.logger.debug(logString)
+        self.logger.info(logString)
         DataAccess.sendValueToDevice(self.connection,command, data)

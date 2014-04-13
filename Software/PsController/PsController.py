@@ -34,22 +34,23 @@ class PsController():
             self.numOfRefreshPerSec.pack(side=RIGHT)
             Label(debugFrame, text="Refresh per sec").pack(side=RIGHT)
         
-            self.updateTypeCmb = Combobox(debugFrame,values=["Polling","Streaming"])
+            self.updateTypeCmb = Combobox(debugFrame,values=["Polling", "Streaming"])
             self.updateTypeCmb.pack(side=RIGHT)
-            self.updateTypeCmb.current(newindex=0)
+            self.updateTypeCmb.current(newindex=1)
             Label(debugFrame, text="Update type").pack(side=RIGHT)
 
-            self.loggingCmb = Combobox(debugFrame, values=["Error","Details"])
+            self.loggingCmb = Combobox(debugFrame, values=["Error", "Info", "Debug"])
             self.loggingCmb.bind("<<ComboboxSelected>>", self._logging_sel_changed)
             self.loggingCmb.pack(side=RIGHT)
-            self.loggingCmb.current(newindex=0)
+            self.loggingCmb.current(newindex=1)
             Label(debugFrame, text="Logging").pack(side=RIGHT)
+            self._logging_sel_changed(self.loggingCmb)
 
-            self.btnUpdateAll = Button(debugFrame, text = "Refresh", command = self.debugRefreshValues)
+            self.btnUpdateAll = Button(debugFrame, text="Refresh", command=self.debugRefreshValues)
             self.btnUpdateAll.pack(side=RIGHT)
 
-            self.chkAutoVar = IntVar(value=0)
-            self.chkAuto = Checkbutton(debugFrame, text = "Auto update", variable = self.chkAutoVar, command = self.debugSwitchAutoMode)
+            self.chkAutoVar = IntVar(value=1)
+            self.chkAuto = Checkbutton(debugFrame, text="Auto update", variable=self.chkAutoVar, command=self.debugSwitchAutoMode)
             self.chkAuto.pack(side=RIGHT)
 
             debugFrame.pack(fill=X)
@@ -76,24 +77,19 @@ class PsController():
     def updateConnectedStatus(self, value):
         connected = value[0]
         if connected:
-            if self.chkAutoVar.get():
-                self.startAutoUpdate()
+            self.startAutoUpdate()
             state = DISABLED
         else:
             state = NORMAL
-
         self.btnConnect.configure(state=state)
-        if self.debugging:
-            self.numOfRefreshPerSec.configure(state=state)
-            self.updateTypeCmb.configure(state=state)
 
     def startAutoUpdate(self):
         if self.debugging:
-                type = self.updateTypeCmb.current()
-                controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=type)
+            if self.chkAutoVar.get():
+                updateType = self.updateTypeCmb.current()
+                controller.startAutoUpdate(interval = 1/self.numOfRefreshPerSecVar.get(), updateType=updateType)
         else:
-            pass
-            controller.startAutoUpdate(interval = 1/3, updateType=0)
+            controller.startAutoUpdate(interval = 1/2, updateType=1)
 
     def addMenuBar(self):
         menubar = Menu(self.mainWindow)
@@ -145,6 +141,8 @@ class PsController():
         selectedIndex = self.loggingCmb.current()
         if selectedIndex == 0:
             controller.setLogging(logging.ERROR)
+        elif selectedIndex == 1:
+            controller.setLogging(logging.INFO)
         elif selectedIndex == 1:
             controller.setLogging(logging.DEBUG)
 
