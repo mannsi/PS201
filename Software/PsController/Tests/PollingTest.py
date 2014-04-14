@@ -44,7 +44,7 @@ def runSetValuesVsOutputValuesTest(targetCurrent, targetVoltage):
     measuredTargetCurrent = controller.getTargetCurrent()
     measuredTargetVoltage = controller.getTargetVoltage()
     outputVoltage = controller.getOutputVoltage()
-    outputCurrent = controller.getOutputCurrent()
+    #outputCurrent = controller.getOutputCurrent()
     allValues = controller.getAllValues()
 
     if targetCurrent != measuredTargetCurrent:
@@ -53,11 +53,11 @@ def runSetValuesVsOutputValuesTest(targetCurrent, targetVoltage):
     if targetVoltage != measuredTargetVoltage:
         raise Exception("Wrong target voltage measured. Target voltage is ", targetVoltage,
                         " but measured target voltage is ", measuredTargetVoltage)
-    compareTargetAndOutputValues(targetCurrent, targetVoltage, outputCurrent, outputVoltage, allValues)
+    compareTargetAndOutputValues(targetVoltage, outputVoltage, allValues)
     print("OK")
 
 
-def compareTargetAndOutputValues(targetCurrent, targetVoltage, outputCurrent, outputVoltage, allValues):
+def compareTargetAndOutputValues(targetVoltage, outputVoltage, allValues):
     #if not withinBounds(targetCurrent, outputCurrent):
     #    raiseException(targetCurrent, outputCurrent, "Current")
     if not withinBounds(targetVoltage, outputVoltage):

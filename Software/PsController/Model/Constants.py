@@ -1,8 +1,8 @@
 """
 Special device function constants
 """
-HANDSHAKE = int('0xa0', 16)  # Send this to device as command and get PROGRAMID back as command if device responds
-PROGRAM_ID = int('0xa1', 16)  # The command that device repsonds with if given HANDSHAKE command
+HANDSHAKE = int('0xa0', 16)  # Send this to device as command and get PROGRAM_ID back as command if device responds
+PROGRAM_ID = int('0xa1', 16)  # The command that device responds with if given HANDSHAKE command
 START = int('0x7e', 16)  # This is the first and last part of the device serial response
 ACKNOWLEDGE = int('0x06', 16)  # Device send this as command if it acknowledged the last command
 NOT_ACKNOWLEDGE = int('0x15', 16)  # Device send this as command if it did not acknowledged the last command

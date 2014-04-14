@@ -1,10 +1,9 @@
 from tkinter import *
-import os
+
 
 class Dialog(Toplevel):
-    def __init__(self,parent,title=None,showCancel=True,type=None):
+    def __init__(self, parent, title=None, showCancel=True):
         Toplevel.__init__(self, parent)
-        self.type = type
         self.transient(parent)
 
         if title:
@@ -28,10 +27,9 @@ class Dialog(Toplevel):
         parentWidth = parent.winfo_width()
         parentHeight = parent.winfo_height()
         x = (parentWidth / 2) - (selfWidth / 2) + parent.winfo_rootx()
-        y = (parentHeight / 2) - (selfHeight / 2)  + parent.winfo_rooty()     
-        self.geometry("+%d+%d" % (x,y))
-        
-        
+        y = (parentHeight / 2) - (selfHeight / 2) + parent.winfo_rooty()
+        self.geometry("+%d+%d" % (x, y))
+
         self.initial_focus.focus_set()
         self.wait_window(self)
 
@@ -47,7 +45,7 @@ class Dialog(Toplevel):
     def buttonbox(self):
         # add standard button box. override if you don't want the
         # standard buttons
-        separator = Frame(self,height=2, bd=1, relief=SUNKEN)
+        separator = Frame(self, height=2, bd=1, relief=SUNKEN)
         separator.pack(fill=X, padx=5, pady=5)
         box = Frame(self)
 
@@ -56,18 +54,18 @@ class Dialog(Toplevel):
         self.bind("<Return>", self.ok)
 
         if self.showCancel:
-          w = Button(box, text="Cancel", width=10, command=self.cancel)
-          w.pack(side=LEFT, padx=5, pady=5)
-          self.bind("<Escape>", self.cancel)
+            w = Button(box, text="Cancel", width=10, command=self.cancel)
+            w.pack(side=LEFT, padx=5, pady=5)
+            self.bind("<Escape>", self.cancel)
 
-        box.pack(anchor=S+E)
+        box.pack(anchor=S + E)
 
     #
     # standard button semantics
 
     def ok(self, event=None):
         if not self.validate():
-            self.initial_focus.focus_set() # put focus back
+            self.initial_focus.focus_set()  # put focus back
             return
 
         self.withdraw()
@@ -83,8 +81,9 @@ class Dialog(Toplevel):
     #
     # command hooks
 
-    def validate(self):
-        return 1 # override
+    @staticmethod
+    def validate():
+        return 1  # override
 
     def apply(self):
-        pass # override
+        pass  # override

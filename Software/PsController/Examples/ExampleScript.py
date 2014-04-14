@@ -33,6 +33,7 @@ def getIndividualValues():
         inputVoltage = controller.getInputVoltage()
         preRegVoltage = controller.getPreRegulatorVoltage()
         deviceOn = controller.getDeviceIsOn()
+        print(outputVoltage, outputCurrent, targetVoltage, targetCurrent, inputVoltage, preRegVoltage, deviceOn)
 
 
 def getAllValues():
@@ -46,6 +47,7 @@ def getAllValues():
         inputVoltage = deviceValues.inputVoltage
         preRegVoltage = deviceValues.preRegVoltage
         deviceOn = deviceValues.outputOn
+        print(outputVoltage, outputCurrent, targetVoltage, targetCurrent, inputVoltage, preRegVoltage, deviceOn)
 
 
 setValues()

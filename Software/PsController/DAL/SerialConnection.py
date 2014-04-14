@@ -4,58 +4,58 @@ import glob
 import threading
 from PsController.Model.Constants import *
 
+
 class SerialConnection():
     def __init__(
-                 self, 
-                 baudrate, 
-                 timeout,  
-                 logger,
-                 idMessage,
-                 deviceVerificationFunc):
-        self.baudRate = baudrate
+            self,
+            baudRate,
+            timeout,
+            logger,
+            idMessage,
+            deviceVerificationFunc):
+        self.baudRate = baudRate
         self.timeout = timeout
         self.processLock = threading.Lock()
         self.logger = logger
         self.idMessage = idMessage
         self.deviceVerificationFunc = deviceVerificationFunc
-        self.connectNotificationFunctionlist = []
+        self.connectNotificationFunctionList = []
         self.connected = False
-        
-    """
-    Get available usb ports
-    """
+        self.connection = None
+
     def availableConnections(self):
+        """Get available usb ports"""
         system_name = platform.system()
         available = []
         if system_name == "Windows":
             # Scan for available ports.
-            usbList =  range(256)
+            usbList = range(256)
         elif system_name == "Darwin":
             # Mac
             usbList = glob.glob('/dev/tty*') + glob.glob('/dev/cu*')
         else:
             # Assume Linux or something else
             usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
-            
+
         for port in usbList:
             try:
-                con = serial.Serial(port, self.baudRate, timeout = 0.01)
+                con = serial.Serial(port, self.baudRate, timeout=0.01)
                 available.append(con.portstr)
                 con.close()
-            except serial.SerialException as e:
+            except serial.SerialException:
                 pass
         return available
-    
+
     def connect(self, usbPort):
         self.connected = self.deviceOnPort(usbPort)
         if self.connected:
-            self.connection = serial.Serial(usbPort, self.baudRate, timeout = self.timeout)
+            self.connection = serial.Serial(usbPort, self.baudRate, timeout=self.timeout)
         return self.connected
-    
+
     def disconnect(self):
         self.connection.close()
         self.connected = False
-     
+
     def connected(self):
         return self.connected
 
@@ -64,51 +64,51 @@ class SerialConnection():
 
     def deviceOnPort(self, usbPort):
         tempConnection = serial.Serial(usbPort, self.baudRate, timeout=self.timeout)
-        self._sendToDevice(tempConnection,self.idMessage)
-        deviceResponse = self._readDeviceReponse(tempConnection)
+        self._sendToDevice(tempConnection, self.idMessage)
+        deviceResponse = self._readDeviceResponse(tempConnection)
         logString = "Checking if device is on port " + usbPort
         self.logger.info(logString)
         return self.deviceVerificationFunc(deviceResponse)
 
     def notifyOnConnectionLost(self, func):
-        self.connectNotificationFunctionlist.append(func)
+        self.connectNotificationFunctionList.append(func)
 
     def get(self):
         if not self.connected:
             return
         try:
-            serialResponse = self._readDeviceReponse(self.connection)
+            serialResponse = self._readDeviceResponse(self.connection)
             logString = "Serial data received:  %s" % serialResponse
             self.logger.debug(logString)
             return serialResponse
-        except Exception as e:
-            self.logger.exception("Error when reading value from device. Serial value received: %s ", serialResponse)
-            self.connected = False 
+        except (serial.SerialException,serial.SerialTimeoutException):
+            self.logger.exception("Error when reading value from device.")
+            self.connected = False
             self._notifyConnectionLost()
-    
+
     def set(self, sendingData):
-        if not self.connected: return
+        if not self.connected:
+            return
         try:
             self.logger.debug("Serial data sent:%s" % sendingData)
             self._sendToDevice(self.connection, sendingData)
-        except Exception as e:
+        except serial.SerialTimeoutException:
             self.logger.exception("Error when setting value with data: %s ", sendingData)
-            self.connected = False  
+            self.connected = False
             self._notifyConnectionLost()
 
-    def _sendToDevice(self, serialConnection, data):    
+    def _sendToDevice(self, serialConnection, data):
         with self.processLock:
             serialConnection.write(data)
 
-    def _readDeviceReponse(self,serialConnection):
+    def _readDeviceResponse(self, serialConnection):
         with self.processLock:
             serialResponse = self._readLine(serialConnection)
         return serialResponse
 
-    """
-    Custom readline method to avoid end of line char issues
-    """
-    def _readLine(self, serialConnection):
+    @staticmethod
+    def _readLine(serialConnection):
+        """Custom readLine method to avoid end of line char issues"""
         line = bytearray()
         startCount = 0
         while True:
@@ -125,9 +125,5 @@ class SerialConnection():
         return bytes(line)
 
     def _notifyConnectionLost(self):
-        for func in self.connectNotificationFunctionlist:
+        for func in self.connectNotificationFunctionList:
             func()
-    
-
-
-    

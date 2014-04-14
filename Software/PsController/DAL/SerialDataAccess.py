@@ -1,5 +1,6 @@
 from PsController.Utilities.DeviceResponse import DeviceCommunication
 
+
 class DataAccess():
     @staticmethod
     def sendValueToDevice(connection, command, data=''):
@@ -9,6 +10,6 @@ class DataAccess():
     @staticmethod
     def getResponseFromDevice(connection):
         serialValue = connection.get()
-        if not serialValue: return None
+        if not serialValue:
+            return None
         return DeviceCommunication.fromSerial(serialValue)
-
