@@ -41,10 +41,8 @@ class Controller():
         self.threadHelper = ThreadHelper()
         self.updateParameters = {}  # A dict with key: UpdateCondition and value (conditionValue, listOfUpdateFunctions)
         self.connected = False
-        self.currentValues = DeviceValues()
         self.connection = self._createConnection()
         self.connection.notifyOnConnectionLost(self._connectionLost)
-        self._registerListeners()
         self.autoUpdateScheduler = None
 
     def connect(self, usbPortNumber, threaded=False):
@@ -68,22 +66,14 @@ class Controller():
             self.connection.disconnect()
 
         # Notify UI of the disconnect update
-        self._updateQueue.put(_connectUpdate)
-        self._updateQueue.put((0, _DISCONNECTED_STRING))
-        self._updateQueue.put(_outputVoltageUpdate)
-        self._updateQueue.put(0.0)
-        self._updateQueue.put(_outputCurrentUpdate)
-        self._updateQueue.put(0)
-        self._updateQueue.put(_targetVoltageUpdate)
-        self._updateQueue.put(0.0)
-        self._updateQueue.put(_targetCurrentUpdate)
-        self._updateQueue.put(0)
-        self._updateQueue.put(_preRegVoltageUpdate)
-        self._updateQueue.put(0.0)
-        self._updateQueue.put(_inputVoltageUpdate)
-        self._updateQueue.put(0.0)
-        self._updateQueue.put(_outputOnOffUpdate)
-        self._updateQueue.put(0)
+        self._conditionUpdated(_connectUpdate, (0, _DISCONNECTED_STRING))
+        self._conditionUpdated(_outputVoltageUpdate, 0)
+        self._conditionUpdated(_outputCurrentUpdate, 0)
+        self._conditionUpdated(_targetVoltageUpdate, 0)
+        self._conditionUpdated(_targetCurrentUpdate, 0)
+        self._conditionUpdated(_preRegVoltageUpdate, 0)
+        self._conditionUpdated(_inputVoltageUpdate, 0)
+        self._conditionUpdated(_outputOnOffUpdate, 0)
 
     def setLogging(self, logLevel):
         if not self.logger:
@@ -129,8 +119,7 @@ class Controller():
                     return
                 self._sendValueToDevice(READ_TARGET_VOLTAGE, targetVoltage)
                 self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
-            self._updateQueue.put(_targetVoltageUpdate)
-            self._updateQueue.put(targetVoltage)
+            self._conditionUpdated(_targetVoltageUpdate, targetVoltage)
 
     def setTargetCurrent(self, targetCurrent, threaded=False):
         if threaded:
@@ -142,8 +131,7 @@ class Controller():
                     return
                 self._sendValueToDevice(READ_TARGET_CURRENT, targetCurrent)
                 self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
-            self._updateQueue.put(_targetCurrentUpdate)
-            self._updateQueue.put(targetCurrent)
+            self._conditionUpdated(_targetCurrentUpdate, targetCurrent)
 
     def setOutputOnOff(self, shouldBeOn, threaded=False):
         if threaded:
@@ -158,8 +146,7 @@ class Controller():
                     return
                 self._sendValueToDevice(setValue, shouldBeOn)
                 self._checkDeviceForAcknowledgement(setValue)
-            self._updateQueue.put(_outputOnOffUpdate)
-            self._updateQueue.put(shouldBeOn)
+            self._conditionUpdated(_outputOnOffUpdate, shouldBeOn)
 
     def notifyConnectedUpdate(self, func):
         """Runs the func function when connection status is updated through auto update"""
@@ -290,8 +277,7 @@ class Controller():
         return True
 
     def stopSchedule(self):
-        self._updateQueue.put(_scheduleDoneUpdate)
-        self._updateQueue.put(uuid.uuid4())  # Add a random UUID to fake a change event
+        self._conditionUpdated(_scheduleDoneUpdate, uuid.uuid4())# Add a random UUID to fake a change event
         self.threadHelper.stopSchedule()
         self._resetScheduleLineParameter()
 
@@ -401,8 +387,7 @@ class Controller():
                         defaultPort = port
                         break
             if defaultPort:
-                self._updateQueue.put(_defaultUsbPortUpdate)
-                self._updateQueue.put(defaultPort)
+                self._conditionUpdated(_defaultUsbPortUpdate, defaultPort)
         except Exception as e:
             self.logger.exception(e)
 
@@ -411,20 +396,13 @@ class Controller():
             deviceValues = self.getAllValues()
             if deviceValues is None:
                 return
-            self._updateQueue.put(_outputVoltageUpdate)
-            self._updateQueue.put(deviceValues.outputVoltage)
-            self._updateQueue.put(_outputCurrentUpdate)
-            self._updateQueue.put(deviceValues.outputCurrent)
-            self._updateQueue.put(_targetVoltageUpdate)
-            self._updateQueue.put(deviceValues.targetVoltage)
-            self._updateQueue.put(_targetCurrentUpdate)
-            self._updateQueue.put(deviceValues.targetCurrent)
-            self._updateQueue.put(_preRegVoltageUpdate)
-            self._updateQueue.put(deviceValues.preRegVoltage)
-            self._updateQueue.put(_inputVoltageUpdate)
-            self._updateQueue.put(deviceValues.inputVoltage)
-            self._updateQueue.put(_outputOnOffUpdate)
-            self._updateQueue.put(deviceValues.outputOn)
+            self._conditionUpdated(_outputVoltageUpdate, deviceValues.outputVoltage)
+            self._conditionUpdated(_outputCurrentUpdate, deviceValues.outputCurrent)
+            self._conditionUpdated(_targetVoltageUpdate, deviceValues.targetVoltage)
+            self._conditionUpdated(_targetCurrentUpdate, deviceValues.targetCurrent)
+            self._conditionUpdated(_preRegVoltageUpdate, deviceValues.preRegVoltage)
+            self._conditionUpdated(_inputVoltageUpdate, deviceValues.inputVoltage)
+            self._conditionUpdated(_outputOnOffUpdate, deviceValues.outputOn)
         except Exception as e:
             self.logger.exception(e)
 
@@ -448,52 +426,42 @@ class Controller():
                 command = pair[0]
                 value = pair[1]
                 if command == WRITE_OUTPUT_VOLTAGE:
-                    self._updateQueue.put(_outputVoltageUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_outputVoltageUpdate, float(value))
                 elif command == WRITE_OUTPUT_CURRENT:
-                    self._updateQueue.put(_outputCurrentUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_outputCurrentUpdate, float(value))
                 elif command == WRITE_PRE_REGULATOR_VOLTAGE:
-                    self._updateQueue.put(_preRegVoltageUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_preRegVoltageUpdate, float(value))
                 elif command == WRITE_TARGET_VOLTAGE:
-                    self._updateQueue.put(_targetVoltageUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_targetVoltageUpdate, float(value))
                 elif command == WRITE_TARGET_CURRENT:
-                    self._updateQueue.put(_targetCurrentUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_targetCurrentUpdate, float(value))
                 elif command == WRITE_IS_OUTPUT_ON:
-                    self._updateQueue.put(_outputOnOffUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_outputOnOffUpdate, float(value))
                 elif command == WRITE_INPUT_VOLTAGE:
-                    self._updateQueue.put(_inputVoltageUpdate)
-                    self._updateQueue.put(float(value))
+                    self._conditionUpdated(_inputVoltageUpdate, float(value))
         except Exception as e:
             self.logger.exception(e)
 
     def _connectWorker(self, usbPortNumber):
-        self._updateQueue.put(_connectUpdate)
         if usbPortNumber == '' or usbPortNumber is None:
             self.logger.info("No usb port given")
-            self._updateQueue.put((0, _NO_USB_PORT_SELECTED_STRING))
+            self._conditionUpdated(_connectUpdate, (0, _NO_USB_PORT_SELECTED_STRING))
             return
         else:
-            self._updateQueue.put((0, _CONNECTING_STRING))
+            self._conditionUpdated(_connectUpdate, (0, _CONNECTING_STRING))
         self.connected = self.connect(usbPortNumber)
-        self._updateQueue.put(_connectUpdate)
         if self.connected:
-            self._updateQueue.put((1, _CONNECTED_STRING))
+            self._conditionUpdated(_connectUpdate, (1, _CONNECTED_STRING))
         else:
-            self._updateQueue.put((0, _NO_DEVICE_FOUND_STRING))
+            self._conditionUpdated(_connectUpdate, (0, _NO_DEVICE_FOUND_STRING))
 
     def _connectionLost(self):
         self.connected = False
-        self._updateQueue.put(_connectUpdate)
-        self._updateQueue.put((0, _LOST_CONNECTION_STRING))
+        self.stopAutoUpdate()
+        self._conditionUpdated(_connectUpdate, (0, _LOST_CONNECTION_STRING))
 
     def _addJobForLine(self, line, logToDataFile, filePath):
-        self._updateQueue.put(_scheduleNewLineUpdate)
-        self._updateQueue.put(line.rowNumber)
+        self._conditionUpdated(_scheduleNewLineUpdate, line.rowNumber)
         self.setTargetVoltage(line.getVoltage())
         self.setTargetCurrent(line.getCurrent())
 
@@ -519,41 +487,6 @@ class Controller():
             fileString += str(deviceValues.outputCurrent)
             fileString += "\n"
             file.write(fileString)
-
-    def _registerListeners(self):
-        self.notifyOutputCurrentUpdate(self._outputCurrentUpdate)
-        self.notifyOutputVoltageUpdate(self._outputVoltageUpdate)
-        self.notifyTargetCurrentUpdate(self._targetCurrentUpdate)
-        self.notifyTargetVoltageUpdate(self._targetVoltageUpdate)
-        self.notifyInputVoltageUpdate(self._inputVoltageUpdate)
-        self.notifyOutputUpdate(self._outPutOnOffUpdate)
-        self.notifyPreRegVoltageUpdate(self._preRegVoltageUpdate)
-        self.notifyConnectedUpdate(self._connectionUpdate)
-
-    def _targetVoltageUpdate(self, newTargetVoltage):
-        self.currentValues.targetVoltage = float(newTargetVoltage)
-
-    def _inputVoltageUpdate(self, newInputVoltage):
-        self.currentValues.inputVoltage = float(newInputVoltage)
-
-    def _targetCurrentUpdate(self, newTargetCurrent):
-        self.currentValues.targetCurrent = int(newTargetCurrent)
-
-    def _outputVoltageUpdate(self, newOutputVoltage):
-        self.currentValues.outputVoltage = newOutputVoltage
-
-    def _outputCurrentUpdate(self, newOutputCurrent):
-        self.currentValues.outputCurrent = newOutputCurrent
-
-    def _outPutOnOffUpdate(self, newOutputOn):
-        self.currentValues.outputOn = newOutputOn
-
-    def _preRegVoltageUpdate(self, preRegVoltage):
-        self.currentValues.preRegVoltage = preRegVoltage
-
-    def _connectionUpdate(self, connected):
-        if not connected:
-            self.stopAutoUpdate()
 
     def _checkDeviceForAcknowledgement(self, command, data=''):
         try:
@@ -629,3 +562,9 @@ class Controller():
         logString = "Sending command '" + readableConstant(command) + "' with data '" + str(data) + "' to device"
         self.logger.info(logString)
         DataAccess.sendValueToDevice(self.connection, command, data)
+
+    def _conditionUpdated(self, condition, value):
+        # Add to update queue if anybody is listening for the update
+        if condition in self.updateParameters:
+            self._updateQueue.put(condition)
+            self._updateQueue.put(value)
