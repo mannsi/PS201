@@ -17,8 +17,9 @@ class PsController():
     def __init__(self, debugging):
         self.guiRefreshRate = 200
         self.mainWindow = Tk()
-        img = PhotoImage(file='Anchor.gif')
+        img = Image("photo", file='electricity-24.gif')
         self.mainWindow.tk.call('wm', 'iconphoto', self.mainWindow._w, img)
+
         self.mainWindow.title(mainWindowTitle)
         self.mainWindow.geometry(mainWindowSize)
         self.topPanel = _HeaderPanel(self.mainWindow)
