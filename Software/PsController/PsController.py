@@ -6,6 +6,7 @@ from PsController.Control.Controller import Controller
 from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
+import PsController.Utilities.OsHelper as osHelper
 
 
 mainWindowSize = '650x400'
@@ -17,7 +18,11 @@ class PsController():
     def __init__(self, debugging):
         self.guiRefreshRate = 200
         self.mainWindow = Tk()
-        img = Image("photo", file='electricity-24.gif')
+        systemType = osHelper.getCurrentOs()
+        if systemType == osHelper.WINDOWS:
+            img = Image("photo", file='electricity-24.gif')
+        else:
+            img = Image("photo", file='electricity-64.gif')
         self.mainWindow.tk.call('wm', 'iconphoto', self.mainWindow._w, img)
 
         self.mainWindow.title(mainWindowTitle)
@@ -31,6 +36,13 @@ class PsController():
         if self.debugging:
             self.mainWindow.geometry('900x400')
             debugFrame = Frame(self.mainWindow)
+
+            self.btnDisconnect = Button(debugFrame, text="Disconnect", command=self.disconnectFromDevice,
+                                        state=DISABLED)
+            self.btnDisconnect.pack(side=RIGHT)
+
+            self.btnConnect = Button(debugFrame, text="Connect", command=self.connectToDevice)
+            self.btnConnect.pack(side=RIGHT)
 
             self.numOfRefreshPerSecVar = IntVar(value=2)
             self.numOfRefreshPerSec = Entry(debugFrame, textvariable=self.numOfRefreshPerSecVar, width=10)
@@ -58,13 +70,6 @@ class PsController():
             self.chkAuto.pack(side=RIGHT)
 
             debugFrame.pack(fill=X)
-
-        self.btnDisconnect = Button(self.mainWindow, text="Disconnect", command=self.disconnectFromDevice,
-                                    state=DISABLED)
-        self.btnDisconnect.pack(side=RIGHT)
-
-        self.btnConnect = Button(self.mainWindow, text="Connect", command=self.connectToDevice)
-        self.btnConnect.pack(side=RIGHT)
 
         self.subMenu = None
         self.selectedUsbPortVar = StringVar()

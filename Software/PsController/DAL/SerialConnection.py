@@ -1,8 +1,8 @@
 import serial
-import platform
 import glob
 import threading
 from PsController.Model.Constants import *
+import PsController.Utilities.OsHelper as osHelper
 
 
 class SerialConnection():
@@ -25,16 +25,14 @@ class SerialConnection():
 
     def availableConnections(self):
         """Get available usb ports"""
-        system_name = platform.system()
+        systemType = osHelper.getCurrentOs()
         available = []
-        if system_name == "Windows":
-            # Scan for available ports.
+        usbList = []
+        if systemType == osHelper.WINDOWS:
             usbList = range(256)
-        elif system_name == "Darwin":
-            # Mac
+        elif systemType == osHelper.OSX:
             usbList = glob.glob('/dev/tty*') + glob.glob('/dev/cu*')
-        else:
-            # Assume Linux or something else
+        elif systemType == osHelper.LINUX:
             usbList = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*')
 
         for port in usbList:
@@ -81,7 +79,7 @@ class SerialConnection():
             logString = "Serial data received:  %s" % serialResponse
             self.logger.debug(logString)
             return serialResponse
-        except (serial.SerialException,serial.SerialTimeoutException):
+        except (serial.SerialException, serial.SerialTimeoutException):
             self.logger.exception("Error when reading value from device.")
             self.connected = False
             self._notifyConnectionLost()
