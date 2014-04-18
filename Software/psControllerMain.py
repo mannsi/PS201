@@ -6,9 +6,11 @@ def run():
     try:
         parser = argparse.ArgumentParser()
         parser.add_argument('-d', '--debug', help='Run in debug mode', action='store_true')
+        parser.add_argument('-p', '--port', help='Force a connection to certain usb port')
         args = parser.parse_args()
         isDebugMode = args.debug
-        PsController.PsController.run(isDebugMode)
+        forcedUsbPort = args.port
+        PsController.PsController.run(isDebugMode, forcedUsbPort)
     except Exception as e:
         print(e)
 

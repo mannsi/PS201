@@ -12,6 +12,7 @@ from PsController.DAL.SerialConnection import SerialConnection
 from PsController.Utilities.Crc import Crc16
 from PsController.Utilities.DeviceResponse import DeviceCommunication, SerialException
 
+
 _connectUpdate = "CONNECT"
 _outputCurrentUpdate = "OUTPUT_CURRENT"
 _outputVoltageUpdate = "OUTPUT_VOLTAGE"
@@ -22,14 +23,13 @@ _inputVoltageUpdate = "INPUT_VOLTAGE"
 _outputOnOffUpdate = "OUTPUT_ON_OFF"
 _scheduleDoneUpdate = "SCHEDULE_DONE"
 _scheduleNewLineUpdate = "SCHEDULE_NEWLINE"
-_defaultUsbPortUpdate = "DEFAULT_USB_PORT"
+_deviceUsbPortUpdate = "DEVICE_USB_PORT"
+_listOfUsbPortsUpdate = "LIST_OF_USB_PORTS"
 
 _CONNECTED_STRING = "Connected"
 _DISCONNECTED_STRING = "Disconnected"
-_CONNECTING_STRING = "Connecting ..."
 _NO_DEVICE_FOUND_STRING = "No device found"
 _NO_USB_PORT_SELECTED_STRING = "No usb port selected"
-_LOST_CONNECTION_STRING = "Lost connection"
 
 
 class Controller():
@@ -42,8 +42,10 @@ class Controller():
         self.updateParameters = {}  # A dict with key: UpdateCondition and value (conditionValue, listOfUpdateFunctions)
         self.connected = False
         self.connection = self._createConnection()
-        self.connection.notifyOnConnectionLost(self._connectionLost)
+        self._registerListeners()
         self.autoUpdateScheduler = None
+        self.pollDeviceScheduler = None
+        self.forcedUsbPort = None
 
     def connect(self, usbPortNumber, threaded=False):
         if threaded:
@@ -54,16 +56,23 @@ class Controller():
                     self.logger.info("Empty usb port given")
                     return False
                 with self.connectionLock:
+                    startTime = time.time()
+                    self.logger.debug("Getting lock. 'connect'.")
+                    if self.connected:
+                        return True
                     self.connected = self.connection.connect(usbPortNumber)
+                    self.logger.debug("Releasing lock. 'connect'.", time.time() - startTime)
                     return self.connected
-            except Exception as e:
-                self.logger.error("Device not found on given port")
-                self.logger.exception(e)
+            except:
+                self.logger.error("Device not found on given port. %s" % usbPortNumber)
                 return False
 
     def disconnect(self):
         with self.connectionLock:
+            startTime = time.time()
+            self.logger.debug("Getting lock. 'disconnect'.")
             self.connection.disconnect()
+            self.logger.debug("Releasing lock. 'disconnect'.", time.time() - startTime)
 
         # Notify UI of the disconnect update
         self._conditionUpdated(_connectUpdate, (0, _DISCONNECTED_STRING))
@@ -78,6 +87,7 @@ class Controller():
     def setLogging(self, logLevel):
         if not self.logger:
             self.logger = logging.getLogger("PS201Logger")
+            self.logger.propagate = False
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             fileHandler = logging.FileHandler("PS201.log")
             fileHandler.setFormatter(formatter)
@@ -91,22 +101,38 @@ class Controller():
 
         self.logger.setLevel(logLevel)
 
-    def getAvailableUsbPorts(self):
-        with self.connectionLock:
-            usbPorts = self.connection.availableConnections()
-        return usbPorts
-
-    def getDeviceUsbPort(self, allUsbPorts=None, threaded=False):
+    def getAvailableUsbPorts(self, threaded=False):
         if threaded:
-            self.threadHelper.runThreadedJob(self._getDeviceUsbPortWorker, args=[allUsbPorts])
+            self.threadHelper.runThreadedJob(self._getAvailableUsbPortsWorker, args=[])
+        else:
+            with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'getAvailableUsbPorts'.")
+                usbPorts = self.connection.availableConnections()
+                self.logger.debug("Releasing lock. 'getAvailableUsbPorts'.", time.time() - startTime)
+            return usbPorts
+
+    def getDeviceUsbPort(self, allUsbPorts=None, forcedUsbPort=None, threaded=False):
+        if threaded:
+            self.threadHelper.runThreadedJob(self._getDeviceUsbPortWorker, args=[allUsbPorts, forcedUsbPort])
             return None
         else:
             with self.connectionLock:
-                if not allUsbPorts:
-                    allUsbPorts = self.connection.availableConnections()
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'getDeviceUsbPort'.")
+                if self.connected:
+                    return self.connection.currentConnectedUsbPort()
+
+                if forcedUsbPort:
+                    allUsbPorts = [forcedUsbPort]
+                else:
+                    if not allUsbPorts:
+                        allUsbPorts = self.connection.availableConnections()
                 for port in allUsbPorts:
                     if self.connection.deviceOnPort(port):
+                        self.logger.debug("Releasing lock. 'getDeviceUsbPort'.", time.time() - startTime)
                         return port
+                self.logger.debug("Releasing lock. 'getDeviceUsbPort'.", time.time() - startTime)
                 return None
 
     def setTargetVoltage(self, targetVoltage, threaded=False):
@@ -114,11 +140,14 @@ class Controller():
             self.threadHelper.runThreadedJob(self.setTargetVoltage, args=[targetVoltage])
         else:
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'setTargetVoltage'.")
                 if not self.connected:
                     self.logger.info("Trying to set voltage when not connected to device")
                     return
                 self._sendValueToDevice(READ_TARGET_VOLTAGE, targetVoltage)
                 self._checkDeviceForAcknowledgement(READ_TARGET_VOLTAGE)
+                self.logger.debug("Releasing lock. 'setTargetVoltage'.", time.time() - startTime)
             self._conditionUpdated(_targetVoltageUpdate, targetVoltage)
 
     def setTargetCurrent(self, targetCurrent, threaded=False):
@@ -126,11 +155,14 @@ class Controller():
             self.threadHelper.runThreadedJob(self.setTargetCurrent, args=[targetCurrent])
         else:
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'setTargetCurrent'.")
                 if not self.connected:
                     self.logger.info("Trying to set current when not connected to device")
                     return
                 self._sendValueToDevice(READ_TARGET_CURRENT, targetCurrent)
                 self._checkDeviceForAcknowledgement(READ_TARGET_CURRENT)
+                self.logger.debug("Releasing lock. 'setTargetCurrent'.", time.time() - startTime)
             self._conditionUpdated(_targetCurrentUpdate, targetCurrent)
 
     def setOutputOnOff(self, shouldBeOn, threaded=False):
@@ -141,11 +173,14 @@ class Controller():
             if shouldBeOn:
                 setValue = TURN_ON_OUTPUT
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'setOutputOnOff'.")
                 if not self.connected:
                     self.logger.info("Trying to set output when not connected to device")
                     return
                 self._sendValueToDevice(setValue, shouldBeOn)
                 self._checkDeviceForAcknowledgement(setValue)
+                self.logger.debug("Releasing lock. 'setOutputOnOff'.", time.time() - startTime)
             self._conditionUpdated(_outputOnOffUpdate, shouldBeOn)
 
     def notifyConnectedUpdate(self, func):
@@ -188,9 +223,18 @@ class Controller():
         """Runs the func function when the currently running schedule line finishes"""
         self._registerUpdateFunction(func, _scheduleNewLineUpdate)
 
-    def notifyDefaultUsbPortUpdate(self, func):
-        """Runs the func function when the default usb port is updated """
-        self._registerUpdateFunction(func, _defaultUsbPortUpdate)
+    def notifyDeviceUsbPortUpdate(self, func):
+        """
+        Runs the func function when the devices usb port is updated.
+        This happens f.x. when an async request for getDeviceUsbPort finds the usb port of the device
+        """
+        self._registerUpdateFunction(func, _deviceUsbPortUpdate)
+
+    def notifyUsbPortListUpdate(self, func):
+        """
+        Runs the func function when an async result of list of usb ports changes
+        """
+        self._registerUpdateFunction(func, _listOfUsbPortsUpdate)
 
     def uiPulse(self):
         """A call to this function lets the controller know that the UI is ready to receive updates"""
@@ -210,22 +254,28 @@ class Controller():
         if updateType == 0:
             # Polling updates
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'startAutoUpdate'.")
                 if not self.connected:
                     self.logger.info("Trying to start polling auto update when not connected to device")
                     return
                 self.connection.clearBuffer()
                 self._sendValueToDevice(STOP_STREAM)
                 self._checkDeviceForAcknowledgement(STOP_STREAM)
+                self.logger.debug("Releasing lock. 'startAutoUpdate'.", time.time() - startTime)
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self.updateAllValuesWorker, interval)
         elif updateType == 1:
             # Streaming updates
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. 'startAutoUpdate'.")
                 if not self.connected:
                     self.logger.info("Trying to start streaming auto update when not connected to device")
                     return
                 self._sendValueToDevice(START_STREAM)
                 self._checkDeviceForAcknowledgement(START_STREAM)
                 self.threadHelper.runThreadedJob(self.updateAllValuesWorker, args=[])
+                self.logger.debug("Releasing lock. 'startAutoUpdate'.", time.time() - startTime)
             self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
 
     def stopAutoUpdate(self):
@@ -277,9 +327,15 @@ class Controller():
         return True
 
     def stopSchedule(self):
-        self._conditionUpdated(_scheduleDoneUpdate, uuid.uuid4())# Add a random UUID to fake a change event
+        self._conditionUpdated(_scheduleDoneUpdate, uuid.uuid4())  # Add a random UUID to fake a change event
         self.threadHelper.stopSchedule()
         self._resetScheduleLineParameter()
+
+    def pollForDeviceDevice(self):
+        if self.pollDeviceScheduler is None or not self.pollDeviceScheduler.running:
+                self.logger.debug("turning on poll device sched")
+                self.pollDeviceScheduler = self.threadHelper.runIntervalJob(
+                    function=self._getDeviceUsbPortWorker, interval=2, args=[None, self.forcedUsbPort])
 
     def _resetScheduleLineParameter(self):
         self.updateParameters[_scheduleNewLineUpdate][0] = -1
@@ -302,8 +358,8 @@ class Controller():
             deviceValues.outputOn = splitValues[6]
 
             return deviceValues
-        except Exception as e:
-            self.logger.exception(e)
+        except:
+            self.logger.error("Unable to get all values from device")
 
     def getOutputVoltage(self):
         value = self._getValueFromDevice(WRITE_OUTPUT_VOLTAGE)
@@ -348,20 +404,22 @@ class Controller():
         return bool(value)
 
     def _getValueFromDevice(self, command):
-        try:
-            with self.connectionLock:
-                if not self.connected:
-                    self.logger.info("Trying to get value with command:", command, "when not connected to device")
-                    return None
-                self._sendValueToDevice(command)
-                acknowledgement = self._getDeviceResponse()
-                self._verifyAcknowledgement(acknowledgement, command, data='')
-                response = self._getDeviceResponse()
-                self._verifyResponse(response, command, data='')
-            return response.data
-        except Exception as e:
-            self.logger.exception(e)
-            return None
+        with self.connectionLock:
+            startTime = time.time()
+            self.logger.debug("Getting lock. '_getValueFromDevice'.")
+            if not self.connected:
+                logString = "Trying to get value with command: '" + \
+                            readableConstant(command) + \
+                            "' when not connected to device"
+                self.logger.info(logString)
+                return None
+            self._sendValueToDevice(command)
+            acknowledgement = self._getDeviceResponse()
+            self._verifyAcknowledgement(acknowledgement, command, data='')
+            response = self._getDeviceResponse()
+            self._verifyResponse(response, command, data='')
+            self.logger.debug("Releasing lock. '_getValueFromDevice'.", time.time() - startTime)
+        return response.data
 
     def _createConnection(self):
         return SerialConnection(
@@ -376,40 +434,24 @@ class Controller():
             self.updateParameters[condition] = [None, []]
         self.updateParameters[condition][1].append(func)
 
-    def _getDeviceUsbPortWorker(self, allUsbPorts):
-        try:
-            with self.connectionLock:
-                if not allUsbPorts:
-                    allUsbPorts = self.connection.availableConnections()
-                defaultPort = None
-                for port in allUsbPorts:
-                    if self.connection.deviceOnPort(port):
-                        defaultPort = port
-                        break
-            if defaultPort:
-                self._conditionUpdated(_defaultUsbPortUpdate, defaultPort)
-        except Exception as e:
-            self.logger.exception(e)
-
     def updateAllValuesWorker(self):
-        try:
-            deviceValues = self.getAllValues()
-            if deviceValues is None:
-                return
-            self._conditionUpdated(_outputVoltageUpdate, deviceValues.outputVoltage)
-            self._conditionUpdated(_outputCurrentUpdate, deviceValues.outputCurrent)
-            self._conditionUpdated(_targetVoltageUpdate, deviceValues.targetVoltage)
-            self._conditionUpdated(_targetCurrentUpdate, deviceValues.targetCurrent)
-            self._conditionUpdated(_preRegVoltageUpdate, deviceValues.preRegVoltage)
-            self._conditionUpdated(_inputVoltageUpdate, deviceValues.inputVoltage)
-            self._conditionUpdated(_outputOnOffUpdate, deviceValues.outputOn)
-        except Exception as e:
-            self.logger.exception(e)
+        deviceValues = self.getAllValues()
+        if deviceValues is None:
+            return
+        self._conditionUpdated(_outputVoltageUpdate, deviceValues.outputVoltage)
+        self._conditionUpdated(_outputCurrentUpdate, deviceValues.outputCurrent)
+        self._conditionUpdated(_targetVoltageUpdate, deviceValues.targetVoltage)
+        self._conditionUpdated(_targetCurrentUpdate, deviceValues.targetCurrent)
+        self._conditionUpdated(_preRegVoltageUpdate, deviceValues.preRegVoltage)
+        self._conditionUpdated(_inputVoltageUpdate, deviceValues.inputVoltage)
+        self._conditionUpdated(_outputOnOffUpdate, deviceValues.outputOn)
 
     def _updateStreamValueWorker(self):
         try:
             respondList = []
             with self.connectionLock:
+                startTime = time.time()
+                self.logger.debug("Getting lock. '_updateStreamValueWorker'.")
                 if not self.connected:
                     self.logger.info("Trying to get stream values when not connected to device")
                     return
@@ -417,6 +459,7 @@ class Controller():
                 while response:
                     respondList.append(response)
                     response = self._getDeviceResponse()
+                self.logger.debug("releasing lock. '_updateStreamValueWorker'.", time.time() - startTime)
             if not respondList:
                 return
             commandDataList = [(x.command, x.data) for x in respondList]
@@ -447,18 +490,26 @@ class Controller():
             self.logger.info("No usb port given")
             self._conditionUpdated(_connectUpdate, (0, _NO_USB_PORT_SELECTED_STRING))
             return
-        else:
-            self._conditionUpdated(_connectUpdate, (0, _CONNECTING_STRING))
-        self.connected = self.connect(usbPortNumber)
-        if self.connected:
+        connected = self.connect(usbPortNumber)
+        if connected:
             self._conditionUpdated(_connectUpdate, (1, _CONNECTED_STRING))
         else:
             self._conditionUpdated(_connectUpdate, (0, _NO_DEVICE_FOUND_STRING))
 
+    def _getDeviceUsbPortWorker(self, allUsbPorts=None, forcedUsbPort=None):
+        devicePort = self.getDeviceUsbPort(allUsbPorts, forcedUsbPort)
+        if devicePort is None:
+            devicePort = ""
+        self._conditionUpdated(_deviceUsbPortUpdate, devicePort)
+
+    def _getAvailableUsbPortsWorker(self):
+        ports = self.getAvailableUsbPorts()
+        self._conditionUpdated(condition=_listOfUsbPortsUpdate, value=ports)
+
     def _connectionLost(self):
         self.connected = False
         self.stopAutoUpdate()
-        self._conditionUpdated(_connectUpdate, (0, _LOST_CONNECTION_STRING))
+        self._conditionUpdated(_connectUpdate, (0, _DISCONNECTED_STRING))
 
     def _addJobForLine(self, line, logToDataFile, filePath):
         self._conditionUpdated(_scheduleNewLineUpdate, line.rowNumber)
@@ -489,11 +540,8 @@ class Controller():
             file.write(fileString)
 
     def _checkDeviceForAcknowledgement(self, command, data=''):
-        try:
-            deviceResponse = self._getDeviceResponse()
-            self._verifyAcknowledgement(deviceResponse, command, data)
-        except Exception as e:
-            self.logger.exception(e)
+        deviceResponse = self._getDeviceResponse()
+        self._verifyAcknowledgement(deviceResponse, command, data)
 
     def _verifyResponse(self, response, command, data):
         self._verifyCrcCode(response, command, data)
@@ -501,12 +549,16 @@ class Controller():
     def _verifyAcknowledgement(self, acknowledgementResponse, command, data):
         if not acknowledgementResponse:
             self._logSendingDataToDevice(command, data)
-            raise Exception("No response from device")
-        if acknowledgementResponse.command == NOT_ACKNOWLEDGE:
-            self._logTransmissionError("Received 'NOT ACKNOWLEDGE' from device", command, data, acknowledgementResponse)
+            logString = "No response from device when sending '" + readableConstant(command) + "'"
+            self.logger.error(logString)
+        elif acknowledgementResponse.command == NOT_ACKNOWLEDGE:
+            logString = "Received 'NOT ACKNOWLEDGE' from device." \
+                        "Command sent to device: '" + readableConstant(command) + "'"
+            self._logTransmissionError(logString, command, data, acknowledgementResponse)
         elif acknowledgementResponse.command != ACKNOWLEDGE:
-            self._logTransmissionError("Received neither 'ACKNOWLEDGE' nor 'NOT ACKNOWLEDGE' from device", command,
-                                       data, acknowledgementResponse)
+            logString = "Received neither 'ACKNOWLEDGE' nor 'NOT ACKNOWLEDGE' from device. " \
+                        "Command sent to device: '" + readableConstant(command) + "'"
+            self._logTransmissionError(logString, command, data, acknowledgementResponse)
         else:
             self._verifyCrcCode(acknowledgementResponse, command, data)
 
@@ -516,6 +568,7 @@ class Controller():
         self._logReceivingDeviceData(response)
 
     def _logSendingDataToDevice(self, command, data):
+        # TODO add error handling
         sendingData = DeviceCommunication.toReadableSerial(command, data)
         self.logger.error("Data sent to device: %s" % ''.join(sendingData))
 
@@ -551,20 +604,41 @@ class Controller():
             return False
 
     def _getDeviceResponse(self):
-        deviceResponse = DataAccess.getResponseFromDevice(self.connection)
-        if deviceResponse is not None:
-            logString = "Got response command '" + readableConstant(deviceResponse.command) + "' with data '" \
-                        + deviceResponse.data + "' from device"
-            self.logger.info(logString)
-        return deviceResponse
+        try:
+            deviceResponse = DataAccess.getResponseFromDevice(self.connection)
+            if deviceResponse is not None:
+                logString = "Got response command '" + readableConstant(deviceResponse.command) + "' with data '" \
+                            + deviceResponse.data + "' from device"
+                self.logger.info(logString)
+            return deviceResponse
+        except:
+            self.logger.error("Error getting response from device")
 
     def _sendValueToDevice(self, command, data=''):
-        logString = "Sending command '" + readableConstant(command) + "' with data '" + str(data) + "' to device"
-        self.logger.info(logString)
-        DataAccess.sendValueToDevice(self.connection, command, data)
+        try:
+            logString = "Sending command '" + readableConstant(command) + "' with data '" + str(data) + "' to device"
+            self.logger.info(logString)
+            DataAccess.sendValueToDevice(self.connection, command, data)
+        except:
+            self.logger.error("Error sending data: '", data, "' to device")
 
     def _conditionUpdated(self, condition, value):
         # Add to update queue if anybody is listening for the update
         if condition in self.updateParameters:
             self._updateQueue.put(condition)
             self._updateQueue.put(value)
+
+    def _registerListeners(self):
+        self.connection.notifyOnConnectionLost(self._connectionLost)
+        self.notifyConnectedUpdate(self._connectionUpdateListener)
+
+    def _connectionUpdateListener(self, connected):
+        """This function is needed to make sure we are thread safe. Workers cannot assign using self"""
+        self.connected = connected[0]
+        if self.connected:
+            if self.pollDeviceScheduler is not None:
+                self.logger.debug("shutting down poll device sched")
+                self.pollDeviceScheduler.shutdown(wait=False)
+        else:
+            self._conditionUpdated(_deviceUsbPortUpdate, "")
+            self.pollForDeviceDevice()

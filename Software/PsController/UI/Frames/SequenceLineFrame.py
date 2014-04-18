@@ -25,7 +25,6 @@ class SequenceLineFrame(Frame):
         self.initializingView = False
         self.verticalScrollBar = None
 
-
     def _on_mousewheel(self, event):
         if self.scrollbarActive:
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")

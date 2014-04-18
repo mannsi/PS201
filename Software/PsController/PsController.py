@@ -7,7 +7,7 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 import PsController.Utilities.OsHelper as osHelper
-
+from PsController.UI.Controls.ToolTip import ToolTip
 
 mainWindowSize = '650x400'
 mainWindowTitle = "PS201 Controller"
@@ -15,7 +15,7 @@ controller = Controller()
 
 
 class PsController():
-    def __init__(self, debugging):
+    def __init__(self, debugging, forcedUsbPort):
         self.guiRefreshRate = 200
         self.mainWindow = Tk()
         systemType = osHelper.getCurrentOs()
@@ -32,9 +32,14 @@ class PsController():
         self.tabControl = TabControl(self.mainWindow)
         self.tabControl.pack(fill=BOTH, expand=1)
         self.debugging = debugging
+        self.forcedUsbPort = forcedUsbPort
+        controller.forcedUsbPort = forcedUsbPort
 
         if self.debugging:
-            self.mainWindow.geometry('900x400')
+            if systemType == osHelper.WINDOWS:
+                self.mainWindow.geometry('900x400')
+            else:
+                self.mainWindow.geometry('1100x400')
             debugFrame = Frame(self.mainWindow)
 
             self.btnDisconnect = Button(debugFrame, text="Disconnect", command=self.disconnectFromDevice,
@@ -73,9 +78,15 @@ class PsController():
 
         self.subMenu = None
         self.selectedUsbPortVar = StringVar()
+        self.availableUsbPorts = []
+        if not self.forcedUsbPort:
+            controller.getAvailableUsbPorts(threaded=True)
+            self.deviceUsbPort = None
+        controller.getDeviceUsbPort(threaded=True, forcedUsbPort=self.forcedUsbPort)
         self.addMenuBar()
         controller.notifyConnectedUpdate(self.updateConnectedStatus)
-        controller.notifyDefaultUsbPortUpdate(self.defaultPortUpdate)
+        controller.notifyDeviceUsbPortUpdate(self.deviceUsbPortUpdate)
+        controller.notifyUsbPortListUpdate(self.usbPortListUpdate)
 
     @staticmethod
     def debugRefreshValues():
@@ -94,12 +105,14 @@ class PsController():
         connected = value[0]
         if connected:
             self.startAutoUpdate()
-            self.btnConnect.configure(state=DISABLED)
-            self.btnDisconnect.configure(state=NORMAL)
+            if self.debugging:
+                self.btnConnect.configure(state=DISABLED)
+                self.btnDisconnect.configure(state=NORMAL)
         else:
             controller.stopAutoUpdate()
-            self.btnConnect.configure(state=NORMAL)
-            self.btnDisconnect.configure(state=DISABLED)
+            if self.debugging:
+                self.btnConnect.configure(state=NORMAL)
+                self.btnDisconnect.configure(state=DISABLED)
 
     def startAutoUpdate(self):
         if self.debugging:
@@ -119,7 +132,7 @@ class PsController():
         toolsMenu = Menu(menuBar, tearoff=0)
         menuBar.add_cascade(label="Tools", menu=toolsMenu)
         self.subMenu = Menu(toolsMenu, tearoff=0)
-        self.buildUsbPortMenu(threaded=True)
+        self.buildUsbPortMenu()
         toolsMenu.add_cascade(label='Usb port', menu=self.subMenu, underline=0)
 
         editMenu = Menu(menuBar, tearoff=0)
@@ -128,21 +141,44 @@ class PsController():
 
         self.mainWindow.config(menu=menuBar)
 
-    def buildUsbPortMenu(self, threaded=False):
+    def buildUsbPortMenu(self):
         self.subMenu.delete(0, END)
-        availableUsbPorts = controller.getAvailableUsbPorts()
-        defaultUsbPort = controller.getDeviceUsbPort(availableUsbPorts, threaded)
 
-        for port in availableUsbPorts:
-            self.subMenu.add_radiobutton(label=port, value=port, var=self.selectedUsbPortVar)
-            if defaultUsbPort == port:
-                self.selectedUsbPortVar.set(port)
-                break
-        self.subMenu.add_separator()
+        if self.forcedUsbPort:
+            self.subMenu.add_radiobutton(label=self.forcedUsbPort, value=self.forcedUsbPort, var=self.selectedUsbPortVar)
+            self.selectedUsbPortVar.set(self.forcedUsbPort)
+            self.usbPortSelected()
+            return
+
+        if self.deviceUsbPort and self.deviceUsbPort not in self.availableUsbPorts:
+            self.availableUsbPorts.append(self.deviceUsbPort)
+
+        if self.availableUsbPorts:
+            for port in self.availableUsbPorts:
+                self.subMenu.add_radiobutton(label=port, value=port, var=self.selectedUsbPortVar,
+                                             command=self.usbPortSelected)
+                if self.deviceUsbPort == port:
+                    self.selectedUsbPortVar.set(port)
+            self.subMenu.add_separator()
         self.subMenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
 
-    def defaultPortUpdate(self, port):
-        self.selectedUsbPortVar.set(port)
+    def usbPortSelected(self):
+        if controller.connected:
+            controller.disconnect()
+        self.connectToDevice()
+
+    def deviceUsbPortUpdate(self, port):
+        self.deviceUsbPort = port
+        self.buildUsbPortMenu()
+        if port == "":
+            # No port found for device so we start polling for device
+            controller.pollForDeviceDevice()
+        else:
+            self.usbPortSelected()
+
+    def usbPortListUpdate(self, usbPorts):
+        self.availableUsbPorts = usbPorts
+        self.buildUsbPortMenu()
 
     def showAboutDialog(self):
         AboutDialog(self.mainWindow, title="About", showCancel=False)
@@ -178,20 +214,24 @@ class _HeaderPanel(Frame):
         Frame.__init__(self, parent)
         self.parent = parent
 
-        topLinFrame = Frame(self)
+        topLineFrame = Frame(self)
+
         self.chkOutputOnVar = IntVar(value=0)
-        self.chkOutputOn = Checkbutton(topLinFrame, text="Output On", variable=self.chkOutputOnVar, state=DISABLED,
+        self.chkOutputOn = Checkbutton(topLineFrame, text="Output On", variable=self.chkOutputOnVar, state=DISABLED,
                                        command=self.outPutOnOff)
-        self.chkOutputOn.pack(side=LEFT, anchor=N)
-        Label(topLinFrame, text="", width=15).pack(side=RIGHT, anchor=N)
-        statusPanel = Frame(topLinFrame)
-        self.lblStatus = Label(statusPanel, text="Status: ").pack(side=LEFT)
-        self.lblStatusValueVar = StringVar(value="Not connected")
-        self.lblStatusValue = Label(statusPanel, textvariable=self.lblStatusValueVar).pack()
-        statusPanel.pack()
-        topLinFrame.pack(fill=X)
+        self.chkOutputOn.grid(row=0, column=0)
+        self.lblStatusValueVar = StringVar(value="Searching for device ...")
+        Label(topLineFrame, textvariable=self.lblStatusValueVar).grid(row=0, column=1)
+        self.lblConnectedImage = Label(topLineFrame)
+        self.connectedImageToolTip = ToolTip(self.lblConnectedImage, msg="", delay=0.5)
+        self.lblConnectedImage.grid(row=0, column=2)
+        self.showConnectedState(False)
+
+        topLineFrame.columnconfigure(1, weight=1)
+        topLineFrame.pack(fill=X)
+
         self.valuesFrame = _ValuesFrame(self)
-        self.valuesFrame.pack(pady=10)
+        self.valuesFrame.pack()
         controller.notifyConnectedUpdate(self.connectedUpdated)
         controller.notifyOutputUpdate(self.outPutOnOffUpdate)
 
@@ -201,13 +241,24 @@ class _HeaderPanel(Frame):
 
     def connectedUpdated(self, value):
         connected = value[0]
-        connectedString = value[1]
+        self.showConnectedState(connected)
+
+    def showConnectedState(self, connected):
         if connected:
             state = NORMAL
+            connectedImage = Image("photo", file='green-circle-16.gif')
+            toolTipMessage = "Connected"
+            self.lblStatusValueVar.set("")
         else:
             state = DISABLED
+            connectedImage = Image("photo", file='red-circle-16.gif')
+            toolTipMessage = "Not connected"
+            self.lblStatusValueVar.set("Searching for device ...")
+
+        self.connectedImageToolTip.message(toolTipMessage)
+        self.lblConnectedImage.configure(image=connectedImage)
+        self.lblConnectedImage.img = connectedImage
         self.chkOutputOn.configure(state=state)
-        self.lblStatusValueVar.set(connectedString)
 
     def outPutOnOffUpdate(self, newOutputOn):
         self.chkOutputOnVar.set(newOutputOn == 1)
@@ -290,9 +341,8 @@ class TabControl(Notebook):
         self.select(self.sequenceTab)
 
 
-def run(isDebugMode):
-    psFrame = PsController(isDebugMode)
-    #psFrame.connectToDevice()
+def run(isDebugMode, forcedUsbPort=None):
+    psFrame = PsController(isDebugMode, forcedUsbPort)
     psFrame.show()
 
 

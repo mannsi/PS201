@@ -61,12 +61,16 @@ class SerialConnection():
         self.connection.flushInput()
 
     def deviceOnPort(self, usbPort):
-        tempConnection = serial.Serial(usbPort, self.baudRate, timeout=self.timeout)
-        self._sendToDevice(tempConnection, self.idMessage)
-        deviceResponse = self._readDeviceResponse(tempConnection)
         logString = "Checking if device is on port " + usbPort
         self.logger.info(logString)
-        return self.deviceVerificationFunc(deviceResponse)
+        try:
+            tempConnection = serial.Serial(usbPort, self.baudRate, timeout=self.timeout)
+            self._sendToDevice(tempConnection, self.idMessage)
+            deviceResponse = self._readDeviceResponse(tempConnection)
+            return self.deviceVerificationFunc(deviceResponse)
+        except:
+            logString = "Device not found on port " + usbPort
+            self.logger.info(logString)
 
     def notifyOnConnectionLost(self, func):
         self.connectNotificationFunctionList.append(func)
@@ -79,10 +83,10 @@ class SerialConnection():
             logString = "Serial data received:  %s" % serialResponse
             self.logger.debug(logString)
             return serialResponse
-        except (serial.SerialException, serial.SerialTimeoutException):
-            self.logger.exception("Error when reading value from device.")
+        except Exception:
             self.connected = False
             self._notifyConnectionLost()
+            raise Exception("Error when reading value from device.")
 
     def set(self, sendingData):
         if not self.connected:
@@ -91,9 +95,9 @@ class SerialConnection():
             self.logger.debug("Serial data sent:%s" % sendingData)
             self._sendToDevice(self.connection, sendingData)
         except serial.SerialTimeoutException:
-            self.logger.exception("Error when setting value with data: %s ", sendingData)
             self.connected = False
             self._notifyConnectionLost()
+            raise Exception("Error when setting value with data: %s ", sendingData)
 
     def _sendToDevice(self, serialConnection, data):
         with self.processLock:
@@ -125,3 +129,6 @@ class SerialConnection():
     def _notifyConnectionLost(self):
         for func in self.connectNotificationFunctionList:
             func()
+
+    def currentConnectedUsbPort(self):
+        return self.connection.port
