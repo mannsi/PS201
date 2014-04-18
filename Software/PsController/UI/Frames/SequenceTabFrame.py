@@ -57,9 +57,9 @@ class SequenceTabFrame(Frame):
                     if dialog.filePath is not "":
                         scheduleStarted = self.controller.startSchedule(
                             self.sequenceLineFrame.getLines(),
-                            startingTargetVoltage=self.controller.currentValues.targetVoltage,
-                            startingTargetCurrent=self.controller.currentValues.targetCurrent,
-                            startingOutputOn=self.controller.currentValues.outputOn,
+                            endingTargetVoltage=0,
+                            endingTargetCurrent=0,
+                            endingOutputOn=False,
                             logWhenValuesChange=True,
                             filePath=dialog.filePath)
                 elif dialog.logEveryXSeconds:
@@ -67,17 +67,17 @@ class SequenceTabFrame(Frame):
                         scheduleStarted = self.controller.startSchedule(
                             self.sequenceLineFrame.getLines(),
                             useLoggingTimeInterval=True,
-                            startingTargetVoltage=self.controller.currentValues.targetVoltage,
-                            startingTargetCurrent=self.controller.currentValues.targetCurrent,
-                            startingOutputOn=self.controller.currentValues.outputOn,
+                            endingTargetVoltage=0,
+                            endingTargetCurrent=0,
+                            endingOutputOn=False,
                             loggingTimeInterval=dialog.timeInterval,
                             filePath=dialog.filePath)
         else:
             scheduleStarted = self.controller.startSchedule(
                 self.sequenceLineFrame.getLines(),
-                startingTargetVoltage=self.controller.currentValues.targetVoltage,
-                startingTargetCurrent=self.controller.currentValues.targetCurrent,
-                startingOutputOn=self.controller.currentValues.outputOn)
+                endingTargetVoltage=0,
+                endingTargetCurrent=0,
+                endingOutputOn=False)
         if scheduleStarted:
             self.btnStop.configure(state=NORMAL)
             self.btnStart.configure(state=DISABLED)

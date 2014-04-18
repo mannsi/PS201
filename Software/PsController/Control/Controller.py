@@ -363,9 +363,9 @@ class Controller():
 
     def startSchedule(self,
                       lines,
-                      startingTargetVoltage,
-                      startingTargetCurrent,
-                      startingOutputOn,
+                      endingTargetVoltage,
+                      endingTargetCurrent,
+                      endingOutputOn,
                       logWhenValuesChange=False,
                       filePath=None,
                       useLoggingTimeInterval=False,
@@ -397,7 +397,7 @@ class Controller():
         self.setOutputOnOff(True)
         listOfFunctions.append(self._resetDevice)
         listOfFiringTimes.append(nextFireTime)
-        listOfArgs.append([startingTargetVoltage, startingTargetCurrent, startingOutputOn])
+        listOfArgs.append([endingTargetVoltage, endingTargetCurrent, endingOutputOn])
         self.threadHelper.runSchedule(listOfFunctions, listOfFiringTimes, listOfArgs, useLoggingTimeInterval,
                                       loggingTimeInterval, filePath, self._logValuesToFile)
         return True
