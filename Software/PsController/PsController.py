@@ -44,20 +44,20 @@ class PsController():
 
             self.btnDisconnect = Button(debugFrame, text="Disconnect", command=self.disconnectFromDevice,
                                         state=DISABLED)
-            self.btnDisconnect.pack(side=RIGHT)
+            #self.btnDisconnect.pack(side=RIGHT)
 
             self.btnConnect = Button(debugFrame, text="Connect", command=self.connectToDevice)
-            self.btnConnect.pack(side=RIGHT)
+            #self.btnConnect.pack(side=RIGHT)
 
             self.numOfRefreshPerSecVar = IntVar(value=2)
             self.numOfRefreshPerSec = Entry(debugFrame, textvariable=self.numOfRefreshPerSecVar, width=10)
-            self.numOfRefreshPerSec.pack(side=RIGHT)
-            Label(debugFrame, text="Refresh per sec").pack(side=RIGHT)
+            #self.numOfRefreshPerSec.pack(side=RIGHT)
+            #Label(debugFrame, text="Refresh per sec").pack(side=RIGHT)
 
             self.updateTypeCmb = Combobox(debugFrame, values=["Polling", "Streaming"])
-            self.updateTypeCmb.pack(side=RIGHT)
+            #self.updateTypeCmb.pack(side=RIGHT)
             self.updateTypeCmb.current(newindex=1)
-            Label(debugFrame, text="Update type").pack(side=RIGHT)
+            #Label(debugFrame, text="Update type").pack(side=RIGHT)
 
             self.loggingCmb = Combobox(debugFrame, values=["Error", "Info", "Debug"])
             self.loggingCmb.bind("<<ComboboxSelected>>", self._logging_sel_changed)
@@ -67,12 +67,12 @@ class PsController():
             self._logging_sel_changed(self.loggingCmb)
 
             self.btnUpdateAll = Button(debugFrame, text="Refresh", command=self.debugRefreshValues)
-            self.btnUpdateAll.pack(side=RIGHT)
+            #self.btnUpdateAll.pack(side=RIGHT)
 
             self.chkAutoVar = IntVar(value=1)
             self.chkAuto = Checkbutton(debugFrame, text="Auto update", variable=self.chkAutoVar,
                                        command=self.debugSwitchAutoMode)
-            self.chkAuto.pack(side=RIGHT)
+            #self.chkAuto.pack(side=RIGHT)
 
             debugFrame.pack(fill=X)
 
@@ -91,7 +91,7 @@ class PsController():
     @staticmethod
     def debugRefreshValues():
         if controller.connected:
-            controller.updateAllValuesWorker()
+            controller._updateAllValuesWorker()
 
     def debugSwitchAutoMode(self):
         chkValue = self.chkAutoVar.get()
