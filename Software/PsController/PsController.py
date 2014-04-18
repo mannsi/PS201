@@ -329,14 +329,14 @@ class TabControl(Notebook):
         Notebook.__init__(self, parent, name='tab control')
 
         self.statusTab = StatusTabFrame(self, controller)
-        self.sequenceTab = SequenceTabFrame(self, self.resetSequenceTab, False, controller)
+        self.sequenceTab = SequenceTabFrame(self, self.resetSequenceTab, controller)
 
         self.add(self.statusTab, text='Status')
         self.add(self.sequenceTab, text='Sequence')
 
     def resetSequenceTab(self):
         self.forget(self.sequenceTab)
-        self.sequenceTab = SequenceTabFrame(self, self.resetSequenceTab, False, controller)
+        self.sequenceTab = SequenceTabFrame(self, self.resetSequenceTab, controller)
         self.add(self.sequenceTab, text='Sequence')
         self.select(self.sequenceTab)
 

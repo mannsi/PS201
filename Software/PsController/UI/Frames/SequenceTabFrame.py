@@ -5,7 +5,7 @@ from PsController.UI.Frames.SequenceLineFrame import SequenceLineFrame
 
 
 class SequenceTabFrame(Frame):
-    def __init__(self, parent, resetTabM, connected, controller):
+    def __init__(self, parent, resetTabM, controller):
         Frame.__init__(self, parent)
         self.parent = parent
         self.resetTabM = resetTabM
@@ -18,7 +18,7 @@ class SequenceTabFrame(Frame):
         self.btnStop = None
         self.btnStart = None
         self.sequenceLineFrame = None
-        self.initializeView(connected)
+        self.initializeView(controller.connected)
         controller.notifyScheduleDoneUpdate(self.sequenceDone)
         controller.notifyScheduleLineUpdate(self.sequenceLineChanged)
         controller.notifyConnectedUpdate(self.connectedChanged)
