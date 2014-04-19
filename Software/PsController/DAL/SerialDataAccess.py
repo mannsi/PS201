@@ -1,10 +1,10 @@
-from PsController.Utilities.DeviceResponse import DeviceCommunication
+from PsController.DAL.SerialMapping import SerialMapping
 
 
 class DataAccess():
     @staticmethod
     def sendValueToDevice(connection, command, data=''):
-        bytesToSend = DeviceCommunication.toSerial(command, data)
+        bytesToSend = SerialMapping.toSerial(command, data)
         connection.set(bytesToSend)
 
     @staticmethod
@@ -12,4 +12,4 @@ class DataAccess():
         serialValue = connection.get()
         if not serialValue:
             return None
-        return DeviceCommunication.fromSerial(serialValue)
+        return SerialMapping.fromSerial(serialValue)

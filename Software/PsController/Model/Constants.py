@@ -28,38 +28,3 @@ TURN_ON_OUTPUT = int('0xc2', 16)
 TURN_OFF_OUTPUT = int('0xc3', 16)
 START_STREAM = int('0xa2', 16)
 STOP_STREAM = int('0xa3', 16)
-
-
-def readableConstant(command):
-    if command == WRITE_OUTPUT_VOLTAGE:
-        return "Write output voltage"
-    elif command == WRITE_OUTPUT_CURRENT:
-        return "Write output current"
-    elif command == WRITE_INPUT_VOLTAGE:
-        return "Write input voltage"
-    elif command == WRITE_PRE_REGULATOR_VOLTAGE:
-        return "Write pre req voltage"
-    elif command == WRITE_ALL:
-        return "Write all"
-    elif command == WRITE_IS_OUTPUT_ON:
-        return "Write is output on"
-    elif command == WRITE_TARGET_VOLTAGE:
-        return "Write target voltage"
-    elif command == WRITE_TARGET_CURRENT:
-        return "Write target current"
-    elif command == READ_TARGET_VOLTAGE:
-        return "Read target voltage"
-    elif command == READ_TARGET_CURRENT:
-        return "Read target current"
-    elif command == TURN_ON_OUTPUT:
-        return "Turn output on"
-    elif command == TURN_OFF_OUTPUT:
-        return "Turn output off"
-    elif command == START_STREAM:
-        return "Start stream"
-    elif command == STOP_STREAM:
-        return "Stop stream"
-    elif command == ACKNOWLEDGE:
-        return "ACKNOWLEDGE"
-    elif command == NOT_ACKNOWLEDGE:
-        return "NOT_ACKNOWLEDGE"

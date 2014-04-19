@@ -10,7 +10,7 @@ from PsController.Model.DeviceValues import DeviceValues
 from PsController.Model.Constants import *
 from PsController.DAL.SerialConnection import SerialConnection
 from PsController.Utilities.Crc import Crc16
-from PsController.Utilities.DeviceResponse import DeviceCommunication, SerialException
+from PsController.DAL.SerialMapping import SerialMapping, SerialException
 
 
 _connectUpdate = "CONNECT"
@@ -416,7 +416,7 @@ class Controller():
             logging.getLogger(_LOGGER_NAME).debug("Getting lock. '_getValueFromDevice'.")
             if not self.connected:
                 logString = "Trying to get value with command: '" + \
-                            readableConstant(command) + \
+                            Controller.readableCommand(command) + \
                             "' when not connected to device"
                 logging.getLogger(_LOGGER_NAME).info(logString)
                 return None
@@ -581,15 +581,15 @@ class Controller():
     def _verifyAcknowledgement(cls, acknowledgementResponse, command, data):
         if not acknowledgementResponse:
             cls._logSendingDataToDevice(command, data)
-            logString = "No response from device when sending '" + readableConstant(command) + "'"
+            logString = "No response from device when sending '" + Controller.readableCommand(command) + "'"
             logging.getLogger(_LOGGER_NAME).error(logString)
         elif acknowledgementResponse.command == NOT_ACKNOWLEDGE:
             logString = "Received 'NOT ACKNOWLEDGE' from device." \
-                        "Command sent to device: '" + readableConstant(command) + "'"
+                        "Command sent to device: '" + Controller.readableCommand(command) + "'"
             cls._logTransmissionError(logString, command, data, acknowledgementResponse)
         elif acknowledgementResponse.command != ACKNOWLEDGE:
             logString = "Received neither 'ACKNOWLEDGE' nor 'NOT ACKNOWLEDGE' from device. " \
-                        "Command sent to device: '" + readableConstant(command) + "'"
+                        "Command sent to device: '" + Controller.readableCommand(command) + "'"
             cls._logTransmissionError(logString, command, data, acknowledgementResponse)
         else:
             cls._verifyCrcCode(acknowledgementResponse, command, data)
@@ -603,7 +603,7 @@ class Controller():
     @classmethod
     def _logSendingDataToDevice(cls, command, data):
         try:
-            sendingData = DeviceCommunication.toReadableSerial(command, data)
+            sendingData = cls.toReadableSerial(command, data)
         except:
             logging.getLogger(_LOGGER_NAME).error("Could not convert sending data to readable form")
             return
@@ -627,7 +627,7 @@ class Controller():
     @staticmethod
     def _getDeviceIdMessage():
         """Gives the messages needed to send to device to verify that device is using a given port"""
-        return DeviceCommunication.toSerial(HANDSHAKE, data='')
+        return SerialMapping.toSerial(HANDSHAKE, data='')
 
     @staticmethod
     def _deviceIdResponseFunction(serialResponse):
@@ -636,8 +636,8 @@ class Controller():
             if not serialResponse:
                 logging.getLogger(_LOGGER_NAME).info("Did not receive an ACKNOWLEDGE response")
                 return False
-            response = DeviceCommunication.fromSerial(serialResponse)
-            logging.getLogger(_LOGGER_NAME).info("Received %s", readableConstant(response.command))
+            response = SerialMapping.fromSerial(serialResponse)
+            logging.getLogger(_LOGGER_NAME).info("Received %s", Controller.readableCommand(response.command))
             return response.command == ACKNOWLEDGE
         except SerialException:
             logging.getLogger(_LOGGER_NAME).info("Did not receive an ACKNOWLEDGE response")
@@ -648,8 +648,8 @@ class Controller():
         try:
             deviceResponse = DataAccess.getResponseFromDevice(connection)
             if deviceResponse is not None:
-                logString = "Got response command '" + readableConstant(deviceResponse.command) + "' with data '" \
-                            + deviceResponse.data + "' from device"
+                logString = "Got response command '" + Controller.readableCommand(deviceResponse.command) + \
+                            "' with data '" + deviceResponse.data + "' from device"
                 logging.getLogger(_LOGGER_NAME).info(logString)
             return deviceResponse
         except:
@@ -658,8 +658,50 @@ class Controller():
     @staticmethod
     def _sendValueToDevice(connection, command, data=''):
         try:
-            logString = "Sending command '" + readableConstant(command) + "' with data '" + str(data) + "' to device"
+            logString = "Sending command '" + Controller.readableCommand(command) + \
+                        "' with data '" + str(data) + "' to device"
             logging.getLogger(_LOGGER_NAME).info(logString)
             DataAccess.sendValueToDevice(connection, command, data)
         except:
             logging.getLogger(_LOGGER_NAME).error("Error sending data: '", data, "' to device")
+
+    @classmethod
+    def toReadableSerial(cls, command, data):
+        serialValue = SerialMapping.toSerial(command, data)
+        response = SerialMapping.fromSerial(serialValue)
+        return response.readableSerial
+
+    @staticmethod
+    def readableCommand(command):
+        if command == WRITE_OUTPUT_VOLTAGE:
+            return "Write output voltage"
+        elif command == WRITE_OUTPUT_CURRENT:
+            return "Write output current"
+        elif command == WRITE_INPUT_VOLTAGE:
+            return "Write input voltage"
+        elif command == WRITE_PRE_REGULATOR_VOLTAGE:
+            return "Write pre req voltage"
+        elif command == WRITE_ALL:
+            return "Write all"
+        elif command == WRITE_IS_OUTPUT_ON:
+            return "Write is output on"
+        elif command == WRITE_TARGET_VOLTAGE:
+            return "Write target voltage"
+        elif command == WRITE_TARGET_CURRENT:
+            return "Write target current"
+        elif command == READ_TARGET_VOLTAGE:
+            return "Read target voltage"
+        elif command == READ_TARGET_CURRENT:
+            return "Read target current"
+        elif command == TURN_ON_OUTPUT:
+            return "Turn output on"
+        elif command == TURN_OFF_OUTPUT:
+            return "Turn output off"
+        elif command == START_STREAM:
+            return "Start stream"
+        elif command == STOP_STREAM:
+            return "Stop stream"
+        elif command == ACKNOWLEDGE:
+            return "ACKNOWLEDGE"
+        elif command == NOT_ACKNOWLEDGE:
+            return "NOT_ACKNOWLEDGE"

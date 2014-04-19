@@ -1,4 +1,3 @@
-
 class DeviceValues:
     def __init__(self):
         self.outputOn = False

@@ -1,19 +1,9 @@
 from PsController.Model.Constants import *
 from PsController.Utilities.Crc import Crc16
+from PsController.DAL.DeviceResponse import DeviceResponse
 
 
-class DeviceResponse:
-    def __init__(self):
-        self.start = 0
-        self.command = 0
-        self.dataLength = 0
-        self.data = ""
-        self.crc = []  # list of int values
-        self.serialResponse = bytearray()
-        self.readableSerial = []
-
-
-class DeviceCommunication:
+class SerialMapping:
     @classmethod
     def toSerial(cls, command, data):
         binaryData = bytes(str(data), 'ascii')
@@ -31,12 +21,6 @@ class DeviceCommunication:
             byteArray.append(crc)
         byteArray.append(START)
         return byteArray
-
-    @classmethod
-    def toReadableSerial(cls, command, data):
-        serialValue = cls.toSerial(command, data)
-        response = cls.fromSerial(serialValue)
-        return response.readableSerial
 
     @classmethod
     def fromSerial(cls, serialValue):
