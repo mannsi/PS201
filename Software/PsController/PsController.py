@@ -20,9 +20,9 @@ class PsController():
         self.mainWindow = Tk()
         systemType = osHelper.getCurrentOs()
         if systemType == osHelper.WINDOWS:
-            img = Image("photo", file='electricity-24.gif')
+            img = Image("photo", file='Icons\\electricity-24.gif')
         else:
-            img = Image("photo", file='electricity-64.gif')
+            img = Image("photo", file='Icons/electricity-64.gif')
         self.mainWindow.tk.call('wm', 'iconphoto', self.mainWindow._w, img)
 
         self.mainWindow.title(mainWindowTitle)
@@ -244,14 +244,21 @@ class _HeaderPanel(Frame):
         self.showConnectedState(connected)
 
     def showConnectedState(self, connected):
+        systemType = osHelper.getCurrentOs()
         if connected:
             state = NORMAL
-            connectedImage = Image("photo", file='green-circle-16.gif')
+            if systemType == osHelper.WINDOWS:
+                connectedImage = Image("photo", file='Icons\\green-circle-16.gif')
+            else:
+                connectedImage = Image("photo", file='Icons/green-circle-16.gif')
             toolTipMessage = "Connected"
             self.lblStatusValueVar.set("")
         else:
             state = DISABLED
-            connectedImage = Image("photo", file='red-circle-16.gif')
+            if systemType == osHelper.WINDOWS:
+                connectedImage = Image("photo", file='Icons\\red-circle-16.gif')
+            else:
+                connectedImage = Image("photo", file='Icons/red-circle-16.gif')
             toolTipMessage = "Not connected"
             self.lblStatusValueVar.set("Searching for device ...")
 
