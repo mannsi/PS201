@@ -18,14 +18,14 @@ USART Serial Definitions
 
 * ALL packets take the form
 
-  Packet byte(s) | Contents	
-  ---------------|-----------------------
-  <u8 start>     | Start character
-  <u8 ID>        | Command identification
-  <u8 len>       | length of data
-  <u8 data[len]> | data
-  <u16 CRC>      | 16 bit CRC code
-  <u8 end>       | end character
+  Packet byte(s)    | Contents	
+  ------------------|-----------------------
+  ```u8 start```    | Start character
+  ```u8 ID```       | Command identification
+  ```u8 len```      | length of data
+  ```u8 data[len]```| data
+  ```u16 CRC```     | 16 bit CRC code
+  ```u8 end```      | end character
 
   This means all packets will be of length len+4 (char)
 
