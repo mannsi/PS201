@@ -1,54 +1,61 @@
 #include "LCD.h"
 
-int showOutputOn = 1;
-
 // Set up the display in 4 bit mode and ready for writing to
 void LCD_Initialize(uint8_t backlight, uint8_t contrast)
-{	
-	// Setting up OC1 which is the PWM module for
-	// charge pump and backlight. The charge pump is 
-	// always set on half duty cycle while backlight is 
-	// controlled by the user.
-	TCCR1A  = (1 << COM1A1)| (1 << COM1B1);	// Enable both osc
-	TCCR1A |= (1 << WGM10) | (1 << WGM12);		// FAST 8 bit PWM
-	OCR1A = contrast*5;							// Contrast
-	OCR1B = backlight*19;					// Backlight
-	TCCR1B = (1 << CS10);						// START no prescaler
+{
+  IOSetOutput(LCD_CS_PORT,LCD_CS_PIN);
+  DESELECT_DISPLAY;
+  IOSetOutput(BACKLIGHT_PORT,BACKLIGHT_PIN);
+  IOSetOutput(CONTRAST_PORT,CONTRAST_PIN);
+  IOSetOutput(LCD_ENABLE_PORT,LCD_ENABLE_PIN);
+  DISABLE_DISPLAY;
+  IOSetPin(BACKLIGHT_PORT,BACKLIGHT_PIN); 
+  IOSetPin(CONTRAST_PORT,CONTRAST_PIN);
+  
+  SPI_Initialize();
+  
+  // Setting up OC1 which is the PWM module for
+  // the backlight and contrast. The duty cycle is 
+  // controlled by the user.
+  BIT_SET(TCCR1A,BIT(COM1A1));			// Enable both osc
+  BIT_SET(TCCR1A,BIT(COM1B1));
+  BIT_SET(TCCR1A,BIT(WGM10));			// FAST 8 bit PWM
+  BIT_SET(TCCR1A,BIT(WGM12));
+  OCR1A = contrast*5;				// Contrast
+  OCR1B = backlight*19;				// Backlight
+  BIT_SET(TCCR1B,BIT(CS10));			// START no prescaler
 
-	// Delay after power up
-	//_delay_ms(1000);
-	// Initialize LCD in 4 bit mode
-	LCD_Command(3);
-	_delay_ms(5);
-	LCD_Command(3);
-	LCD_Command(3);
-	LCD_Command(2);
-	
-	// Function set
-	LCD_Command(2);
-	LCD_Command(8);
-	_delay_ms(1);
+  // Initialize LCD in 4 bit mode
+  LCD_Command(3);
+  _delay_ms(5);
+  LCD_Command(3);
+  LCD_Command(3);
+  LCD_Command(2);
 
-	// Display off
-	LCD_Command(0);
-	LCD_Command(8);
-	_delay_ms(1);
+  // Function set
+  LCD_Command(2);
+  LCD_Command(8);
+  _delay_ms(1);
 
-	// Entry mode
-	LCD_Command(0);
-	LCD_Command(6);
-	_delay_ms(1);
+  // Display off
+  LCD_Command(0);
+  LCD_Command(8);
+  _delay_ms(1);
 
-	// Display on
-	LCD_Command(0);
-	LCD_Command(0x0C);
-	_delay_ms(1);
-	
-	// Clear Screen
-	LCD_Command(0);
-	LCD_Command(1);
-	_delay_ms(1);
+  // Entry mode
+  LCD_Command(0);
+  LCD_Command(6);
+  _delay_ms(1);
 
+  // Display on
+  LCD_Command(0);
+  LCD_Command(0x0C);
+  _delay_ms(1);
+
+  // Clear Screen
+  LCD_Command(0);
+  LCD_Command(1);
+  _delay_ms(1);
 }
 
 // The display is connected through a shift 595 register, the first
@@ -58,377 +65,85 @@ void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 // four, in both cases the RS bit must be HIGH.
 static void LCD_Data(unsigned char a)
 {
+  // Take the 595 chip select pin low
+  SELECT_DISPLAY;
+  // Transfer the first four bits of a via SPI
+  // manually making sure that the fifth bit is high
+  SPI_SendData(a>>4 | (1<<4));
+  // Restore the chip select
+  DESELECT_DISPLAY;
 
-	// Take the 595 chip select pin low
-	SELECT_DISPLAY;
-	// Transfer the first four bits of a via SPI
-	// manually making sure that the fifth bit is high
-	SPDR = a>>4 | (1<<4);
-	while(!(SPSR & (1<<SPIF)));
-  	// Restore the chip select
-  	DESELECT_DISPLAY;
-	
-	// enable the display to read the data
-	// (wait two cycles to led the display read)
-	ENABLE_DISPLAY; 
-	_delay_ms(1);
-	DISABLE_DISPLAY;
+  // enable the display to read the data
+  // (wait two cycles to led the display read)
+  ENABLE_DISPLAY; 
+  _delay_ms(1);
+  DISABLE_DISPLAY;
 
-	// Take the 595 chip select pin low
-	SELECT_DISPLAY;
-	// Transfer the last four bits of a via SPI
-	// again manually making sure fith bit is high
-	SPDR = a | (1<<4);
-	while(!(SPSR & (1<<SPIF)));
-	// Restore the chip select
-  	DESELECT_DISPLAY;
-	
-	// enable the display to read the data
-	ENABLE_DISPLAY; 
-	_delay_ms(1);
-	DISABLE_DISPLAY;
+  // Take the 595 chip select pin low
+  SELECT_DISPLAY;
+  // Transfer the last four bits of a via SPI
+  // again manually making sure fith bit is high
+  SPI_SendData(a | (1<<4));
+  // Restore the chip select
+  DESELECT_DISPLAY;
+
+  // enable the display to read the data
+  ENABLE_DISPLAY; 
+  _delay_ms(1);
+  DISABLE_DISPLAY;
 }
 
 // To write a full string to the LCD
 void LCD_Write(unsigned char* data)
 {
-	unsigned char i;
+  unsigned char i;
 
-	for(i=0;i<20;i++)
-	{
-		if(!data[i]) break;
-		LCD_Data(data[i]);
-	}
+  for(i=0;i<20;i++)
+  {
+    if(!data[i]) break;
+    LCD_Data(data[i]);
+  }
 }
 
 // To position the cursor
 void LCD_Cursor(uint8_t row, uint8_t column)
 {
-	switch (row)
-	{
-		case 0:		LCD_Command((0x80 + column)>>4); 
-					LCD_Command(0x80 + column);
-					break;
-		case 1: 	LCD_Command((0xc0 + column)>>4);
-					LCD_Command(0xc0 + column);
-					break;
-		default:	break;
-	}
+  switch (row)
+  {
+    case 0:
+      LCD_Command((0x80 + column)>>4); 
+      LCD_Command(0x80 + column);
+      break;
+    case 1:
+      LCD_Command((0xc0 + column)>>4);
+      LCD_Command(0xc0 + column);
+      break;
+    default:
+      break;
+  }
 }
 
 // to highlight the current cursor position
 void LCD_HighLight()
 {
-	LCD_Command(0);
-	LCD_Command(0xE);
+  LCD_Command(0);
+  LCD_Command(0xE);
 }
 
 // to turn off highlight 
 void LCD_NoHighLight()
 {
-	LCD_Command(0);
-	LCD_Command(0xC);
+  LCD_Command(0);
+  LCD_Command(0xC);
 }
 
 // to clear the display
 void LCD_Clear()
 {
-	LCD_Command(0);
-	LCD_Command(1);
-	_delay_ms(1);
+  LCD_Command(0);
+  LCD_Command(1);
+  _delay_ms(1);
 }
-
-void LCD_StartScreen()
-{
-	LCD_Clear();
-	LCD_Cursor(0,4);
-	LCD_Write("Digital");
-	LCD_Cursor(1,6);
-	LCD_Write("PSU");
-}
-
-void LCD_HomeScreen(uint16_t voltage,uint16_t current, uint8_t outputOn, unsigned char encoderControls)
-{
-	// Write normal home screen
-	LCD_Clear();
-	LCD_Cursor(0,0);
-	LCD_Write("V:       V");
-	LCD_Cursor(1,0);
-	LCD_Write("I:      mA");
-
-	LCD_WriteControlArrow(encoderControls);
-	LCD_WriteVoltage(voltage);
-	LCD_WriteCurrent(current);
-
-	if(outputOn)
-	{
-		LCD_OutputOn();
-	}
-	else
-	{	
-		LCD_OutputOff();
-	}
-}
-
-unsigned char menuItem[NUMBEROFMENUITEMS][12] = {
-	"Backlight",
-	"Contrast",
-	"Status",
-	"Calibration"};
-	
-
-unsigned char LCD_MenuScreen(void)
-{
-	unsigned char currentItem = 0;
-	unsigned char selectorUpper = 1;
-	unsigned char updateScreen = 1;
-	
-	while(!SW_Check1())
-	{
-		if(updateScreen)
-		{
-			LCD_Clear();
-			if(selectorUpper)
-			{
-				LCD_Cursor(0,2);
-			}
-			else
-			{
-				LCD_Cursor(1,2);
-			}
-			LCD_Write("~");
-			LCD_Cursor(0,3);
-			LCD_Write(menuItem[currentItem]);
-			LCD_Cursor(1,3);
-			if(currentItem == NUMBEROFMENUITEMS - 1)
-			{
-				LCD_Write(menuItem[0]);
-			}
-			else
-			{
-				LCD_Write(menuItem[currentItem + 1]);
-			}
-			updateScreen = 0;
-		}
-
-
-		unsigned char dir = SW_CheckEncoder();
-		//preveous menu item
-		if(SW_Check2() || (dir && dir != ENCODER_CCW))
-		{
-			if(selectorUpper)
-			{
-				updateScreen = 1;
-				if(currentItem == 0)
-				{
-					currentItem = NUMBEROFMENUITEMS-1;
-				}
-				else
-				{
-					currentItem--;
-				}
-			}
-			else
-			{
-				LCD_Cursor(0,2);
-				LCD_Write("~");
-				LCD_Cursor(1,2);
-				LCD_Write(" ");
-				selectorUpper = 1;
-			}
-		}
-		//next menu item
-		if(SW_Check3() || dir == ENCODER_CCW)
-		{
-			if(selectorUpper)
-			{
-				LCD_Cursor(0,2);
-				LCD_Write(" ");
-				LCD_Cursor(1,2);
-				LCD_Write("~");
-				selectorUpper = 0;
-			}
-			else
-			{
-				updateScreen = 1;
-				if(currentItem == NUMBEROFMENUITEMS-1)
-				{
-					currentItem = 0;
-				}
-				else
-				{
-					currentItem++;
-				}
-
-			}
-
-		}
-		//item selected
-		if(SW_Check4())
-		{
-			if(currentItem + 1 - selectorUpper == NUMBEROFMENUITEMS)
-			{
-				return 0;
-			}
-			else
-			{
-				return (currentItem + 1 - selectorUpper);
-			}
-		}
-	}
-	return -1;
-}
-
-void LCD_WriteVoltage(uint16_t voltage)
-{
-	unsigned char voltageArray [10];
-	mapVoltage(voltage, voltageArray);
-	LCD_Cursor(0,3);
-	LCD_Write(voltageArray);
-}
-
-void LCD_WriteCurrent(uint16_t current)
-{
-	unsigned char currentArray [10];
-	mapCurrent(current, currentArray);
-	LCD_Cursor(1,3);
-	LCD_Write(currentArray);
-}
-
-void LCD_WriteControlArrow(unsigned char encoderControls)
-{
-	// Determine the last selected encoder function
-	switch(encoderControls)
-	{
-		case VOLTAGE:
-			LCD_Cursor(0,2);
-			LCD_Write("~");
-			LCD_Cursor(1,2);
-			LCD_Write(" ");
-			break;
-		case CURRENT:
-			LCD_Cursor(0,2);
-			LCD_Write(" ");
-			LCD_Cursor(1,2);
-			LCD_Write("~");
-			break;
-		default:
-			encoderControls = VOLTAGE;
-			LCD_Cursor(0,2);
-			LCD_Write("~");
-			LCD_Cursor(1,2);
-			LCD_Write(" ");
-			break;
-	}
-
-}
-
-uint8_t LCD_SetBacklight(uint8_t backlightIntensity)
-{
-	// Write small backlight screen
-	LCD_Clear();
-	LCD_Cursor(0,3);
-	LCD_Write(menuItem[MENU_BACKLIGHT]);
-	LCD_Cursor(1,0);
-	LCD_Write("[              ]");
-	LCD_Cursor(1,1);
-	int i = backlightIntensity;
-	for(i; i>0; i--)
-	{
-		LCD_Write("=");
-	}
-	LCD_Write(">");
-	while(!SW_Check1() && !SW_Check2() && !SW_Check3() && !SW_Check4())
-	{
-		unsigned char dir = SW_CheckEncoder();
-		if(dir)
-		{
-			if(dir == ENCODER_CCW) 	
-			{
-				backlightIntensity--;
-			} 
-			else
-			{
-				backlightIntensity++;
-			}
-			if(backlightIntensity > 20)
-			{
-				backlightIntensity = 0;
-			}
-			else if(backlightIntensity > 13)
-			{
-				backlightIntensity = 13;
-			}
-			else
-			{
-				OCR1B = 19*backlightIntensity;
-				LCD_Cursor(1,0);
-				LCD_Write("[              ]");
-				LCD_Cursor(1,1);
-				for(i = backlightIntensity; i>0; i--)
-				{
-					LCD_Write("=");
-				}
-				LCD_Write(">");
-			}
-		}
-	}
-	return backlightIntensity;
-}
-
-uint8_t LCD_SetContrast(uint8_t contrast)
-{
-	// Write small backlight screen
-	LCD_Clear();
-	LCD_Cursor(0,3);
-	LCD_Write(menuItem[MENU_CONTRAST]);
-	LCD_Cursor(1,0);
-	LCD_Write("[              ]");
-	LCD_Cursor(1,1);
-	int i = contrast;
-	for(i; i>0; i--)
-	{
-		LCD_Write("=");
-	}
-	LCD_Write(">");
-	while(!SW_Check1() && !SW_Check2() && !SW_Check3() && !SW_Check4())
-	{
-		unsigned char dir = SW_CheckEncoder();
-		if(dir)
-		{
-			if(dir == ENCODER_CCW) 	
-			{
-				contrast--;
-			} 
-			else
-			{
-				contrast++;
-			}
-			if(contrast > 20)
-			{
-				contrast = 0;
-			}
-			else if(contrast > 13)
-			{
-				contrast = 13;
-			}
-			else
-			{
-				OCR1A = 5*contrast;
-				LCD_Cursor(1,0);
-				LCD_Write("[              ]");
-				LCD_Cursor(1,1);
-				for(i = contrast; i>0; i--)
-				{
-					LCD_Write("=");
-				}
-				LCD_Write(">");
-			}
-		}
-	}
-	return contrast;
-}
-
 
 // This is exactly like the above function but now
 // we make sure the fifth bit is allways LOW to indicate
@@ -437,32 +152,17 @@ uint8_t LCD_SetContrast(uint8_t contrast)
 // of a are ignored.
 static void LCD_Command(unsigned char a)
 {
-	// Take the 595 chip select pin low
-	SELECT_DISPLAY;
-	// Transfer the last four bits of a via SPI
-	// again manually making sure fith bit is low
-	SPDR = a & ~(1<<4);
-	while(!(SPSR & (1<<SPIF)));
-	// Restore the chip select
-  	DESELECT_DISPLAY;
-	
-	// enable the display to read the data
-	ENABLE_DISPLAY; 
-	_delay_ms(1);
-	DISABLE_DISPLAY;
-}
+  // Take the 595 chip select pin low
+  SELECT_DISPLAY;
+  // Transfer the last four bits of a via SPI
+  // again manually making sure fith bit is low
+  SPI_SendData(a & ~(1<<4));
+  // Restore the chip select
+  DESELECT_DISPLAY;
 
-void LCD_OutputOn()
-{
-	showOutputOn = 1;
-	LCD_Cursor(0,13);
-	LCD_Write(" ON");
-}
-
-void LCD_OutputOff()
-{
-	showOutputOn = 0;
-	LCD_Cursor(0,13);
-	LCD_Write("OFF");
+  // enable the display to read the data
+  ENABLE_DISPLAY; 
+  _delay_ms(1);
+  DISABLE_DISPLAY;
 }
 
