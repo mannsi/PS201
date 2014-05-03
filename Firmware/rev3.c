@@ -97,21 +97,26 @@ int main(void)
   
   uint8_t encoderControls = VOLTAGE;
   
-  //voltageSet = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
-  //currentSet = EEPROM_ReadNum(ADDR_STARTCURRENT);
-  //DAC_transfer(DACVOLTAGE,((float)voltageSet)/voltageSetMulti);
-  //DAC_transfer(DACCURRENT,((float)currentSet)/currentSetMulti);
+  // initialize settings and transfer to the DAC
+  setting[VOLTAGE].analog = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
+  mapToDigital(&setting[VOLTAGE]);
+  DAC_transfer(DAC_ctrlCode[VOLTAGE],setting[VOLTAGE].digital);
+  setting[CURRENT].analog = EEPROM_ReadNum(ADDR_STARTCURRENT);
+  mapToDigital(&setting[CURRENT]);
+  DAC_transfer(DAC_ctrlCode[CURRENT],setting[CURRENT].digital);
 
-  // Start in the home screen with the set valueschar data[8];
+  // Start in the home screen with the set values;
   {
     char vol[8];
     char cur[8];
     mapToString(&setting[VOLTAGE],vol);
-    vol[6] = ' ';
-    vol[7] = 'V';
+    vol[5] = ' ';
+    vol[6] = 'V';
+    vol[7] = '\0';
     mapToString(&setting[CURRENT],cur);
-    cur[6] = ' ';
-    cur[7] = 'A';
+    cur[5] = ' ';
+    cur[6] = 'A';
+    cur[7] = '\0';
     DISPLAY_HomeScreen(vol,cur,outputIsOn,encoderControls);
   }
   
@@ -177,22 +182,23 @@ int main(void)
 	{
 	  char data[8];
 	  mapToString(&setting[VOLTAGE],data);
-	  data[6] = ' ';
-	  data[7] = 'V';
+	  data[5] = ' ';
+	  data[6] = 'V';
 	  DISPLAY_WriteVoltage(data);
 	  mapToString(&setting[CURRENT],data);
-	  data[7] = 'A';
+	  data[6] = 'A';
 	  DISPLAY_WriteCurrent(data);
 	}
 	else if(newMeasurement)
 	{
 	  char data[8];
 	  mapToString(&measured[VOLTAGE],data);
-	  data[6] = ' ';
-	  data[7] = 'V';
+	  data[5] = ' ';
+	  data[6] = 'V';
+	  data[7] = '\0';
 	  DISPLAY_WriteVoltage(data);
 	  mapToString(&measured[CURRENT],data);
-	  data[7] = 'A';
+	  data[6] = 'A';
 	  DISPLAY_WriteCurrent(data);
 	}
 	break;
@@ -297,7 +303,7 @@ void mapToString(PSUData* A,char* S)
   S[0] = num < 1000 ? ' ' : (char) ( ((int) '0') + num / 1000 );
   S[1] = num < 100  ? '0' : (char) ( ((int) '0') + (num%1000) / (100) );
   S[2] = '.';
-  S[3] = (char) ( ((int) '0') + (num%100));
+  S[3] = (char) ( ((int) '0') + (num%100)/10);
   S[4] = (char) ( ((int) '0') + (num%10));
   S[5] = '\0';
 }

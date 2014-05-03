@@ -21,9 +21,9 @@ void DISPLAY_HomeScreen(char* voltage,char* current, uint8_t outputOn, unsigned 
   // Write normal home screen
   LCD_Clear();
   LCD_Cursor(0,0);
-  LCD_Write("V:       V");
+  LCD_Write("V:");
   LCD_Cursor(1,0);
-  LCD_Write("I:      mA");
+  LCD_Write("I:");
 
   DISPLAY_WriteSelectorUpper();
   DISPLAY_WriteVoltage(voltage);
