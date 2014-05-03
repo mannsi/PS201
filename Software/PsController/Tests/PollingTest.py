@@ -3,6 +3,7 @@ This is an integration test script. It tests every voltage value from 0 - (Input
 increments of 0.1 V for a low target current. Then it sets a low voltage and goes through set current of
 0 - 1000 mA. In this second run the goal is simply to see if every set value is correct and that
 communication between device and computer behaves as expected.
+
 The test condition are
  - target voltage and current are the same as what was set
  - output voltage is closer to the set values then a predefined deviation

@@ -7,6 +7,7 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Frames.SequenceTabFrame import SequenceTabFrame
 from PsController.UI.Frames.StatusTabFrame import StatusTabFrame
 import PsController.Utilities.OsHelper as osHelper
+import PsController.Utilities.IconHelper as iconHelper
 from PsController.UI.Controls.ToolTip import ToolTip
 
 mainWindowSize = '650x400'
@@ -18,46 +19,39 @@ class PsController():
     def __init__(self, debugging, forcedUsbPort):
         self.guiRefreshRate = 200
         self.mainWindow = Tk()
-        systemType = osHelper.getCurrentOs()
-        if systemType == osHelper.WINDOWS:
-            img = Image("photo", file='Icons\\electricity-24.gif')
-        else:
-            img = Image("photo", file='Icons/electricity-64.gif')
-        self.mainWindow.tk.call('wm', 'iconphoto', self.mainWindow._w, img)
+        self.setIcon()
 
+        # Set up main UI
         self.mainWindow.title(mainWindowTitle)
         self.mainWindow.geometry(mainWindowSize)
-        self.topPanel = _HeaderPanel(self.mainWindow)
+        self.topPanel = TopFrame(self.mainWindow)
         self.topPanel.pack(fill=X)
         self.tabControl = TabControl(self.mainWindow)
         self.tabControl.pack(fill=BOTH, expand=1)
-        self.debugging = debugging
+
+        # Register for updates
+        controller.notifyConnectedUpdate(self.updateConnectedStatus)
+        controller.notifyDeviceUsbPortUpdate(self.deviceUsbPortUpdate)
+        controller.notifyUsbPortListUpdate(self.usbPortListUpdate)
+
+        # Try to find device
+        self.selectedUsbPortVar = StringVar()
+        self.availableUsbPorts = []
+        self.deviceUsbPort = None
         self.forcedUsbPort = forcedUsbPort
         controller.forcedUsbPort = forcedUsbPort
+        self.findDevice()
 
-        if self.debugging:
-            if systemType == osHelper.WINDOWS:
+        # Create menu
+        self.subMenu = None
+        self.addMenuBar()
+
+        if debugging:
+            if osHelper.getCurrentOs() == osHelper.WINDOWS:
                 self.mainWindow.geometry('900x400')
             else:
                 self.mainWindow.geometry('1100x400')
             debugFrame = Frame(self.mainWindow)
-
-            self.btnDisconnect = Button(debugFrame, text="Disconnect", command=self.disconnectFromDevice,
-                                        state=DISABLED)
-            #self.btnDisconnect.pack(side=RIGHT)
-
-            self.btnConnect = Button(debugFrame, text="Connect", command=self.connectToDevice)
-            #self.btnConnect.pack(side=RIGHT)
-
-            self.numOfRefreshPerSecVar = IntVar(value=2)
-            self.numOfRefreshPerSec = Entry(debugFrame, textvariable=self.numOfRefreshPerSecVar, width=10)
-            #self.numOfRefreshPerSec.pack(side=RIGHT)
-            #Label(debugFrame, text="Refresh per sec").pack(side=RIGHT)
-
-            self.updateTypeCmb = Combobox(debugFrame, values=["Polling", "Streaming"])
-            #self.updateTypeCmb.pack(side=RIGHT)
-            self.updateTypeCmb.current(newindex=1)
-            #Label(debugFrame, text="Update type").pack(side=RIGHT)
 
             self.loggingCmb = Combobox(debugFrame, values=["Error", "Info", "Debug"])
             self.loggingCmb.bind("<<ComboboxSelected>>", self._logging_sel_changed)
@@ -65,62 +59,35 @@ class PsController():
             self.loggingCmb.current(newindex=1)
             Label(debugFrame, text="Logging").pack(side=RIGHT)
             self._logging_sel_changed(self.loggingCmb)
-
-            self.btnUpdateAll = Button(debugFrame, text="Refresh", command=self.debugRefreshValues)
-            #self.btnUpdateAll.pack(side=RIGHT)
-
-            self.chkAutoVar = IntVar(value=1)
-            self.chkAuto = Checkbutton(debugFrame, text="Auto update", variable=self.chkAutoVar,
-                                       command=self.debugSwitchAutoMode)
-            #self.chkAuto.pack(side=RIGHT)
-
             debugFrame.pack(fill=X)
 
-        self.subMenu = None
-        self.selectedUsbPortVar = StringVar()
-        self.availableUsbPorts = []
+    def findDevice(self):
         if not self.forcedUsbPort:
             controller.getAvailableUsbPorts(threaded=True)
             self.deviceUsbPort = None
         controller.getDeviceUsbPort(threaded=True, forcedUsbPort=self.forcedUsbPort)
-        self.addMenuBar()
-        controller.notifyConnectedUpdate(self.updateConnectedStatus)
-        controller.notifyDeviceUsbPortUpdate(self.deviceUsbPortUpdate)
-        controller.notifyUsbPortListUpdate(self.usbPortListUpdate)
 
-    @staticmethod
-    def debugRefreshValues():
-        if controller.connected:
-            controller._updateAllValuesWorker()
+    def deviceUsbPortUpdate(self, port):
+        self.deviceUsbPort = port
+        self.buildUsbPortMenu()
+        if port == "":
+            # No port found for device so we start polling for device
+            controller.pollForDeviceDevice()
+        else:
+            self.usbPortSelected()
 
-    def debugSwitchAutoMode(self):
-        chkValue = self.chkAutoVar.get()
-        if controller.connected:
-            if chkValue:
-                self.startAutoUpdate()
-            else:
-                controller.stopAutoUpdate()
+    def setIcon(self):
+        self.mainWindow.tk.call('wm', 'iconphoto', self.mainWindow._w, PhotoImage(data=iconHelper.getIconData('electricity-64.gif')))
 
     def updateConnectedStatus(self, value):
         connected = value[0]
         if connected:
             self.startAutoUpdate()
-            if self.debugging:
-                self.btnConnect.configure(state=DISABLED)
-                self.btnDisconnect.configure(state=NORMAL)
         else:
             controller.stopAutoUpdate()
-            if self.debugging:
-                self.btnConnect.configure(state=NORMAL)
-                self.btnDisconnect.configure(state=DISABLED)
 
     def startAutoUpdate(self):
-        if self.debugging:
-            if self.chkAutoVar.get():
-                updateType = self.updateTypeCmb.current()
-                controller.startAutoUpdate(interval=1 / self.numOfRefreshPerSecVar.get(), updateType=updateType)
-        else:
-            controller.startAutoUpdate(interval=1 / 2, updateType=1)
+        controller.startAutoUpdate(interval=1/2)
 
     def addMenuBar(self):
         menuBar = Menu(self.mainWindow)
@@ -163,18 +130,7 @@ class PsController():
         self.subMenu.add_command(label="Refresh", command=self.buildUsbPortMenu)
 
     def usbPortSelected(self):
-        if controller.connected:
-            controller.disconnect()
         self.connectToDevice()
-
-    def deviceUsbPortUpdate(self, port):
-        self.deviceUsbPort = port
-        self.buildUsbPortMenu()
-        if port == "":
-            # No port found for device so we start polling for device
-            controller.pollForDeviceDevice()
-        else:
-            self.usbPortSelected()
 
     def usbPortListUpdate(self, usbPorts):
         self.availableUsbPorts = usbPorts
@@ -209,7 +165,8 @@ class PsController():
         self.mainWindow.mainloop()
 
 
-class _HeaderPanel(Frame):
+class TopFrame(Frame):
+    """ The top part of the PsController. Contains connection check box, program status and connected state"""
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
@@ -230,7 +187,7 @@ class _HeaderPanel(Frame):
         topLineFrame.columnconfigure(1, weight=1)
         topLineFrame.pack(fill=X)
 
-        self.valuesFrame = _ValuesFrame(self)
+        self.valuesFrame = OutputValuesFrame(self)
         self.valuesFrame.pack()
         controller.notifyConnectedUpdate(self.connectedUpdated)
         controller.notifyOutputUpdate(self.outPutOnOffUpdate)
@@ -244,21 +201,14 @@ class _HeaderPanel(Frame):
         self.showConnectedState(connected)
 
     def showConnectedState(self, connected):
-        systemType = osHelper.getCurrentOs()
         if connected:
             state = NORMAL
-            if systemType == osHelper.WINDOWS:
-                connectedImage = Image("photo", file='Icons\\green-circle-16.gif')
-            else:
-                connectedImage = Image("photo", file='Icons/green-circle-16.gif')
+            connectedImage = PhotoImage(data=iconHelper.getIconData('green-circle-16.gif'))
             toolTipMessage = "Connected"
             self.lblStatusValueVar.set("")
         else:
             state = DISABLED
-            if systemType == osHelper.WINDOWS:
-                connectedImage = Image("photo", file='Icons\\red-circle-16.gif')
-            else:
-                connectedImage = Image("photo", file='Icons/red-circle-16.gif')
+            connectedImage = PhotoImage(data=iconHelper.getIconData('red-circle-16.gif'))
             toolTipMessage = "Not connected"
             self.lblStatusValueVar.set("Searching for device ...")
 
@@ -271,7 +221,8 @@ class _HeaderPanel(Frame):
         self.chkOutputOnVar.set(newOutputOn == 1)
 
 
-class _ValuesFrame(Frame):
+class OutputValuesFrame(Frame):
+    """ Shows the output values of the DPS201. Also has buttons to set target values """
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
@@ -331,6 +282,7 @@ class _ValuesFrame(Frame):
 
 
 class TabControl(Notebook):
+    """ The tab control on the lower part of the PsController """
     def __init__(self, parent):
         self.parent = parent
         Notebook.__init__(self, parent, name='tab control')

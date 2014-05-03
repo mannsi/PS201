@@ -41,7 +41,10 @@ class Controller():
         self.connectionLock = threading.Lock()
         self._updateQueue = queue.Queue()
         self.threadHelper = ThreadHelper()
-        self.updateParameters = {}  # A dict with key: UpdateCondition and value (conditionValue, listOfUpdateFunctions)
+
+        # A dict with key: UpdateCondition and value (currentConditionValue, listOfUpdateFunctions)
+        self.updateFunctionsAndValues = {}
+
         self.connected = False
         self.connection = self._createConnection()
         self._registerListeners()
@@ -316,45 +319,35 @@ class Controller():
             while self._updateQueue.qsize():
                 updateCondition = self._updateQueue.get(0)
                 updatedValue = self._updateQueue.get(0)
-                value, updateFunctions = self.updateParameters[updateCondition]
+                value, updateFunctions = self.updateFunctionsAndValues[updateCondition]
                 if value != updatedValue:
-                    self.updateParameters[updateCondition][0] = updatedValue
+                    self.updateFunctionsAndValues[updateCondition][0] = updatedValue
                     for func in updateFunctions:
                         func(updatedValue)
         except queue.Empty:
             self._updateQueue.queue.clear()
 
-    def startAutoUpdate(self, interval, updateType):
-        if updateType == 0:
-            # Polling updates
-            with self.connectionLock:
-                startTime = time.time()
-                logging.getLogger(_LOGGER_NAME).debug("Getting lock. 'startAutoUpdate'.")
-                if not self.connected:
-                    logging.getLogger(_LOGGER_NAME).info(
-                        "Trying to start polling auto update when not connected to device")
-                    return
-                self.connection.clearBuffer()
-                Controller._sendValueToDevice(self.connection, STOP_STREAM)
-                Controller._checkDeviceForAcknowledgement(self.connection, STOP_STREAM)
-                logging.getLogger(_LOGGER_NAME).debug("Releasing lock. 'startAutoUpdate'.", time.time() - startTime)
-            self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateAllValuesWorker, interval)
-        elif updateType == 1:
-            # Streaming updates
-            with self.connectionLock:
-                startTime = time.time()
-                logging.getLogger(_LOGGER_NAME).debug("Getting lock. 'startAutoUpdate'.")
-                if not self.connected:
-                    logging.getLogger(_LOGGER_NAME).info(
-                        "Trying to start streaming auto update when not connected to device")
-                    return
-                Controller._sendValueToDevice(self.connection, START_STREAM)
-                Controller._checkDeviceForAcknowledgement(self.connection, START_STREAM)
-                self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
-                logging.getLogger(_LOGGER_NAME).debug("Releasing lock. 'startAutoUpdate'.", time.time() - startTime)
-            self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
+    def startAutoUpdate(self, interval):
+        with self.connectionLock:
+            startTime = time.time()
+            logging.getLogger(_LOGGER_NAME).debug("Getting lock. 'startAutoUpdate'.")
+            if not self.connected:
+                logging.getLogger(_LOGGER_NAME).info(
+                    "Trying to start streaming auto update when not connected to device")
+                return
+
+            Controller._sendValueToDevice(self.connection, START_STREAM)
+            Controller._checkDeviceForAcknowledgement(self.connection, START_STREAM)
+            self.threadHelper.runThreadedJob(self._updateAllValuesWorker, args=[])
+
+            logging.getLogger(_LOGGER_NAME).debug("Releasing lock. 'startAutoUpdate'.", time.time() - startTime)
+        self.autoUpdateScheduler = self.threadHelper.runIntervalJob(self._updateStreamValueWorker, interval)
 
     def stopAutoUpdate(self):
+        with self.connectionLock:
+            Controller._sendValueToDevice(self.connection, STOP_STREAM)
+            Controller._checkDeviceForAcknowledgement(self.connection, STOP_STREAM)
+
         if self.autoUpdateScheduler:
             try:
                 self.autoUpdateScheduler.shutdown(wait=False)
@@ -408,7 +401,7 @@ class Controller():
         self._resetScheduleLineParameter()
 
     def _resetScheduleLineParameter(self):
-        self.updateParameters[_scheduleNewLineUpdate][0] = -1
+        self.updateFunctionsAndValues[_scheduleNewLineUpdate][0] = -1
 
     def _getValueFromDevice(self, command):
         with self.connectionLock:
@@ -437,9 +430,9 @@ class Controller():
             deviceVerificationFunc=self._deviceIdResponseFunction)
 
     def _registerUpdateFunction(self, func, condition):
-        if condition not in self.updateParameters:
-            self.updateParameters[condition] = [None, []]
-        self.updateParameters[condition][1].append(func)
+        if condition not in self.updateFunctionsAndValues:
+            self.updateFunctionsAndValues[condition] = [None, []]  # [CurrentValue, ListOfUpdateFunctions]
+        self.updateFunctionsAndValues[condition][1].append(func)
 
     def _updateAllValuesWorker(self):
         deviceValues = self.getAllValues()
@@ -549,7 +542,7 @@ class Controller():
 
     def _conditionUpdated(self, condition, value):
         # Add to update queue if anybody is listening for the update
-        if condition in self.updateParameters:
+        if condition in self.updateFunctionsAndValues:
             self._updateQueue.put(condition)
             self._updateQueue.put(value)
 
@@ -652,8 +645,8 @@ class Controller():
                             "' with data '" + deviceResponse.data + "' from device"
                 logging.getLogger(_LOGGER_NAME).info(logString)
             return deviceResponse
-        except:
-            logging.getLogger(_LOGGER_NAME).error("Error getting response from device")
+        except Exception as e:
+            logging.getLogger(_LOGGER_NAME).error("Error getting response from device. Error message: " + str(e))
 
     @staticmethod
     def _sendValueToDevice(connection, command, data=''):
@@ -661,6 +654,7 @@ class Controller():
             logString = "Sending command '" + Controller.readableCommand(command) + \
                         "' with data '" + str(data) + "' to device"
             logging.getLogger(_LOGGER_NAME).info(logString)
+            connection.clearBuffer()  # Clear buffer so that the acknowledge check does not meet a stream value previously in the buffer
             DataAccess.sendValueToDevice(connection, command, data)
         except:
             logging.getLogger(_LOGGER_NAME).error("Error sending data: '", data, "' to device")
