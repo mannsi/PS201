@@ -132,7 +132,12 @@ int main(void)
   while(1)
   {
     // loop control variables
-    int newSetting = 0;
+    int newVoltageSetting = 0;
+    int newCurrentSetting = 0;
+    int turnOutputOn = 0;
+    int turnOutputOff = 0;
+    int selectVoltage = 0;
+    int selectCurrent = 0;
     // Read the ADC.
     int newMeasurement = readFromADC(&measured[ADCmeasures]);
     // Listen to USB commands.
@@ -156,21 +161,30 @@ int main(void)
 	      state = setState(MENU);
 	      break;
 	    case CANCEL:
-	      toggleOutput();
-	      newSetting = 1;
+	      if(outputIsOn) turnOutputOff = 1;
+	      else turnOutputOn = 1;
 	      break;
 	    case ENTER:
-	      if(encoderControls==VOLTAGE) encoderControls = CURRENT;
-	      else encoderControls = VOLTAGE;
-	      newSetting = 1;
+	      if(encoderControls==VOLTAGE) 
+	      {
+		encoderControls = CURRENT;
+		selectCurrent = 1;
+	      }
+	      else 
+	      {
+		encoderControls = VOLTAGE;
+		selectVoltage = 1;
+	      }
 	      break;
 	    case CLOCKWISE:
 	      increaseAnalog(&setting[encoderControls]);
-	      newSetting = 1;
+	      if(encoderControls==VOLTAGE) newVoltageSetting = 1;
+	      else newCurrentSetting = 1;
 	      break;
 	    case COUNTERCLOCKWISE:
 	      decreaseAnalog(&setting[encoderControls]);
-	      newSetting = 1;
+	      if(encoderControls==VOLTAGE) newVoltageSetting = 1;
+	      else newCurrentSetting = 1;
 	      break;
 	    default:
 	      break;     
@@ -178,14 +192,19 @@ int main(void)
 	}
 	
 	// Write to LCD
-	if(newSetting)
+	if(newVoltageSetting)
 	{
 	  char data[8];
 	  mapToString(&setting[VOLTAGE],data);
 	  data[5] = ' ';
 	  data[6] = 'V';
 	  DISPLAY_WriteVoltage(data);
+	}
+	if(newCurrentSetting)
+	{
+	  char data[8];
 	  mapToString(&setting[CURRENT],data);
+	  data[5] = ' ';
 	  data[6] = 'A';
 	  DISPLAY_WriteCurrent(data);
 	}
@@ -210,11 +229,46 @@ int main(void)
 	setState(NORMAL);
 	break;
     }
-    // Update the output.
-    if(newSetting)
+    // Write to LCD
+    if(newVoltageSetting)
     {
-      DAC_transfer(DAC_ctrlCode[encoderControls],setting[encoderControls].digital);
+      char data[8];
+      mapToString(&setting[VOLTAGE],data);
+      data[5] = ' ';
+      data[6] = 'V';
+      DISPLAY_WriteVoltage(data);
     }
+    if(newCurrentSetting)
+    {
+      char data[8];
+      mapToString(&setting[CURRENT],data);
+      data[5] = ' ';
+      data[6] = 'A';
+      DISPLAY_WriteCurrent(data);
+    }
+    else if(newMeasurement)
+    {
+      char data[8];
+      mapToString(&measured[VOLTAGE],data);
+      data[5] = ' ';
+      data[6] = 'V';
+      data[7] = '\0';
+      DISPLAY_WriteVoltage(data);
+      mapToString(&measured[CURRENT],data);
+      data[6] = 'A';
+      DISPLAY_WriteCurrent(data);
+    }
+    if(turnOutputOn)      DISPLAY_OutputOn();
+    if(turnOutputOff)     DISPLAY_OutputOff();
+    if(selectVoltage)     DISPLAY_SelectVoltage();
+    if(selectCurrent)     DISPLAY_SelectCurrent();
+    
+    // Update the output.
+    if(newVoltageSetting) DAC_transfer(DAC_ctrlCode[VOLTAGE],setting[VOLTAGE].digital);
+    if(newCurrentSetting) DAC_transfer(DAC_ctrlCode[CURRENT],setting[VOLTAGE].digital);
+    if(turnOutputOn)      enableOutput();
+    if(turnOutputOff)     disableOutput();
+    
     // Restart the ADC
     if(newMeasurement)
     {
@@ -336,12 +390,15 @@ void mapToNum(PSUData* A,char* S)
 void increaseAnalog(PSUData* A)
 {
   A->analog += A->analogIncrements;
+  if(A->analog > A->maxAnalogValue) A->analog = A->maxAnalogValue;
   mapToDigital(A);
 }
 
 void decreaseAnalog(PSUData* A)
 {
   A->analog -= A->analogIncrements;
+  // remember that A.analog is a unsigned int
+  if(A->analog > A->maxAnalogValue) A->analog = 0;
   mapToDigital(A);
 }
 

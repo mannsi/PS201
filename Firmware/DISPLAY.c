@@ -16,6 +16,22 @@ void DISPLAY_StartScreen()
   LCD_Write("PSU");
 }
 
+static void DISPLAY_WriteSelectorUpper(void)
+{
+  LCD_Cursor(0,2);
+  LCD_Write("~");
+  LCD_Cursor(1,2);
+  LCD_Write(" ");
+}
+
+static void DISPLAY_WriteSelectorLower(void)
+{
+  LCD_Cursor(0,2);
+  LCD_Write(" ");
+  LCD_Cursor(1,2);
+  LCD_Write("~");
+}
+
 void DISPLAY_HomeScreen(char* voltage,char* current, uint8_t outputOn, unsigned char encoderControls)
 {
   // Write normal home screen
@@ -156,20 +172,14 @@ void DISPLAY_WriteCurrent(char* current)
   LCD_Write(current);
 }
 
-void DISPLAY_WriteSelectorUpper(void)
+void DISPLAY_SelectVoltage(void)
 {
-  LCD_Cursor(0,2);
-  LCD_Write("~");
-  LCD_Cursor(1,2);
-  LCD_Write(" ");
+  DISPLAY_WriteSelectorUpper();
 }
 
-void DISPLAY_WriteSelectorLower(void)
+void DISPLAY_SelectCurrent(void)
 {
-  LCD_Cursor(0,2);
-  LCD_Write(" ");
-  LCD_Cursor(1,2);
-  LCD_Write("~");
+  DISPLAY_WriteSelectorLower();
 }
 
 uint8_t DISPLAY_SetBacklight(uint8_t backlightIntensity)

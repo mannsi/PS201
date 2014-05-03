@@ -15,8 +15,8 @@ void DISPLAY_Initialize(uint8_t backlight, uint8_t contrast);
 void DISPLAY_StartScreen(void);
 void DISPLAY_HomeScreen(char *v,char *c, uint8_t outputOn, unsigned char encoderControls);
 unsigned char DISPLAY_MenuScreen(void);
-void DISPLAY_WriteSelectorUpper(void);
-void DISPLAY_WriteSelectorLower(void);
+void DISPLAY_SelectVoltage(void);
+void DISPLAY_SelectCurrent(void);
 
 uint8_t DISPLAY_SetBacklight(uint8_t backlightIntensity);
 uint8_t DISPLAY_SetContrast(uint8_t contrast);
