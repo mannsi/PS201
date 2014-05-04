@@ -4,8 +4,10 @@
 #include<avr/io.h>
 #include<avr/interrupt.h>
 #include "IOHandler.h"
+#include "TIMER.h"
 
 #define ADC_STARTCONVERSION ADCSRA |= 1 << ADSC
+#define ADC_DELAY 20 //in ms
 
 void ADC_Initialize(void);
 void ADC_StartMeasuring(unsigned char);

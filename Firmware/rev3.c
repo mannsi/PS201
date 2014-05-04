@@ -85,14 +85,16 @@ int main(void)
 
   // Initialize PSU variables
   {
-    PSUData defaultVoltage = {.analog=0, .digital=0, .multiplier=2.43, .offset=0, .maxAnalogValue=2000, .analogIncrements=10};
-    PSUData defaultCurrent = {.analog=0, .digital=0, .multiplier=2.43, .offset=0, .maxAnalogValue=100, .analogIncrements=1};
+    PSUData defaultVoltage = {.analog=0, .digital=0, .multiplier=getVoltageReadMultiplier(), .offset=0, .maxAnalogValue=2000, .analogIncrements=10};
+    PSUData defaultCurrent = {.analog=0, .digital=0, .multiplier=getCurrentMultiplier(), .offset=0, .maxAnalogValue=100, .analogIncrements=1};
     measured[VOLTAGE] = defaultVoltage;
     measured[PREREG]  = defaultVoltage;
     measured[VIN]     = defaultVoltage;
     setting[VOLTAGE]  = defaultVoltage;
     measured[CURRENT] = defaultCurrent;
     setting[CURRENT]  = defaultCurrent;
+    
+    setting[VOLTAGE].multiplier = getVoltageSetMultiplier();
   }
   
   uint8_t encoderControls = VOLTAGE;
@@ -121,6 +123,7 @@ int main(void)
   }
   
   // Start the ADC
+  sei();
   ADC_StartMeasuring(ADCregister[ADCmeasures]);
 
   /************************
@@ -139,7 +142,8 @@ int main(void)
     int selectVoltage = 0;
     int selectCurrent = 0;
     // Read the ADC.
-    int newMeasurement = readFromADC(&measured[ADCmeasures]);
+    int measurementCompleted[4] = {0,0,0,0};
+    measurementCompleted[ADCmeasures] = readFromADC(&measured[ADCmeasures]);
     // Listen to USB commands.
     serialCommand newUSBCommand = readUSB();
     
@@ -190,36 +194,6 @@ int main(void)
 	      break;     
 	  }
 	}
-	
-	// Write to LCD
-	if(newVoltageSetting)
-	{
-	  char data[8];
-	  mapToString(&setting[VOLTAGE],data);
-	  data[5] = ' ';
-	  data[6] = 'V';
-	  DISPLAY_WriteVoltage(data);
-	}
-	if(newCurrentSetting)
-	{
-	  char data[8];
-	  mapToString(&setting[CURRENT],data);
-	  data[5] = ' ';
-	  data[6] = 'A';
-	  DISPLAY_WriteCurrent(data);
-	}
-	else if(newMeasurement)
-	{
-	  char data[8];
-	  mapToString(&measured[VOLTAGE],data);
-	  data[5] = ' ';
-	  data[6] = 'V';
-	  data[7] = '\0';
-	  DISPLAY_WriteVoltage(data);
-	  mapToString(&measured[CURRENT],data);
-	  data[6] = 'A';
-	  DISPLAY_WriteCurrent(data);
-	}
 	break;
       case USBCONTROLLED:
 	break;
@@ -246,7 +220,7 @@ int main(void)
       data[6] = 'A';
       DISPLAY_WriteCurrent(data);
     }
-    else if(newMeasurement)
+    if(measurementCompleted[VOLTAGE] == 1)
     {
       char data[8];
       mapToString(&measured[VOLTAGE],data);
@@ -254,8 +228,14 @@ int main(void)
       data[6] = 'V';
       data[7] = '\0';
       DISPLAY_WriteVoltage(data);
+    }
+    if(measurementCompleted[CURRENT] == 1)
+    {
+      char data[8];
       mapToString(&measured[CURRENT],data);
+      data[5] = ' ';
       data[6] = 'A';
+      data[7] = '\0';
       DISPLAY_WriteCurrent(data);
     }
     if(turnOutputOn)      DISPLAY_OutputOn();
@@ -270,7 +250,7 @@ int main(void)
     if(turnOutputOff)     disableOutput();
     
     // Restart the ADC
-    if(newMeasurement)
+    if(measurementCompleted[ADCmeasures])
     {
       startADC(&ADCmeasures);
     }
@@ -317,8 +297,8 @@ int readFromADC(PSUData* A)
   // Check global variable:
   // WARNING This must be an ATOMIC operation since 
   // ADC_reading is accessed by the ISR.
-  uint16_t reading;
-  uint16_t oldReading;
+  int16_t reading;
+  int16_t oldReading;
   
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
   {
@@ -331,9 +311,18 @@ int readFromADC(PSUData* A)
     oldReading = A->digital;
     if(oldReading != reading)
     {
+      // Filter the reading
+      // This works like a low pass filter and has an exponential
+      // behaviour under step-change, the time constant being "10"
+      // in this case.
+      reading = (oldReading - (oldReading - reading)/10);
       A->digital = reading;
       mapToAnalog(A);
       return 1;
+    }
+    else 
+    {
+      return -1;
     }
   }
   return 0;
@@ -402,11 +391,42 @@ void decreaseAnalog(PSUData* A)
   mapToDigital(A);
 }
 
+void averageAnalogCurrent(PSUData* A)
+{
+}
+
 void logToUSB(PSUData* A,unsigned char cmd)
 {
   char data[5];
   mapToString(A,data);
   sendpacket(cmd,data);
+}
+
+float getReferenceVoltage(void)
+{
+  // Read from EEPROM
+  float referenceVoltage  = ((float) EEPROM_ReadNum(ADDR_CALIBRATION))/1000.0;
+  if(referenceVoltage == 0)
+  {
+    referenceVoltage = 2.43;
+    EEPROM_WriteNum((uint16_t)referenceVoltage*1000,ADDR_CALIBRATION);
+  }
+  return referenceVoltage;
+}
+
+float getCurrentMultiplier(void)
+{
+  return getReferenceVoltage()/0.2/11;
+}
+
+float getVoltageSetMultiplier(void)
+{
+  return getReferenceVoltage();
+}
+
+float getVoltageReadMultiplier(void)
+{
+  return 11.0*getReferenceVoltage()/10.0;
 }
 
 // To map the serialCommand to a meaningfull command
@@ -561,20 +581,20 @@ static void initRegistries()
   DISABLE_OUTPUT;
 }
 
-// static void initCalibration()
-// {
-//   // Calibration variables
-//   // Read from EEPROM
-//   voltageSetMulti  = ((float) EEPROM_ReadNum(ADDR_CALIBRATION))/1000.0;
-//   if(voltageSetMulti == 0)
-//   {
-//     voltageSetMulti = 0.243;
-//     EEPROM_WriteNum((uint16_t)voltageSetMulti*1000,ADDR_CALIBRATION);
-//   }
-//   voltageReadMulti = 11.0*voltageSetMulti/10.0;
-//   currentSetMulti  = voltageSetMulti/0.2/11;
-//   currentReadMulti = voltageSetMulti/0.2/11;
-// }
+void writeDebug(uint16_t a, uint16_t b)
+{
+  LCD_Clear();
+  LCD_Cursor(0,0);
+  char aa[16];
+  char bb[16];
+  sprintf(aa,"%i",a);
+  sprintf(bb,"%i",b);
+  LCD_Write(aa);
+  LCD_Cursor(1,0);
+  LCD_Write(bb);
+  _delay_ms(1000);
+}
+
 // 
 // void doCalibration()
 // {

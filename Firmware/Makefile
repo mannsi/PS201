@@ -77,8 +77,7 @@ PROGRAMMER_MCU=m328p
 
 # Name of our project
 # (use a single word, e.g. 'myproject')
-PROJECTNAME=blink
-#rev3
+PROJECTNAME=rev3
 
 # Source files
 # List C/C++/Assembly source files:
@@ -86,7 +85,7 @@ PROJECTNAME=blink
 # Use .cc, .cpp or .C suffix for C++ files, use .S 
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c 
-PRJSRC=rev3.c SERIAL.c USART.c DISPLAY.c LCD.c SWITCH.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c
+PRJSRC=rev3.c SERIAL.c USART.c DISPLAY.c LCD.c SWITCH.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c TIMER.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include

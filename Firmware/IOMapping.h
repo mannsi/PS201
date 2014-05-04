@@ -51,4 +51,9 @@
 #define PREREG_PORT	portB
 #define PREREG_PIN	0
 
+// Clock
+#ifndef F_CPU
+#define F_CPU 8000000
+#endif
+
 #endif

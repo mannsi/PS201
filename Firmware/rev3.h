@@ -20,6 +20,8 @@
 #define ENABLE_PREREG  IOClearPin(PREREG_PORT,PREREG_PIN)
 #define DISABLE_PREREG IOSetPin(PREREG_PORT,PREREG_PIN)
 
+#define NUMBER_OF_AVERAGES 50
+
 extern button switch1, switch2, switch3, switch4;
 
 int main(void);
@@ -46,6 +48,11 @@ uint16_t mapToAnalog(PSUData*);
 uint16_t mapToDigital(PSUData*);
 void mapToString(PSUData*,char*);
 void mapToNum(PSUData*,char*);
+
+// Calibration initialization
+float getVoltageSetMultiplier(void);
+float getVoltageReadMultiplier(void);
+float getCurrentMultiplier(void);
 
 // Some more manipulations on the PSUData
 void increaseAnalog(PSUData*);
@@ -116,7 +123,12 @@ void writeToUsb(uint16_t voltage,
 		unsigned char outputOn);
 
 static void initRegistries(void);
-// static void initCalibration(void);
+
+
+
+
+
+
 // void doCalibration(void);
 
 void joinArrays(unsigned char *voltageArray, 
