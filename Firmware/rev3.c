@@ -308,22 +308,28 @@ int readFromADC(PSUData* A)
   
   if(reading != -1)
   {
-    oldReading = A->digital;
-    if(oldReading != reading)
+    // We accumulate data to increase the effective number of bits
+    A->average += (uint32_t) reading;
+    A->numberOfSamples += 1;
+    // When we have reached the nuber of averages we bitshift right 
+    // four times, which is the same as dividing by square root of 
+    // the number of averages.
+    if(A->numberOfSamples == 256) // THIS NUMBER IS 4^4 and should stay there!
     {
-      // Filter the reading
-      // This works like a low pass filter and has an exponential
-      // behaviour under step-change, the time constant being "10"
-      // in this case.
-      reading = (oldReading - (oldReading - reading)/10);
-      A->digital = reading;
-      mapToAnalog(A);
-      return 1;
+      oldReading = A->digital;
+      reading = (uint16_t) (A->average>>4);
+      // the reading should now be a 14 bit number in stead of just
+      // 10 bit number, the last couple of bits we do not really use.
+      A->average = 0;
+      A->numberOfSamples = 0;
+      if(oldReading != reading)
+      {
+	A->digital = reading;
+	mapToAnalog(A);
+	return 1;
+      }
     }
-    else 
-    {
-      return -1;
-    }
+    return -1;
   }
   return 0;
 }
@@ -416,17 +422,17 @@ float getReferenceVoltage(void)
 
 float getCurrentMultiplier(void)
 {
-  return getReferenceVoltage()/0.2/11;
+  return getReferenceVoltage()/0.2/11.0/16.0;
 }
 
 float getVoltageSetMultiplier(void)
 {
-  return getReferenceVoltage();
+  return 12.0*getReferenceVoltage()/10.0;
 }
 
 float getVoltageReadMultiplier(void)
 {
-  return 11.0*getReferenceVoltage()/10.0;
+  return 11.0*getReferenceVoltage()/10.0/16.0;
 }
 
 // To map the serialCommand to a meaningfull command

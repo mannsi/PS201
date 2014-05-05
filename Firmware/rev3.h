@@ -20,8 +20,6 @@
 #define ENABLE_PREREG  IOClearPin(PREREG_PORT,PREREG_PIN)
 #define DISABLE_PREREG IOSetPin(PREREG_PORT,PREREG_PIN)
 
-#define NUMBER_OF_AVERAGES 50
-
 extern button switch1, switch2, switch3, switch4;
 
 int main(void);
@@ -37,6 +35,8 @@ void mapToCurrent(uint16_t* cur, char* b);
 typedef struct {
   uint16_t analog;
   uint16_t digital;
+  uint32_t average;
+  uint16_t numberOfSamples;
   float multiplier;
   uint16_t offset;
   uint16_t maxAnalogValue; // 2000 corresponds to 20V

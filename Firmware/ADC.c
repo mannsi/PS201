@@ -13,21 +13,18 @@ void ADC_Initialize(void)
   BIT_SET(ADCSRA,BIT(ADEN));
   // Enable ADC interupt
   BIT_SET(ADCSRA,BIT(ADIE));
-  // Set the ADC prescaler to 128 for min
-  // sampling speed
-  BIT_SET(ADCSRA,BIT(ADPS0));
+  // Set the ADC prescaler to 64 for ADC 
+  // clock of 125kHz.
+  //BIT_SET(ADCSRA,BIT(ADPS0));
   BIT_SET(ADCSRA,BIT(ADPS1));
   BIT_SET(ADCSRA,BIT(ADPS2));
-  
-  // initialize the timer
-  TIMER_Initialize();
 }
 
 void ADC_StartMeasuring(unsigned char a)
 {
   ADMUX = 0;
   BIT_SET(ADMUX,a);
-  TIMER_ADC_Start(ADC_DELAY);
+  ADC_STARTCONVERSION;
 }
 
 // The ADC interupt function is automatically triggered
@@ -43,6 +40,6 @@ ISR(ADC_vect)
 ISR(TIMER0_COMPA_vect)
 {
   TIMER_ADC_Stop();
-  ADC_STARTCONVERSION;
+  //ADC_STARTCONVERSION;
 }
 
