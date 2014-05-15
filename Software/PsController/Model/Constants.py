@@ -28,3 +28,5 @@ TURN_ON_OUTPUT = int('0xc2', 16)
 TURN_OFF_OUTPUT = int('0xc3', 16)
 START_STREAM = int('0xa2', 16)
 STOP_STREAM = int('0xa3', 16)
+
+LOGGER_NAME = "PS201Logger"

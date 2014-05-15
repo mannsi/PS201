@@ -12,22 +12,29 @@ Preconditions:
 - DPS201 is connected to the computer via usb
 - DPS201 is powered on and with input voltage > 4V
 """
-import time
-from PsController.Control.Controller import Controller
 
-controller = Controller()
+
+import time
+from PsController.Control.Control import Control
+from PsController.DAL.DAL import DAL
+
+
+control = Control(DAL=DAL(), threaded=False)
 MAX_VOLTAGE_PERCENTAGE_DEVIATION = 0.02
 MAX_VOLTAGE_ABSOLUTE_DEVIATION = 0.21
+
+MAX_CURRENT_PERCENTAGE_DEVIATION = 0.02
+MAX_CURRENT_ABSOLUTE_DEVIATION = 21
+
 TARGET_CURRENT = 10
 SLEEP_BETWEEN_STEPS = 2
 
 
 def connect():
-    if controller.connected:
+    if control.connected:
         return True
     print("Connecting")
-    deviceUsbPort = controller.getDeviceUsbPort()
-    connected = controller.connect(deviceUsbPort)
+    connected = control.connect()
     if not connected:
         print("Unable to connect")
     else:
@@ -39,14 +46,14 @@ def runSetValuesVsOutputValuesTest(targetCurrent, targetVoltage):
     """Sets the values of the device to target values and then records the device output values.
     Finally compares these values and throws an exception if they do not match according to expectations"""
     print("Checking voltage: ", targetVoltage, " and current: ", targetCurrent)
-    controller.setTargetCurrent(targetCurrent)
-    controller.setTargetVoltage(targetVoltage)
+    control.setTargetCurrent(targetCurrent)
+    control.setTargetVoltage(targetVoltage)
     time.sleep(SLEEP_BETWEEN_STEPS)
-    measuredTargetCurrent = controller.getTargetCurrent()
-    measuredTargetVoltage = controller.getTargetVoltage()
-    outputVoltage = controller.getOutputVoltage()
-    #outputCurrent = controller.getOutputCurrent()
-    allValues = controller.getAllValues()
+    measuredTargetCurrent = control.getTargetCurrent()
+    measuredTargetVoltage = control.getTargetVoltage()
+    outputVoltage = control.getOutputVoltage()
+    outputCurrent = control.getOutputCurrent()
+    allValues = control.getAllValues()
 
     if targetCurrent != measuredTargetCurrent:
         raise Exception("Wrong target current measured. Target current is ", targetCurrent,
@@ -54,23 +61,27 @@ def runSetValuesVsOutputValuesTest(targetCurrent, targetVoltage):
     if targetVoltage != measuredTargetVoltage:
         raise Exception("Wrong target voltage measured. Target voltage is ", targetVoltage,
                         " but measured target voltage is ", measuredTargetVoltage)
-    compareTargetAndOutputValues(targetVoltage, outputVoltage, allValues)
+    compareTargetAndOutputValues(targetVoltage, outputVoltage, targetCurrent, outputCurrent, allValues)
     print("OK")
 
 
-def compareTargetAndOutputValues(targetVoltage, outputVoltage, allValues):
-    #if not withinBounds(targetCurrent, outputCurrent):
-    #    raiseException(targetCurrent, outputCurrent, "Current")
-    if not withinBounds(targetVoltage, outputVoltage):
+def compareTargetAndOutputValues(targetVoltage, outputVoltage, targetCurrent, outputCurrent, allValues):
+    if not currentWithinBounds(targetCurrent, outputCurrent):
+        raiseException(targetCurrent, outputCurrent, "Current")
+    if not voltageWithinBounds(targetVoltage, outputVoltage):
         raiseException(targetVoltage, outputVoltage, "Voltage")
-    #if not withinBounds(targetCurrent, allValues.outputCurrent):
-    #    raiseException(targetCurrent, allValues.outputCurrent, "All values current")
-    if not withinBounds(targetVoltage, allValues.outputVoltage):
+    if not currentWithinBounds(targetCurrent, allValues.outputCurrent):
+        raiseException(targetCurrent, allValues.outputCurrent, "All values current")
+    if not voltageWithinBounds(targetVoltage, allValues.outputVoltage):
         raiseException(targetVoltage, outputVoltage, "All values voltage")
 
 
-def withinBounds(target, measured):
+def voltageWithinBounds(target, measured):
     return abs(target - measured) <= max(MAX_VOLTAGE_ABSOLUTE_DEVIATION, MAX_VOLTAGE_PERCENTAGE_DEVIATION * target)
+
+
+def currentWithinBounds(target, measured):
+    return abs(target - measured) <= max(MAX_CURRENT_ABSOLUTE_DEVIATION, MAX_CURRENT_PERCENTAGE_DEVIATION * target)
 
 
 def raiseException(target, measured, valueName):
@@ -78,9 +89,9 @@ def raiseException(target, measured, valueName):
 
 
 def runVoltageIntegrationTest():
-    if not controller.connected:
+    if not control.connected:
         raise Exception("Not connected")
-    inputVoltage = controller.getInputVoltage()
+    inputVoltage = control.getInputVoltage()
     if inputVoltage < 4:
         raise Exception("Input voltage not high enough to test. Input voltage value: ", inputVoltage)
 
@@ -92,7 +103,7 @@ def runVoltageIntegrationTest():
 
 
 def runCurrentIntegrationTest():
-    if not controller.connected:
+    if not control.connected:
         raise Exception("Could not connect to device")
 
     for c in range(10, 1000, 10):
@@ -103,12 +114,14 @@ def runCurrentIntegrationTest():
 def setup():
     connected = connect()
     if connected:
-        controller.stopAutoUpdate()
-        controller.setOutputOnOff(True)
+        control.stopAutoUpdate()
+        control.setOutputOnOff(True)
 
 
 def cleanup():
-    controller.setOutputOnOff(False)
+    control.setTargetCurrent(0)
+    control.setTargetVoltage(0)
+    control.setOutputOnOff(False)
 
 
 if __name__ == "__main__":

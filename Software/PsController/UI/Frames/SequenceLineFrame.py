@@ -6,7 +6,7 @@ from PsController.UI.Controls.SequenceLine import SequenceLine
 class SequenceLineFrame(Frame):
     """Displays a list of SequenceLine objects"""
     def __init__(self, parent):
-        Frame.__init__(self, parent)
+        super().__init__(parent)
         self.canvas = parent
         self.canvas.pack(fill="both", expand=True)
         self.canvas.create_window((0, 0), window=self, anchor="nw", tags="self")

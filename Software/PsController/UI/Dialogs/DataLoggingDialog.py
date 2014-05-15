@@ -60,8 +60,9 @@ class DataLoggingDialog(Dialog):
 
     def browse(self):
         file = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
-        self.filePathVar.set(file.name)
-        file.close()
+        if file:
+            self.filePathVar.set(file.name)
+            file.close()
 
     @staticmethod
     def initializeFile(filePath):

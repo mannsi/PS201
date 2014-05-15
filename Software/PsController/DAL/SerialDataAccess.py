@@ -1,7 +1,7 @@
 from PsController.DAL.SerialMapping import SerialMapping
 
 
-class DataAccess():
+class SerialDataAccess():
     @staticmethod
     def sendValueToDevice(connection, command, data=''):
         bytesToSend = SerialMapping.toSerial(command, data)

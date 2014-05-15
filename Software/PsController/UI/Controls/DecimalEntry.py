@@ -14,7 +14,7 @@ class DecimalEntry(Entry):
             self.textVar = IntVar(None)
         self.textVar.set(self.VerifyInitialValue(self.textVar.get()))
         vcmd = (master.register(self.OnValidate), '%P', '%S')
-        Entry.__init__(self, master, validate="key", validatecommand=vcmd, textvariable=self.textVar, *args, **kwargs)
+        super().__init__(master, validate="key", validatecommand=vcmd, textvariable=self.textVar, *args, **kwargs)
 
     def get(self):
         val = self.textVar.get()

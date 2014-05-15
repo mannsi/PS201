@@ -222,3 +222,19 @@ pip-log.txt
 *.out
 *.out.map
 
+/PsController/Output/PsController setup.exe
+/PsController/Ps201.sln
+/PsController/PsController.pyproj
+/PsController/PsController/Ps201.sln
+/PsController/PsController/PsController.pyproj
+/PsController/installed dependencies
+/PsController/Output/PsController.exe
+/PsController/PsController.iss
+/PsController/createExecutables.py
+/PsController/createInstall.bat
+/Software/installed dependencies
+/Software/Ps201.sln
+/Software/PsController.iss
+/Software/PsController.pyproj
+/Software/createInstall.bat
+/Software/.idea

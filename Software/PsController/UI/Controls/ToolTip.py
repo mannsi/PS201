@@ -79,8 +79,10 @@ class ToolTip(Toplevel):
         self.geometry('+%i+%i' % (
             event.x_root + 10, event.y_root + 10))  # Offset the ToolTip 10x10 pixes southwest of the pointer
         try:
+            # Try to call the message function.
+            # Will not change the message if the message function is None or the message function fails
             self.msgVar.set(
-                self.msgFunc())  # Try to call the message function.  Will not change the message if the message function is None or the message function fails
+                self.msgFunc())
         except:
             pass
         self.after(int(self.delay * 1000), self.show)

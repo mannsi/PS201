@@ -117,7 +117,7 @@ AVRDUDE_PROGRAMMERID=stk500v2
 # port--serial or parallel port to which your 
 # hardware programmer is attached
 #
-AVRDUDE_PORT=/dev/ttyUSB0
+AVRDUDE_PORT=COM3
 
 
 ####################################################

@@ -29,11 +29,10 @@ class ThreadHelper():
                     filePath, fileLoggingFunction):
         self.scheduleScheduler = Scheduler()
         self.scheduleScheduler.start()
+        for function, firingTime, args in zip(listOfFunctions, listOfFiringTimes, listOfArgs):
+                self.scheduleScheduler.add_date_job(function, firingTime, args)
         if useLoggingTimeInterval:
             self.scheduleScheduler.add_interval_job(fileLoggingFunction, seconds=loggingTimeInterval, args=[filePath])
-        else:
-            for function, firingTime, args in zip(listOfFunctions, listOfFiringTimes, listOfArgs):
-                self.scheduleScheduler.add_date_job(function, firingTime, args)
 
     def stopSchedule(self):
         self.scheduleScheduler.shutdown(wait=False)

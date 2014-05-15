@@ -19,7 +19,6 @@ class SerialConnection():
         self.logger = logger
         self.idMessage = idMessage
         self.deviceVerificationFunc = deviceVerificationFunc
-        self.connectNotificationFunctionList = []
         self.connected = False
         self.connection = None
 
@@ -40,7 +39,7 @@ class SerialConnection():
                 con = serial.Serial(port, self.baudRate, timeout=0.01)
                 available.append(con.portstr)
                 con.close()
-            except serial.SerialException:
+            except serial.SerialException as e:
                 pass
         return available
 
@@ -72,32 +71,19 @@ class SerialConnection():
             logString = "Device not found on port " + usbPort
             self.logger.info(logString)
 
-    def notifyOnConnectionLost(self, func):
-        self.connectNotificationFunctionList.append(func)
-
     def get(self):
         if not self.connected:
             return
-        try:
-            serialResponse = self._readDeviceResponse(self.connection)
-            logString = "Serial data received:  %s" % serialResponse
-            self.logger.debug(logString)
-            return serialResponse
-        except Exception:
-            self.connected = False
-            self._notifyConnectionLost()
-            raise Exception("Error when reading value from device.")
+        serialResponse = self._readDeviceResponse(self.connection)
+        logString = "Serial data received:  %s" % serialResponse
+        self.logger.debug(logString)
+        return serialResponse
 
     def set(self, sendingData):
         if not self.connected:
             return
-        try:
-            self.logger.debug("Serial data sent:%s" % sendingData)
-            self._sendToDevice(self.connection, sendingData)
-        except serial.SerialTimeoutException:
-            self.connected = False
-            self._notifyConnectionLost()
-            raise Exception("Error when setting value with data: %s ", sendingData)
+        self.logger.debug("Serial data sent:%s" % sendingData)
+        self._sendToDevice(self.connection, sendingData)
 
     def _sendToDevice(self, serialConnection, data):
         with self.processLock:
@@ -125,10 +111,6 @@ class SerialConnection():
             if startCount == 2:
                 break
         return bytes(line)
-
-    def _notifyConnectionLost(self):
-        for func in self.connectNotificationFunctionList:
-            func()
 
     def currentConnectedUsbPort(self):
         return self.connection.port
