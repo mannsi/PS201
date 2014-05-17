@@ -2,7 +2,7 @@ from PsController.UI.Dialogs.AboutDialog import *
 from PsController.UI.Dialogs.RampDialog import RampDialog
 from PsController.UI.Dialogs.DataLoggingDialog import DataLoggingDialog
 from PsController.UI.Frames.SequenceLineFrame import SequenceLineFrame
-import PsController.Model.ConnectionState as ConnectionState
+import PsController.Model.Constants as Constants
 
 
 class SequenceTabFrame(Frame):
@@ -122,7 +122,7 @@ class SequenceTabFrame(Frame):
         self.selectLine(rowNumber)
 
     def connectedChanged(self, value):
-        connected = (value == ConnectionState.CONNECTED)
+        connected = (value == Constants.CONNECTED)
         if connected:
             state = NORMAL
         else:

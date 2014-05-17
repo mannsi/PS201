@@ -1,16 +1,15 @@
 import logging
 
 from PsController.Model.Constants import *
-from .SerialConnection import SerialConnection
-from .SerialMapping import SerialMapping
-from .SerialDataAccess import SerialDataAccess
+from .DataMapping.SerialDataMapping import SerialDataMapping
+from .Connection.SerialConnectionFactory import SerialConnectionFactory
 
 
-class DAL:
+class Model:
     def __init__(self):
         self.connected = False
-        self._dataAccessClass = SerialDataAccess()
-        self._connection = self._createConnection()
+        self._dataAccessClass = SerialDataMapping()
+        self._connection = SerialConnectionFactory(logger=logging.getLogger(LOGGER_NAME)).getConnection()
         self._currentUsbPort = None
         self._connectNotificationFunctionList = []
 
@@ -53,32 +52,6 @@ class DAL:
 
     def notifyOnConnectionLost(self, func):
         self._connectNotificationFunctionList.append(func)
-
-    def _createConnection(self):
-        return SerialConnection(
-            baudRate=9600,
-            timeout=0.1,
-            logger=logging.getLogger(LOGGER_NAME),
-            idMessage=DAL._getDeviceIdMessage(),
-            deviceVerificationFunc=self._deviceIdResponseFunction)
-
-    @staticmethod
-    def _getDeviceIdMessage():
-        """Gives the messages needed to send to device to verify that device is using a given port"""
-        return SerialMapping.toSerial(HANDSHAKE, data='')
-
-    @staticmethod
-    def _deviceIdResponseFunction(serialResponse):
-        """Function used to verify an id response from device, i.e. if the response come from our device or not"""
-        try:
-            if not serialResponse:
-                logging.getLogger(LOGGER_NAME).info("Did not receive an ACKNOWLEDGE response")
-                return False
-            response = SerialMapping.fromSerial(serialResponse)
-            return response.command == ACKNOWLEDGE
-        except:
-            logging.getLogger(LOGGER_NAME).info("Did not receive an ACKNOWLEDGE response")
-            return False
 
     def _notifyConnectionLost(self):
         for func in self._connectNotificationFunctionList:

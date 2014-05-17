@@ -7,7 +7,7 @@ from ..Controls.ToolTip import ToolTip
 from .TabControlFrame import TabControl
 import PsController.Utilities.OsHelper as osHelper
 import PsController.Utilities.IconHelper as iconHelper
-import PsController.Model.ConnectionState as ConnectionState
+import PsController.Model.Constants as Constants
 
 
 mainWindowSize = '650x400'
@@ -120,7 +120,7 @@ class _TopFrame(Frame):
         self.control.setOutputOnOff(chkValue)
 
     def connectedUpdated(self, value):
-        connected = (value == ConnectionState.CONNECTED)
+        connected = (value == Constants.CONNECTED)
         self.showConnectedState(connected)
 
     def showConnectedState(self, connected):
@@ -196,7 +196,7 @@ class _OutputValuesFrame(Frame):
         self.currentEntryVar.set(int(newOutputCurrent))
 
     def connectedUpdated(self, value):
-        connected = (value == ConnectionState.CONNECTED)
+        connected = (value == Constants.CONNECTED)
         if connected:
             state = NORMAL
         else:

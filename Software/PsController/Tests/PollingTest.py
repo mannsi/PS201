@@ -13,13 +13,13 @@ Preconditions:
 - DPS201 is powered on and with input voltage > 4V
 """
 
-
 import time
+
 from PsController.Control.Control import Control
-from PsController.DAL.DAL import DAL
+from PsController.Model.Model import Model
 
 
-control = Control(DAL=DAL(), threaded=False)
+control = Control(DAL=Model(), threaded=False)
 MAX_VOLTAGE_PERCENTAGE_DEVIATION = 0.02
 MAX_VOLTAGE_ABSOLUTE_DEVIATION = 0.21
 

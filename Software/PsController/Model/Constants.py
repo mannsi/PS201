@@ -30,3 +30,10 @@ START_STREAM = int('0xa2', 16)
 STOP_STREAM = int('0xa3', 16)
 
 LOGGER_NAME = "PS201Logger"
+
+"""
+Connection states
+"""
+CONNECTED = "Connected"
+DISCONNECTED = "Disconnected"
+NO_DEVICE_FOUND = "No device found"

@@ -1,6 +1,6 @@
 import crcmod.predefined
 
-from PsController.Model.Settings import *
+from PsController.Model.EscapeCharacters import *
 
 
 class Crc16:

@@ -1,11 +1,14 @@
+# TODO this class should only be instanciated within a ConnectionFactory class. This class needs to be created
+
 import serial
 import glob
 import threading
 from PsController.Model.Constants import *
 import PsController.Utilities.OsHelper as osHelper
+from .Connection import Connection
 
 
-class SerialConnection():
+class SerialConnection(Connection):
     def __init__(
             self,
             baudRate,
@@ -111,6 +114,3 @@ class SerialConnection():
             if startCount == 2:
                 break
         return bytes(line)
-
-    def currentConnectedUsbPort(self):
-        return self.connection.port

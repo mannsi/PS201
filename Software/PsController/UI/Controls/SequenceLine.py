@@ -1,7 +1,8 @@
 from tkinter import *
 from tkinter.ttk import *
+
 from .DecimalEntry import DecimalEntry
-from PsController.Model.SequenceLineData import SequenceLineData
+from PsController.UI.DataObjects.SequenceLineData import SequenceLineData
 
 
 class SequenceLine():

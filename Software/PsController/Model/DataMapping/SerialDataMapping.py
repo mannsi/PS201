@@ -1,9 +1,20 @@
 from PsController.Model.Constants import *
 from PsController.Utilities.Crc import Crc16
-from PsController.DAL.DeviceResponse import DeviceResponse
 
 
-class SerialMapping:
+class SerialDataMapping():
+    @classmethod
+    def sendValueToDevice(cls, connection, command, data=''):
+        bytesToSend = cls.toSerial(command, data)
+        connection.set(bytesToSend)
+
+    @classmethod
+    def getResponseFromDevice(cls, connection):
+        serialValue = connection.get()
+        if not serialValue:
+            return None
+        return cls.fromSerial(serialValue)
+
     @classmethod
     def toSerial(cls, command, data):
         binaryData = bytes(str(data), 'ascii')
@@ -67,6 +78,17 @@ class SerialMapping:
         if len(hexString) == 1:
             hexString = '0' + hexString
         return hexString
+
+
+class DeviceResponse:
+    def __init__(self):
+        self.start = 0
+        self.command = 0
+        self.dataLength = 0
+        self.data = ""
+        self.crc = []  # list of int values
+        self.serialResponse = bytearray()
+        self.readableSerial = []
 
 
 class SerialException(Exception):

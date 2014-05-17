@@ -1,7 +1,6 @@
 # TODO Need to register all the things somehow. Now they are all hardcoded which sucks
-# TODO Review the actual logic flow. Do I know how everything is supposed to work ?
-# TODO go through every use case and make sure everything is working. Also check to see if logging works
-# TODO fix the tests and example code
+# TODO merge DAL and Model together into Model. Take a look at MVC stuff online and refactor more
+# TODO separate sequence logic from 'normal' logic
 
 import logging
 import queue
@@ -9,8 +8,7 @@ import threading
 
 from PsController.Control.Controller import Controller
 from PsController.Utilities.ThreadHelper import ThreadHelper
-import PsController.Model.ConnectionState as ConnectionState
-from PsController.Model.Constants import *
+import PsController.Model.Constants as ModelConstants
 from . import Constants
 
 
@@ -27,7 +25,7 @@ class Control:
         # A dict with key: UpdateCondition and value (currentConditionValue, listOfUpdateFunctions)
         self._updateFunctionsAndValues = {}
 
-        # TODO_later this should not be created here. It should come from a factory or as a parameter or something
+        # TODO this should not be created here. It should come from a factory or as a parameter or something
         self._controller = Controller(self._DAL, self._transactionLock, self._conditionUpdated)
         self._logHandlersAdded = False
         self.setLogging(logging.ERROR)
@@ -50,7 +48,7 @@ class Control:
                     self._DAL.connect(forcedUsbPort)
                     return self.connected
             except:
-                logging.getLogger(LOGGER_NAME).error("Error while connecting to device")
+                logging.getLogger(ModelConstants.LOGGER_NAME).error("Error while connecting to device")
                 return False
 
     def _connectWorker(self, forcedUsbPort):
@@ -58,23 +56,23 @@ class Control:
         try:
             self._DAL.connect(forcedUsbPort)
             if self.connected:
-                self._conditionUpdated(Constants.CONNECT_UPDATE, ConnectionState.CONNECTED)
+                self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.CONNECTED)
             else:
-                self._conditionUpdated(Constants.CONNECT_UPDATE, ConnectionState.NO_DEVICE_FOUND)
+                self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.NO_DEVICE_FOUND)
         except Exception as e:
-            logging.getLogger(LOGGER_NAME).error('Error connecting to device. Msg', str(e))
+            logging.getLogger(ModelConstants.LOGGER_NAME).error('Error connecting to device. Msg', str(e))
 
     def disconnect(self):
         try:
             self._DAL.disconnect()
         except Exception as e:
-            logging.getLogger(LOGGER_NAME).error('Error disconnecting from device. Msg', str(e))
-        self._conditionUpdated(Constants.CONNECT_UPDATE, ConnectionState.DISCONNECTED)
+            logging.getLogger(ModelConstants.LOGGER_NAME).error('Error disconnecting from device. Msg', str(e))
+        self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.DISCONNECTED)
         self._conditionUpdated(Constants.OUTPUT_VOLTAGE_UPDATE, 0)
         self._conditionUpdated(Constants.OUTPUT_CURRENT_UPDATE, 0)
         self._conditionUpdated(Constants.TARGET_VOLTAGE_UPDATE, 0)
         self._conditionUpdated(Constants.TARGET_CURRENT_UPDATE, 0)
-        self._conditionUpdated(Constants.PREREG_VOLTAGE_UPDATE, 0)
+        self._conditionUpdated(Constants.PRE_REG_VOLTAGE_UPDATE, 0)
         self._conditionUpdated(Constants.INPUT_VOLTAGE_UPDATE, 0)
         self._conditionUpdated(Constants.OUTPUT_ON_OFF_UPDATE, 0)
 
@@ -146,7 +144,7 @@ class Control:
 
     def setLogging(self, logLevel):
         if not self._logHandlersAdded:
-            logger = logging.getLogger(LOGGER_NAME)
+            logger = logging.getLogger(ModelConstants.LOGGER_NAME)
             logger.propagate = False
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             fileHandler = logging.FileHandler("PS201.log")
@@ -160,13 +158,7 @@ class Control:
             # Overwhelming when this is set to debug
             logging.getLogger("apscheduler.scheduler").setLevel(logging.ERROR)
 
-        logging.getLogger(LOGGER_NAME).setLevel(logLevel)
-
-    def getAvailableUsbPorts(self):
-        pass
-
-    def getDeviceUsbPort(self, allUsbPorts=None, forcedUsbPort=None):
-        pass
+        logging.getLogger(ModelConstants.LOGGER_NAME).setLevel(logLevel)
 
     def notifyConnectedUpdate(self, func):
         """Runs the func function when connection status changes.
@@ -186,7 +178,7 @@ class Control:
     def notifyPreRegVoltageUpdate(self, func):
         """Runs the func function when pre reg voltage value changes.
            Only runs when running in threaded mode"""
-        self._registerUpdateFunction(func, Constants.PREREG_VOLTAGE_UPDATE)
+        self._registerUpdateFunction(func, Constants.PRE_REG_VOLTAGE_UPDATE)
 
     def notifyTargetCurrentUpdate(self, func):
         """Runs the func function when target current value changes.
@@ -241,17 +233,33 @@ class Control:
                       filePath=None,
                       useLoggingTimeInterval=False,
                       loggingTimeInterval=0):
-        return self._controller.startSchedule(lines,
-                                       endingTargetVoltage,
-                                       endingTargetCurrent,
-                                       endingOutputOn,
-                                       logWhenValuesChange,
-                                       filePath,
-                                       useLoggingTimeInterval,
-                                       loggingTimeInterval)
+        return self._controller.startSchedule(
+            lines,
+            endingTargetVoltage,
+            endingTargetCurrent,
+            endingOutputOn,
+            logWhenValuesChange,
+            filePath,
+            useLoggingTimeInterval,
+            loggingTimeInterval)
 
     def stopSchedule(self):
         self._controller.stopSchedule()
+
+    def startAutoUpdate(self, interval):
+        if self.connected:
+            self._controller.startStream()
+            ThreadHelper.runThreadedJob(self._controller.getAllValues, args=[True])
+            self._autoUpdateScheduler = ThreadHelper.runIntervalJob(self._controller.getStreamValues, interval)
+
+    def stopAutoUpdate(self):
+        if self.connected:
+            self._controller.stopStream()
+        if self._autoUpdateScheduler:
+            try:
+                self._autoUpdateScheduler.shutdown(wait=False)
+            except Exception as e:
+                logging.getLogger(ModelConstants.LOGGER_NAME).exception(e)
 
     def _registerUpdateFunction(self, func, condition):
         if condition not in self._updateFunctionsAndValues:
@@ -269,41 +277,26 @@ class Control:
         self.notifyConnectedUpdate(self._connectionUpdateListener)
 
     def _connectionUpdateListener(self, connected):
-        connected = (connected == ConnectionState.CONNECTED)
+        connected = (connected == ModelConstants.CONNECTED)
         if connected:
-            logging.getLogger(LOGGER_NAME).info("Device connected")
-            self.stopPollForDevice()
+            logging.getLogger(ModelConstants.LOGGER_NAME).info("Device connected")
+            self._stopPollForDevice()
             self.startAutoUpdate(interval=1/2)
         else:
-            logging.getLogger(LOGGER_NAME).info("Device disconnected")
+            logging.getLogger(ModelConstants.LOGGER_NAME).info("Device disconnected")
             self.stopAutoUpdate()
-            self.startPollForDevice()
+            self._startPollForDevice()
 
     def _connectionLost(self):
-        self._conditionUpdated(Constants.CONNECT_UPDATE, ConnectionState.DISCONNECTED)
+        self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.DISCONNECTED)
 
-    def startPollForDevice(self):
+    def _startPollForDevice(self):
         if self._pollDeviceScheduler is None or not self._pollDeviceScheduler.running:
-            logging.getLogger(LOGGER_NAME).debug("turning on poll device sched")
+            logging.getLogger(ModelConstants.LOGGER_NAME).debug("turning on poll device sched")
             self._pollDeviceScheduler = ThreadHelper.runIntervalJob(
                 function=self.connect, interval=3, args=[self._forcedUsbPort])
 
-    def stopPollForDevice(self):
+    def _stopPollForDevice(self):
         if self._pollDeviceScheduler is not None:
-            logging.getLogger(LOGGER_NAME).debug("shutting down poll device sched")
+            logging.getLogger(ModelConstants.LOGGER_NAME).debug("shutting down poll device sched")
             self._pollDeviceScheduler.shutdown(wait=False)
-
-    def startAutoUpdate(self, interval):
-        if self.connected:
-            self._controller.startStream()
-            ThreadHelper.runThreadedJob(self._controller.getAllValues, args=[True])
-            self._autoUpdateScheduler = ThreadHelper.runIntervalJob(self._controller.getStreamValues, interval)
-
-    def stopAutoUpdate(self):
-        if self.connected:
-            self._controller.stopStream()
-        if self._autoUpdateScheduler:
-            try:
-                self._autoUpdateScheduler.shutdown(wait=False)
-            except Exception as e:
-                logging.getLogger(LOGGER_NAME).exception(e)

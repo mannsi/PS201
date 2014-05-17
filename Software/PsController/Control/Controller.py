@@ -73,7 +73,7 @@ class Controller():
                 self._updateConditionFunction(Constants.OUTPUT_CURRENT_UPDATE, deviceValues.outputCurrent)
                 self._updateConditionFunction(Constants.TARGET_VOLTAGE_UPDATE, deviceValues.targetVoltage)
                 self._updateConditionFunction(Constants.TARGET_CURRENT_UPDATE, deviceValues.targetCurrent)
-                self._updateConditionFunction(Constants.PREREG_VOLTAGE_UPDATE, deviceValues.preRegVoltage)
+                self._updateConditionFunction(Constants.PRE_REG_VOLTAGE_UPDATE, deviceValues.preRegVoltage)
                 self._updateConditionFunction(Constants.INPUT_VOLTAGE_UPDATE, deviceValues.inputVoltage)
                 self._updateConditionFunction(Constants.OUTPUT_ON_OFF_UPDATE, deviceValues.outputOn)
             else:
@@ -101,7 +101,7 @@ class Controller():
 
     def getPreRegulatorVoltage(self, threaded=False):
         value = self._getValueFromDevice(WRITE_PRE_REGULATOR_VOLTAGE)
-        return self._handleReturnFloatValue(value, threaded, Constants.PREREG_VOLTAGE_UPDATE)
+        return self._handleReturnFloatValue(value, threaded, Constants.PRE_REG_VOLTAGE_UPDATE)
 
     def getTargetVoltage(self, threaded=False):
         value = self._getValueFromDevice(WRITE_TARGET_VOLTAGE)
@@ -209,7 +209,7 @@ class Controller():
                 elif command == WRITE_OUTPUT_CURRENT:
                     self._updateConditionFunction(Constants.OUTPUT_CURRENT_UPDATE, float(value))
                 elif command == WRITE_PRE_REGULATOR_VOLTAGE:
-                    self._updateConditionFunction(Constants.PREREG_VOLTAGE_UPDATE, float(value))
+                    self._updateConditionFunction(Constants.PRE_REG_VOLTAGE_UPDATE, float(value))
                 elif command == WRITE_TARGET_VOLTAGE:
                     self._updateConditionFunction(Constants.TARGET_VOLTAGE_UPDATE, float(value))
                 elif command == WRITE_TARGET_CURRENT:
