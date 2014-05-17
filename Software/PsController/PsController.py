@@ -1,11 +1,11 @@
 
-from PsController.Control.Control import Control
+from PsController.Control.Controller import Controller
 from PsController.UI.Frames.MainFrame import MainFrame
 from PsController.Model.Model import Model
 
 
 def run(isDebugMode, forcedUsbPort=None):
-    control = Control(Model=Model(), threaded=True)
+    control = Controller(Model=Model(), threaded=True)
     control.connect(forcedUsbPort=forcedUsbPort)
     mainFrame = MainFrame(isDebugMode, control)
     mainFrame.show()

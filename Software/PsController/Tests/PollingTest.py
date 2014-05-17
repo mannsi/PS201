@@ -15,11 +15,11 @@ Preconditions:
 
 import time
 
-from PsController.Control.Control import Control
+from PsController.Control.Controller import Controller
 from PsController.Model.Model import Model
 
 
-control = Control(Model=Model(), threaded=False)
+control = Controller(Model=Model(), threaded=False)
 MAX_VOLTAGE_PERCENTAGE_DEVIATION = 0.02
 MAX_VOLTAGE_ABSOLUTE_DEVIATION = 0.21
 
