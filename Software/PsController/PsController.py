@@ -5,7 +5,7 @@ from PsController.Model.Model import Model
 
 
 def run(isDebugMode, forcedUsbPort=None):
-    control = Control(DAL=Model(), threaded=True)
+    control = Control(Model=Model(), threaded=True)
     control.connect(forcedUsbPort=forcedUsbPort)
     mainFrame = MainFrame(isDebugMode, control)
     mainFrame.show()

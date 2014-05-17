@@ -19,7 +19,7 @@ from PsController.Control.Control import Control
 from PsController.Model.Model import Model
 
 
-control = Control(DAL=Model(), threaded=False)
+control = Control(Model=Model(), threaded=False)
 MAX_VOLTAGE_PERCENTAGE_DEVIATION = 0.02
 MAX_VOLTAGE_ABSOLUTE_DEVIATION = 0.21
 

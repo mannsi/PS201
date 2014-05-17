@@ -5,14 +5,13 @@ from datetime import datetime, timedelta
 from PsController.Model.DeviceValues import DeviceValues
 from PsController.Model.Constants import *
 from PsController.Utilities.Crc import Crc16
-#from PsController.DAL.SerialMapping import SerialMapping
 from PsController.Utilities.ThreadHelper import ThreadHelper
 from . import Constants
 
 
 class Controller():
-    def __init__(self, DAL, transactionLock, updateConditionFunction):
-        self._DAL = DAL
+    def __init__(self, Model, transactionLock, updateConditionFunction):
+        self._Model = Model
         self._transactionLock = transactionLock
         self._updateConditionFunction = updateConditionFunction
         self._threadHelper = ThreadHelper()
@@ -302,7 +301,7 @@ class Controller():
 
     def _getDeviceResponse(self):
         try:
-            deviceResponse = self._DAL.getResponseFromDevice()
+            deviceResponse = self._Model.getResponseFromDevice()
             if deviceResponse is not None:
                 logString = "Got response command '" + Controller._readableCommand(deviceResponse.command) + \
                             "' with data '" + deviceResponse.data + "' from device"
@@ -317,8 +316,8 @@ class Controller():
         logging.getLogger(LOGGER_NAME).info(logString)
         try:
             # Clear buffer so that the acknowledge check does not meet a stream value previously in the buffer
-            self._DAL.clearBuffer()
-            self._DAL.sendValueToDevice(command, data)
+            self._Model.clearBuffer()
+            self._Model.sendValueToDevice(command, data)
         except:
             logging.getLogger(LOGGER_NAME).error('Error sending command ', Controller._readableCommand(command),
                                                  ' with data: ', data, ' to device')

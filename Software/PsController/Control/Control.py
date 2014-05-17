@@ -1,5 +1,4 @@
 # TODO Need to register all the things somehow. Now they are all hardcoded which sucks
-# TODO merge DAL and Model together into Model. Take a look at MVC stuff online and refactor more
 # TODO separate sequence logic from 'normal' logic
 
 import logging
@@ -16,8 +15,8 @@ class Control:
     """
     Public control interface
     """
-    def __init__(self, DAL, threaded=False):
-        self._DAL = DAL
+    def __init__(self, Model, threaded=False):
+        self._Model = Model
         self._threaded = threaded
         self._transactionLock = threading.Lock()
         self._updateQueue = queue.Queue()
@@ -26,7 +25,7 @@ class Control:
         self._updateFunctionsAndValues = {}
 
         # TODO this should not be created here. It should come from a factory or as a parameter or something
-        self._controller = Controller(self._DAL, self._transactionLock, self._conditionUpdated)
+        self._controller = Controller(self._Model, self._transactionLock, self._conditionUpdated)
         self._logHandlersAdded = False
         self.setLogging(logging.ERROR)
         self._autoUpdateScheduler = None
@@ -36,7 +35,7 @@ class Control:
 
     @property
     def connected(self):
-        return self._DAL.connected
+        return self._Model.connected
 
     def connect(self, forcedUsbPort=''):
         self._forcedUsbPort = forcedUsbPort
@@ -45,7 +44,7 @@ class Control:
         else:
             try:
                 with self._transactionLock:
-                    self._DAL.connect(forcedUsbPort)
+                    self._Model.connect(forcedUsbPort)
                     return self.connected
             except:
                 logging.getLogger(ModelConstants.LOGGER_NAME).error("Error while connecting to device")
@@ -54,7 +53,7 @@ class Control:
     def _connectWorker(self, forcedUsbPort):
         print("Trying to connect ...")
         try:
-            self._DAL.connect(forcedUsbPort)
+            self._Model.connect(forcedUsbPort)
             if self.connected:
                 self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.CONNECTED)
             else:
@@ -64,7 +63,7 @@ class Control:
 
     def disconnect(self):
         try:
-            self._DAL.disconnect()
+            self._Model.disconnect()
         except Exception as e:
             logging.getLogger(ModelConstants.LOGGER_NAME).error('Error disconnecting from device. Msg', str(e))
         self._conditionUpdated(Constants.CONNECT_UPDATE, ModelConstants.DISCONNECTED)
@@ -273,7 +272,7 @@ class Control:
             self._updateQueue.put(value)
 
     def _registerListeners(self):
-        self._DAL.notifyOnConnectionLost(self._connectionLost)
+        self._Model.notifyOnConnectionLost(self._connectionLost)
         self.notifyConnectedUpdate(self._connectionUpdateListener)
 
     def _connectionUpdateListener(self, connected):
