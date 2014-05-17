@@ -3,19 +3,11 @@ PS201 - An adjustable power supply
 
 What is it?
 ------
-The PS201 is an adjustable power supply hardware project. See the 'Hardware details' section for details. The repository is split into Firmware and Software. Firmware stores code (C) running on the 
-hardware while Software stores a Python 3 module called PsController that allows to control the hardware via USB cable.
-The PsController software runs both and Windows and Linux (and should run on Mac but is untested) and requires Python 3.3+
+The PS201 is an adjustable power supply hardware project. Firmware stores code (C) running on the hardware.
 
 Release date
 ------
 Currently there is no decided release date
-
-Software installation and execution
-------
-The easiest way to install is to run `sudo python3 Software/setup.py`. Note that this will try to download and install python dependencies so a network connection is probably needed (see the setup.py file for dependencies).
-After install you can run the software with `PsController`
-The software uses TkInter so the package python3-tk is required
 
 Hardware details
 ------
