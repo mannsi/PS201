@@ -85,7 +85,7 @@ PROJECTNAME=rev3
 # Use .cc, .cpp or .C suffix for C++ files, use .S 
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c 
-PRJSRC=rev3.c SERIAL.c USART.c DISPLAY.c LCD.c SWITCH.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c TIMER.c
+PRJSRC=rev3.c Device.c Usb.c SERIAL.c USART.c ADC.c DAC.c SPI.c IOHandler.c TIMER.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include
@@ -117,7 +117,7 @@ AVRDUDE_PROGRAMMERID=stk500v2
 # port--serial or parallel port to which your 
 # hardware programmer is attached
 #
-AVRDUDE_PORT=COM3
+AVRDUDE_PORT=/dev/ttyUSB0
 
 
 ####################################################

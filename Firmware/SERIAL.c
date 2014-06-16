@@ -31,7 +31,7 @@ static uint8_t DecodeChar(uint8_t *c)
   return 0;
 }
 
-uint8_t SERIAL_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen)
+uint8_t SERIAL_GetPacket(uint8_t *cmd, char *data)
 {
   // Tha data structure is
   // <SFLAG><CMD><LEN><DATA[LEN]><CRC><EFLAG>
@@ -62,12 +62,12 @@ uint8_t SERIAL_GetPacket(uint8_t *cmd, char *data, uint8_t maxlen)
 
   // Now we find the DATA, first we check if len 
   // exceeds maxlen
-  if(len > maxlen)
+  if(len > MAXLEN)
   {
     *cmd = SERIAL_NAK;
     return *cmd;
   }
-  else if(len != maxlen)
+  else if(len != MAXLEN)
   {
   data[len] = '\0';
   }

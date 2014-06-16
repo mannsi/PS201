@@ -11,12 +11,9 @@ void DAC_Initialize(void)
 // first four bits are control code, the next eight 
 // are the actual data and the last two are ignored.
 void DAC_transfer(unsigned char CTRL,uint16_t dacData){
-  // Make sure a is a ten bit word
+  // Make sure dacData is a ten bit word
   dacData &= 0x03FF;
-  // Then shift up by two bits, the DAC does not
-  // care about the two last bits!
-  //a = a << 2; 
-  // Shift the control code up by 4 bits
+
   CTRL = CTRL << 4;
 
   // Now we can transfer this to the DAC
