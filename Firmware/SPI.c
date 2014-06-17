@@ -2,6 +2,9 @@
 
 void SPI_Initialize(void)
 {
+  // SS pin must be set as output
+  IOSetOutput(portB,2); 
+  
   // Setup IO pins
   IOSetOutput(SPI_MOSI_PORT,SPI_MOSI_PIN);
   IOSetInput(SPI_MISO_PORT,SPI_MISO_PIN);
@@ -9,9 +12,10 @@ void SPI_Initialize(void)
   
   // Enable SPI, Master, set clock rate fck/16
   SPCR = 0;
-  BIT_SET(SPCR,BIT(SPE));
   BIT_SET(SPCR,BIT(MSTR));
   BIT_SET(SPCR,BIT(SPR0));
+  BIT_SET(SPCR,BIT(SPE));
+  //SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
 }
 
 void SPI_SendData(char data)

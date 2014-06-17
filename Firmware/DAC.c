@@ -19,9 +19,11 @@ void DAC_transfer(unsigned char CTRL,uint16_t dacData){
   // Now we can transfer this to the DAC
   // Take the DAC chip select low
   SELECT_DAC;
+  
   // Transfer in two 8 bit steps
   SPI_SendData(CTRL | (dacData >> 6));
   SPI_SendData((dacData << 2) & 0x00FF);
+  
   // Restore the chip select
   DESELECT_DAC;
 }

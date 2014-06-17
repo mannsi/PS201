@@ -13,35 +13,22 @@
 #define F_CPU 8000000
 #endif
 #include <util/delay.h>
+#include "SPI.h"
 
 
 int main(void)
 {
-	
-	//USB_Initialize();
+	USB_Initialize();
 	Device_Initialize();
-	IOSetOutput(BACKLIGHT_PORT,BACKLIGHT_PIN);
-	Device_TurnOutputOn();
-
+	
 	while(1)
 	{
-		/*
 		Usb_response_struct usb_response = USB_GetResponse();
 		if (usb_response.command != 0)
 		{
 			State_struct state = Device_GetState();
 			processUsbResponse(usb_response, state);
 		}
-		* */
-		
-		_delay_ms(1000);
-		IOSetPin(BACKLIGHT_PORT,BACKLIGHT_PIN); 
-		//DAC_transfer(10, 0); // VOLTAGE
-		//DAC_transfer(9, 0); // CURRENT
-		_delay_ms(1000);
-		IOClearPin(BACKLIGHT_PORT,BACKLIGHT_PIN);
-		//DAC_transfer(10, 1000); // VOLTAGE
-		//DAC_transfer(9, 1000); // CURRENT
 	}
 	return 0;
 }

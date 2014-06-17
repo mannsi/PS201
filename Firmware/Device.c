@@ -19,10 +19,10 @@ void InitRegistries(void)
 
 void Device_Initialize()
 {
-	//ADC_Initialize();
+	ADC_Initialize();
 	DAC_Initialize();
 	InitRegistries();
-	//StartMeasurement();
+	StartMeasurement();
 }
 
 void StartMeasurement(void)
@@ -33,8 +33,13 @@ void StartMeasurement(void)
 
 State_struct Device_GetState(void)
 {
-	state.output_voltage = ADC_GetMeasuredVoltage();
-	state.output_current = ADC_GetMeasuredCurrent();
+	int device_voltage = ADC_GetMeasuredVoltage();
+	int device_current = ADC_GetMeasuredCurrent();
+	float voltage_conversion_factor = getVoltageReadMultiplier();
+	float current_conversion_factor = getCurrentMultiplier();
+	
+	state.output_voltage = mapFromDevice(device_voltage, voltage_conversion_factor);
+	state.output_current = mapFromDevice(device_current, current_conversion_factor);
     return state;
 }
 
@@ -43,7 +48,6 @@ void Device_SetTargetVoltage(int set_voltage)
 	state.target_voltage = set_voltage;
 	float voltage_mulitiplier = getVoltageSetMultiplier();
 	uint16_t device_voltage_value = mapToDevice(set_voltage, voltage_mulitiplier);
-	//state.output_voltage = device_voltage_value;
     DAC_transfer(10, device_voltage_value);
 }
 
@@ -52,7 +56,6 @@ void Device_SetTargetCurrent(int set_current)
 	state.target_current = set_current;
 	float current_mulitiplier = getCurrentMultiplier();
 	uint16_t device_current_value = mapToDevice(set_current, current_mulitiplier);
-	//state.output_current = device_current_value;
     DAC_transfer(9, device_current_value);
 }
 
