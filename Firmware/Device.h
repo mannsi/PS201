@@ -21,11 +21,4 @@ void Device_SetTargetCurrent(int current);
 void Device_TurnOutputOn(void);
 void Device_TurnOutputOff(void);
 
-static float getCurrentMultiplier(void);
-static float getVoltageSetMultiplier(void);
-static float getVoltageReadMultiplier(void);
-static uint16_t mapFromDevice(int device_value, float multiplier);
-static uint16_t mapToDevice(int set_value, float multiplier);
-static void StartMeasurement(void);
-
 #endif

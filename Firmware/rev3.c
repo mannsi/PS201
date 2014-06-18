@@ -9,12 +9,8 @@
 
 #include "rev3.h"
 
-#ifndef F_CPU
-#define F_CPU 8000000
-#endif
-#include <util/delay.h>
-#include "SPI.h"
-
+static void allValuesToString(State_struct state, char* string_array);
+static void processUsbResponse(Usb_response_struct usb_response, State_struct state);
 
 int main(void)
 {
@@ -33,7 +29,12 @@ int main(void)
 	return 0;
 }
 
-void allValuesToString(State_struct state, char* string_array)
+/*
+ * Takes a State_struct object and converts it's values
+ * into a series of ; seperated strings. These strings are
+ * concatinated and store in char* string_array
+ */
+static void allValuesToString(State_struct state, char* string_array)
 {
 	char output_voltage_array[8];
 	char output_current_array[8];
@@ -54,7 +55,7 @@ void allValuesToString(State_struct state, char* string_array)
 	strcat(string_array, output_is_on_array); 
 }
 
-void processUsbResponse(Usb_response_struct usb_response, State_struct state)
+static void processUsbResponse(Usb_response_struct usb_response, State_struct state)
 {
 	switch (usb_response.command)
 	{
@@ -66,7 +67,6 @@ void processUsbResponse(Usb_response_struct usb_response, State_struct state)
 			char all_values_array[50];
 			allValuesToString(state, all_values_array);
 			USB_WriteAllValues(all_values_array);
-			//memset(all_values_array, 0, 50); // Reset the array to zero
 			break;
 		case SERIAL_ENABLE_OUTPUT:
 			USB_WriteAcknowledge();
