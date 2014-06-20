@@ -67,7 +67,7 @@ void Device_SetTargetCurrent(int set_current)
 void Device_TurnOutputOn()
 {
 	state.output_on = 1;
-	ClearPin(SHUTDOWN_PORT,SHUTDOWN_PIN);
+	IOClearPin(SHUTDOWN_PORT,SHUTDOWN_PIN);
 	IOClearPin(PREREG_PORT,PREREG_PIN);
 }
 
