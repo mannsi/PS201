@@ -46,7 +46,7 @@ static void allValuesToString(State_struct state, char* string_array)
 	sprintf(output_current_array, "%i;", state.output_current);
 	sprintf(target_voltage_array, "%i;", state.target_voltage);
 	sprintf(target_current_array, "%i;", state.target_current);
-	sprintf(output_is_on_array, "%i;", state.output_on);
+	sprintf(output_is_on_array, "%i", state.output_on);
 	
 	strcpy(string_array, output_voltage_array);
 	strcat(string_array, output_current_array);
