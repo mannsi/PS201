@@ -5,6 +5,7 @@
 #include "IOMapping.h"
 #include "DAC.h"
 #include "ADC.h"
+#include "EEPROM.h"
 
 typedef struct State_struct {
   int output_on;

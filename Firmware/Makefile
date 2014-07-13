@@ -77,7 +77,7 @@ PROGRAMMER_MCU=m328p
 
 # Name of our project
 # (use a single word, e.g. 'myproject')
-PROJECTNAME=rev3
+PROJECTNAME=PS201
 
 # Source files
 # List C/C++/Assembly source files:
@@ -85,18 +85,11 @@ PROJECTNAME=rev3
 # Use .cc, .cpp or .C suffix for C++ files, use .S 
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c 
-PRJSRC=rev3.c Device.c Usb.c SERIAL.c USART.c ADC.c DAC.c SPI.c IOHandler.c TIMER.c
-
-# additional includes (e.g. -I/path/to/mydir)
-INC=#-I/path/to/include
-
-# libraries to link in (e.g. -lmylib)
-LIBS=
+PRJSRC=ADC.c DAC.c Device.c EEPROM.c IOHandler.c rev3.c SERIAL.c SPI.c TIMER.c USART.c Usb.c
 
 # Optimization level, 
 # use s (size opt), 1, 2, 3 or 0 (off)
 OPTLEVEL=s
-
 
 #####      AVR Dude 'writeflash' options       #####
 #####  If you are using the avrdude program
@@ -117,8 +110,7 @@ AVRDUDE_PROGRAMMERID=stk500v2
 # port--serial or parallel port to which your 
 # hardware programmer is attached
 #
-AVRDUDE_PORT=/dev/ttyUSB0
-
+AVRDUDE_PORT=/dev/ttyUSB1
 
 ####################################################
 #####                Config Done               #####
@@ -129,7 +121,6 @@ AVRDUDE_PORT=/dev/ttyUSB0
 ##### nonetheless                              #####
 #####                                          #####
 ####################################################
-
 
 ##### Flags ####
 
