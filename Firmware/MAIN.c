@@ -1,13 +1,13 @@
 /************************************
 *                                   *
-*        DIGITAL PSU REV 3          *
+*        DIGITAL PSU REV 4          *
 *        Fridrik F Gautason         *
 *        Gudbjorn Einarsson         *
 *        Copyright 2014             *
 *                                   *
 *************************************/
 
-#include "rev3.h"
+#include "MAIN.h"
 
 // MAGIC NUMBERS
 #define MAXVOLTAGE 200
@@ -23,8 +23,6 @@ uint8_t updateStartVoltage = 0;
 uint8_t updateStartCurrent = 0;
 uint8_t outputIsOn = 0;
 uint8_t streamIsOn = 0;
-uint8_t backlightIntensity = 10;
-uint8_t contrast = 10;
 
 // To keep track of the ADC 
 ADC_MUX ADCmeasures = VOLTAGE;
@@ -40,7 +38,6 @@ const unsigned char DAC_ctrlCode[2] = {DACVOLTAGE,DACCURRENT};
 // The display and physical UI act as a state machine.
 PSUState state = NORMAL;
 
-
 // Delay variables, between read cycles. We do not
 // want to be constantly running the ADC.
 uint16_t readDelay = 10000;
@@ -52,15 +49,8 @@ const unsigned char ADCregister[4] = {
   ADC_VOLTAGE_MON, ADC_CURRENT_MON, ADC_PREREG, ADC_VIN_MON
 };
 
-// Switches
-button switch1 = {.switchPort = &SW1_PORT, .switchPin = SW1_PIN, .state = 0};
-button switch2 = {.switchPort = &SW2_PORT, .switchPin = SW2_PIN, .state = 0};
-button switch3 = {.switchPort = &SW3_PORT, .switchPin = SW3_PIN, .state = 0};
-button switch4 = {.switchPort = &SW4_PORT, .switchPin = SW4_PIN, .state = 0};
-
 int main(void)
 {
-  DISPLAY_Initialize(backlightIntensity,contrast);
   ADC_Initialize();
   DAC_Initialize();
   SERIAL_Initialize();
@@ -68,21 +58,6 @@ int main(void)
   initRegistries();
   //initCalibration();
   
-  // Initialize switches
-  SWITCH_Initialize(&switch1);
-  SWITCH_Initialize(&switch2);
-  SWITCH_Initialize(&switch3);
-  SWITCH_Initialize(&switch4);
-  
-  // Set up rotary encoder
-  IOSetInput(ENCODERA_PORT,ENCODERA_PIN);
-  IOEnablePullup(ENCODERA_PORT,ENCODERA_PIN);
-  IOSetInput(ENCODERB_PORT,ENCODERB_PIN);
-  IOEnablePullup(ENCODERB_PORT,ENCODERB_PIN);
-  
-  DISPLAY_StartScreen();
-  _delay_ms(1000);
-
   // Initialize PSU variables
   {
     PSUData defaultVoltage = {.analog=0, .digital=0, .multiplier=getVoltageReadMultiplier(), .offset=0, .maxAnalogValue=2000, .analogIncrements=10};
@@ -97,8 +72,6 @@ int main(void)
     setting[VOLTAGE].multiplier = getVoltageSetMultiplier();
   }
   
-  uint8_t encoderControls = VOLTAGE;
-  
   // initialize settings and transfer to the DAC
   setting[VOLTAGE].analog = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
   mapToDigital(&setting[VOLTAGE]);
@@ -107,21 +80,6 @@ int main(void)
   mapToDigital(&setting[CURRENT]);
   DAC_transfer(DAC_ctrlCode[CURRENT],setting[CURRENT].digital);
 
-  // Start in the home screen with the set values;
-  {
-    char vol[8];
-    char cur[8];
-    mapToString(&setting[VOLTAGE],vol);
-    vol[5] = ' ';
-    vol[6] = 'V';
-    vol[7] = '\0';
-    mapToString(&setting[CURRENT],cur);
-    cur[5] = ' ';
-    cur[6] = 'A';
-    cur[7] = '\0';
-    DISPLAY_HomeScreen(vol,cur,outputIsOn,encoderControls);
-  }
-  
   // Start the ADC
   sei();
   ADC_StartMeasuring(ADCregister[ADCmeasures]);
@@ -151,49 +109,6 @@ int main(void)
     switch(state){
       case NORMAL:
 	if(newUSBCommand) state = setState(USBCONTROLLED);
-	else
-	{
-	  // Read the UI switches and respond
-	  UICommand newUICommand = readUI();
-	  switch(newUICommand){
-	    case NO_UI_COMMAND:
-	      break;
-	    case UP:
-	      state = setState(MENU);
-	      break;
-	    case DOWN:
-	      state = setState(MENU);
-	      break;
-	    case CANCEL:
-	      if(outputIsOn) turnOutputOff = 1;
-	      else turnOutputOn = 1;
-	      break;
-	    case ENTER:
-	      if(encoderControls==VOLTAGE) 
-	      {
-		encoderControls = CURRENT;
-		selectCurrent = 1;
-	      }
-	      else 
-	      {
-		encoderControls = VOLTAGE;
-		selectVoltage = 1;
-	      }
-	      break;
-	    case CLOCKWISE:
-	      increaseAnalog(&setting[encoderControls]);
-	      if(encoderControls==VOLTAGE) newVoltageSetting = 1;
-	      else newCurrentSetting = 1;
-	      break;
-	    case COUNTERCLOCKWISE:
-	      decreaseAnalog(&setting[encoderControls]);
-	      if(encoderControls==VOLTAGE) newVoltageSetting = 1;
-	      else newCurrentSetting = 1;
-	      break;
-	    default:
-	      break;     
-	  }
-	}
 	break;
       case USBCONTROLLED:
 	break;
@@ -203,45 +118,6 @@ int main(void)
 	setState(NORMAL);
 	break;
     }
-    // Write to LCD
-    if(newVoltageSetting)
-    {
-      char data[8];
-      mapToString(&setting[VOLTAGE],data);
-      data[5] = ' ';
-      data[6] = 'V';
-      DISPLAY_WriteVoltage(data);
-    }
-    if(newCurrentSetting)
-    {
-      char data[8];
-      mapToString(&setting[CURRENT],data);
-      data[5] = ' ';
-      data[6] = 'A';
-      DISPLAY_WriteCurrent(data);
-    }
-    if(measurementCompleted[VOLTAGE] == 1)
-    {
-      char data[8];
-      mapToString(&measured[VOLTAGE],data);
-      data[5] = ' ';
-      data[6] = 'V';
-      data[7] = '\0';
-      DISPLAY_WriteVoltage(data);
-    }
-    if(measurementCompleted[CURRENT] == 1)
-    {
-      char data[8];
-      mapToString(&measured[CURRENT],data);
-      data[5] = ' ';
-      data[6] = 'A';
-      data[7] = '\0';
-      DISPLAY_WriteCurrent(data);
-    }
-    if(turnOutputOn)      DISPLAY_OutputOn();
-    if(turnOutputOff)     DISPLAY_OutputOff();
-    if(selectVoltage)     DISPLAY_SelectVoltage();
-    if(selectCurrent)     DISPLAY_SelectCurrent();
     
     // Update the output.
     if(newVoltageSetting) DAC_transfer(DAC_ctrlCode[VOLTAGE],setting[VOLTAGE].digital);
@@ -262,22 +138,6 @@ int main(void)
 PSUState setState(PSUState nextState)
 {
   return NORMAL;
-}
-
-// Don't mess with order, priority is important.
-UICommand readUI(void)
-{
-  if (SWITCH_Pressed(&switch1)) return CANCEL;
-  if (SWITCH_Pressed(&switch4)) return ENTER;
-  unsigned char encoderTurnDirection = SW_CheckEncoder();
-  if(encoderTurnDirection)
-  {
-    if(encoderTurnDirection == ENCODER_CCW) return COUNTERCLOCKWISE;
-    else return CLOCKWISE;
-  }
-  if (SWITCH_Pressed(&switch2)) return UP;
-  if (SWITCH_Pressed(&switch3)) return DOWN;
-  return NO_UI_COMMAND;
 }
 
 uint16_t mapToAnalog(PSUData* A)
@@ -586,96 +446,3 @@ static void initRegistries()
   DISABLE_PREREG;
   DISABLE_OUTPUT;
 }
-
-void writeDebug(uint16_t a, uint16_t b)
-{
-  LCD_Clear();
-  LCD_Cursor(0,0);
-  char aa[16];
-  char bb[16];
-  sprintf(aa,"%i",a);
-  sprintf(bb,"%i",b);
-  LCD_Write(aa);
-  LCD_Cursor(1,0);
-  LCD_Write(bb);
-  _delay_ms(1000);
-}
-
-// 
-// void doCalibration()
-// {
-// 	uint16_t measuredVoltage = 500;
-// 	uint16_t voltageCode = 200;
-// 	unsigned char updateScreen = 1;
-// 	unsigned char buffer[10];
-// 
-// 	disableOutput();
-// 	LCD_Clear();
-// 	LCD_Cursor(0,0);
-// 	LCD_Write("--CALIBRATION-- ");
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("Disconnect load ");
-// 	_delay_ms(1000);
-// 	LCD_Cursor(1,0);
-// 	// turn on the output at code 256,
-// 	// the user then measures the output.
-// 	DAC_transfer(DACVOLTAGE, voltageCode);
-// 	DAC_transfer(DACCURRENT, 10.0 / currentSetMulti);
-// 	ENABLE_OUTPUT;
-// 	ENABLE_PREREG;
-// 	LCD_Clear();
-// 	LCD_Cursor(0,0);
-// 	LCD_Write("--CALIBRATION-- ");
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("Connect meter.  ");
-// 	_delay_ms(1000);
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("Turn knob until ");
-// 	_delay_ms(1000);
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("meter agrees and");
-// 	_delay_ms(1000);
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("hit OK.         ");
-// 	_delay_ms(1000);
-// 	LCD_Cursor(1,0);
-// 	LCD_Write("Voltage:        ");
-// 	while(!SWITCH_Pressed(&switch1))
-// 	{
-// 		if(updateScreen)
-// 		{
-// 			LCD_Cursor(1,9);
-// 			sprintf(buffer,"%i.%2i V",measuredVoltage/100,measuredVoltage%100);
-// 			LCD_Write(buffer);
-// 			updateScreen = 0;
-// 		}
-// 		
-// 		unsigned char dir = SW_CheckEncoder();
-// 		if(SWITCH_Pressed(&switch2) || (dir && dir != ENCODER_CCW))
-// 		{
-// 			measuredVoltage++;
-// 			updateScreen = 1;
-// 		}
-// 		if(SWITCH_Pressed(&switch3) || dir == ENCODER_CCW)
-// 		{
-// 			measuredVoltage--;
-// 			updateScreen = 1;
-// 		}		
-// 
-// 		if(SWITCH_Pressed(&switch4))
-// 		{
-// 
-// 			// Now we can calculate the voltageRef
-// 			voltageSetMulti = ((float) measuredVoltage)/voltageCode;
-// 			EEPROM_WriteNum(voltageSetMulti*100,ADDR_CALIBRATION);
-// 			initCalibration();
-// 			break;
-// 		}
-// 	}
-// 	DISABLE_PREREG;
-// 	DISABLE_OUTPUT;
-// 	
-// 
-// 	DAC_transfer(DACVOLTAGE, ((float)voltageSet) / voltageSetMulti);
-// 	DAC_transfer(DACCURRENT, ((float)currentSet) / currentSetMulti);
-// }

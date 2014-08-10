@@ -65,7 +65,7 @@
 # Name of target controller 
 # (e.g. 'at90s8515', see the available avr-gcc mmcu 
 # options for possible values)
-MCU=atmega328p
+MCU=attiny167
 
 # id to use with programmer
 # default: PROGRAMMER_MCU=$(MCU)
@@ -73,11 +73,11 @@ MCU=atmega328p
 # accept the same MCU name as avr-gcc (for example
 # for ATmega8s, avr-gcc expects 'atmega8' and 
 # avrdude requires 'm8')
-PROGRAMMER_MCU=m328p
+PROGRAMMER_MCU=t167
 
 # Name of our project
 # (use a single word, e.g. 'myproject')
-PROJECTNAME=rev3
+PROJECTNAME=DPS201-Rev4
 
 # Source files
 # List C/C++/Assembly source files:
@@ -85,7 +85,7 @@ PROJECTNAME=rev3
 # Use .cc, .cpp or .C suffix for C++ files, use .S 
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c 
-PRJSRC=rev3.c SERIAL.c USART.c DISPLAY.c LCD.c SWITCH.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c TIMER.c
+PRJSRC=MAIN.c SERIAL.c USART.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include
