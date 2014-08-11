@@ -56,6 +56,6 @@ unsigned char IOGetAllPins(port po);
 // Definitions of ports as external variables. This definition is processor 
 // specific to the ATMEGA series microcontrollers, and depends on the <avr/io.h>
 // library.
-extern port portB, portC, portD;
+extern port portA, portB;
 
 #endif

@@ -21,23 +21,23 @@
 ####################################################
 
 
-##### This Makefile will make compiling Atmel AVR 
-##### micro controller projects simple with Linux 
-##### or other Unix workstations and the AVR-GCC 
+##### This Makefile will make compiling Atmel AVR
+##### micro controller projects simple with Linux
+##### or other Unix workstations and the AVR-GCC
 ##### tools.
 #####
 ##### It supports C, C++ and Assembly source files.
 #####
 ##### Customize the values as indicated below and :
 ##### make
-##### make disasm 
-##### make stats 
+##### make disasm
+##### make stats
 ##### make hex
 ##### make writeflash
 ##### make gdbinit
 ##### or make clean
 #####
-##### See the http://electrons.psychogenic.com/ 
+##### See the http://electrons.psychogenic.com/
 ##### website for detailed instructions
 
 
@@ -62,8 +62,8 @@
 #####         Target Specific Details          #####
 #####     Customize these for your project     #####
 
-# Name of target controller 
-# (e.g. 'at90s8515', see the available avr-gcc mmcu 
+# Name of target controller
+# (e.g. 'at90s8515', see the available avr-gcc mmcu
 # options for possible values)
 MCU=attiny167
 
@@ -71,7 +71,7 @@ MCU=attiny167
 # default: PROGRAMMER_MCU=$(MCU)
 # In case the programer used, e.g avrdude, doesn't
 # accept the same MCU name as avr-gcc (for example
-# for ATmega8s, avr-gcc expects 'atmega8' and 
+# for ATmega8s, avr-gcc expects 'atmega8' and
 # avrdude requires 'm8')
 PROGRAMMER_MCU=t167
 
@@ -82,10 +82,10 @@ PROJECTNAME=DPS201-Rev4
 # Source files
 # List C/C++/Assembly source files:
 # (list all files to compile, e.g. 'a.c b.cpp as.S'):
-# Use .cc, .cpp or .C suffix for C++ files, use .S 
+# Use .cc, .cpp or .C suffix for C++ files, use .S
 # (NOT .s !!!) for assembly source code files.
-#PRJSRC=blink.c LED.c SWITCH.c IOHandler.c 
-PRJSRC=MAIN.c SERIAL.c USART.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c
+#PRJSRC=blink.c LED.c SWITCH.c IOHandler.c
+PRJSRC=MAIN.c SERIAL.c USART.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c CHARGEPUMP.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include
@@ -93,7 +93,7 @@ INC=#-I/path/to/include
 # libraries to link in (e.g. -lmylib)
 LIBS=
 
-# Optimization level, 
+# Optimization level,
 # use s (size opt), 1, 2, 3 or 0 (off)
 OPTLEVEL=s
 
@@ -109,15 +109,15 @@ OPTLEVEL=s
 # programmer id--check the avrdude for complete list
 # of available opts.  These should include stk500,
 # avr910, avrisp, bsd, pony and more.  Set this to
-# one of the valid "-c PROGRAMMER-ID" values 
+# one of the valid "-c PROGRAMMER-ID" values
 # described in the avrdude info page.
-# 
+#
 AVRDUDE_PROGRAMMERID=stk500v2
 
-# port--serial or parallel port to which your 
+# port--serial or parallel port to which your
 # hardware programmer is attached
 #
-AVRDUDE_PORT=COM3
+AVRDUDE_PORT=/dev/ttyUSB0
 
 
 ####################################################
@@ -174,7 +174,7 @@ REMOVE=rm -f
 TRG=$(PROJECTNAME).out
 DUMPTRG=$(PROJECTNAME).s
 
-HEXROMTRG=$(PROJECTNAME).hex 
+HEXROMTRG=$(PROJECTNAME).hex
 HEXTRG=$(HEXROMTRG) $(PROJECTNAME).ee.hex
 GDBINITFILE=gdbinit-$(PROJECTNAME)
 
@@ -201,9 +201,9 @@ OBJDEPS=$(CFILES:.c=.o)    \
 # Define all lst files.
 LST=$(filter %.lst, $(OBJDEPS:.o=.lst))
 
-# All the possible generated assembly 
+# All the possible generated assembly
 # files (.s files)
-GENASMFILES=$(filter %.s, $(OBJDEPS:.o=.s)) 
+GENASMFILES=$(filter %.s, $(OBJDEPS:.o=.s))
 
 
 .SUFFIXES : .c .cc .cpp .C .o .out .s .S \
@@ -220,7 +220,7 @@ disasm: $(DUMPTRG) stats
 
 stats: $(TRG)
 	$(OBJDUMP) -h $(TRG)
-	$(SIZE) $(TRG) 
+	$(SIZE) $(TRG)
 
 hex: $(HEXTRG)
 
@@ -233,11 +233,11 @@ writeflash: hex
 
 install: writeflash
 
-$(DUMPTRG): $(TRG) 
+$(DUMPTRG): $(TRG)
 	$(OBJDUMP) -S  $< > $@
 
 
-$(TRG): $(OBJDEPS) 
+$(TRG): $(OBJDEPS)
 	$(CC) $(LDFLAGS) -o $(TRG) $(OBJDEPS)
 
 
@@ -259,7 +259,7 @@ $(TRG): $(OBJDEPS)
 
 #### Generating object files ####
 # object from C
-.c.o: 
+.c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
@@ -293,11 +293,11 @@ gdbinit: $(GDBINITFILE)
 
 $(GDBINITFILE): $(TRG)
 	@echo "file $(TRG)" > $(GDBINITFILE)
-	
+
 	@echo "target remote localhost:1212" \
 		                >> $(GDBINITFILE)
-	
-	@echo "load"        >> $(GDBINITFILE) 
+
+	@echo "load"        >> $(GDBINITFILE)
 	@echo "break main"  >> $(GDBINITFILE)
 	@echo "continue"    >> $(GDBINITFILE)
 	@echo
@@ -311,7 +311,7 @@ clean:
 	$(REMOVE) $(LST) $(GDBINITFILE)
 	$(REMOVE) $(GENASMFILES)
 	$(REMOVE) $(HEXTRG)
-	
+
 
 
 #####                    EOF                   #####

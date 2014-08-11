@@ -13,7 +13,9 @@
 #define BAUD 9600
 #endif
 
-#define MYUBRR (F_CPU/16/BAUD - 1)
+#define SAMPLES_PER_BIT 16
+
+#define MYLINBRR (F_CPU/SAMPLES_PER_BIT/BAUD - 1)
 
 void USART_Initialize(void);
 int USART_PutChar(char c, FILE *stream);

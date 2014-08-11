@@ -1,5 +1,5 @@
-#ifndef REV3_H
-#define REV3_H
+#ifndef MAIN_H
+#define MAIN_H
 
 #include<avr/io.h>
 #include<avr/interrupt.h>
@@ -7,20 +7,15 @@
 #include<string.h>
 #include<stdlib.h>
 #include "IOMapping.h"
-#include "DISPLAY.h"
-#include "SWITCH.h"
 #include "ADC.h"
 #include "DAC.h"
 #include "SERIAL.h"
 #include "EEPROM.h"
+#include "CHARGEPUMP.h"
 
 // Shortcuts for enabling and disabling the output
 #define ENABLE_OUTPUT  IOClearPin(SHUTDOWN_PORT,SHUTDOWN_PIN)
 #define DISABLE_OUTPUT IOSetPin(SHUTDOWN_PORT,SHUTDOWN_PIN)
-#define ENABLE_PREREG  IOClearPin(PREREG_PORT,PREREG_PIN)
-#define DISABLE_PREREG IOSetPin(PREREG_PORT,PREREG_PIN)
-
-extern button switch1, switch2, switch3, switch4;
 
 int main(void);
 void mapVoltage(uint16_t volt, unsigned char* b);
@@ -42,7 +37,7 @@ typedef struct {
   uint16_t maxAnalogValue; // 2000 corresponds to 20V
   uint16_t analogIncrements;
 } PSUData;
-// Mapping functions that act on PSUData, returns the 
+// Mapping functions that act on PSUData, returns the
 // mapped to value.
 uint16_t mapToAnalog(PSUData*);
 uint16_t mapToDigital(PSUData*);
@@ -75,7 +70,6 @@ void logToUSB(PSUData*,serialCommand);
 typedef enum {
   VOLTAGE,
   CURRENT,
-  PREREG,
   VIN,
 } ADC_MUX;
 // returns 1 if a new reading was recorded, otherwise 0.
@@ -114,10 +108,10 @@ void toggleOutput(void);
 void enableOutput(void);
 void disableOutput(void);
 
-void writeToUsb(uint16_t voltage, 
-		uint16_t current, 
-		uint16_t voltageSet, 
-		uint16_t currentSet, 
+void writeToUsb(uint16_t voltage,
+		uint16_t current,
+		uint16_t voltageSet,
+		uint16_t currentSet,
 		uint16_t inputVoltage,
 		uint16_t vinVoltage,
 		unsigned char outputOn);
@@ -131,18 +125,18 @@ static void initRegistries(void);
 
 // void doCalibration(void);
 
-void joinArrays(unsigned char *voltageArray, 
-		unsigned char *currentArray, 
-		unsigned char *voltageSetArray, 
+void joinArrays(unsigned char *voltageArray,
+		unsigned char *currentArray,
+		unsigned char *voltageSetArray,
 		unsigned char *currentSetArray,
 		unsigned char *voltagePreregArray,
 		unsigned char *voltageVinArray,
 		unsigned char outputOn,
 		unsigned char *combinedArray);
 
-int appendArray(unsigned char *targetArray, 
-		int arraySize, 
-		unsigned char *appendingArray, 
+int appendArray(unsigned char *targetArray,
+		int arraySize,
+		unsigned char *appendingArray,
 		int appendingArrayMaxSize);
 
 void clearArray(unsigned char *array, int size);

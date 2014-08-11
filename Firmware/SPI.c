@@ -6,7 +6,10 @@ void SPI_Initialize(void)
   IOSetOutput(SPI_MOSI_PORT,SPI_MOSI_PIN);
   IOSetInput(SPI_MISO_PORT,SPI_MISO_PIN);
   IOSetOutput(SPI_SCK_PORT,SPI_SCK_PIN);
-  
+
+  // Annoyingly we must also set the SS pin as an output
+  IOSetOutput(SPI_SS_PORT,SPI_SS_PIN);
+
   // Enable SPI, Master, set clock rate fck/16
   SPCR = 0;
   BIT_SET(SPCR,BIT(SPE));

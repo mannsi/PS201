@@ -17,14 +17,14 @@
 #define DACCURRENT 9
 #define NUMBITS 1024
 
-// Use uint8_t (unsigned char) for variables that do not have to be 
+// Use uint8_t (unsigned char) for variables that do not have to be
 // bigger than one byte.
 uint8_t updateStartVoltage = 0;
 uint8_t updateStartCurrent = 0;
 uint8_t outputIsOn = 0;
 uint8_t streamIsOn = 0;
 
-// To keep track of the ADC 
+// To keep track of the ADC
 ADC_MUX ADCmeasures = VOLTAGE;
 // We store all measured voltages and current in a array of type
 // PSUData, defined in the header. The four elements correspond
@@ -41,44 +41,51 @@ PSUState state = NORMAL;
 // Delay variables, between read cycles. We do not
 // want to be constantly running the ADC.
 uint16_t readDelay = 10000;
-uint16_t setDelay = 50000; 
+uint16_t setDelay = 50000;
 uint16_t delay = 10000;
 
 // To map the ADC_MUX variable to register locations
-const unsigned char ADCregister[4] = {
-  ADC_VOLTAGE_MON, ADC_CURRENT_MON, ADC_PREREG, ADC_VIN_MON
+const unsigned char ADCregister[3] = {
+  ADC_VOLTAGE_MON, ADC_CURRENT_MON, ADC_VIN_MON
 };
 
 int main(void)
 {
+  CHARGEPUMP_Initialize();
+  // Start the charge pump
+  CHARGEPUMP_Start();
   ADC_Initialize();
   DAC_Initialize();
   SERIAL_Initialize();
-  
+
   initRegistries();
   //initCalibration();
-  
+
   // Initialize PSU variables
   {
     PSUData defaultVoltage = {.analog=0, .digital=0, .multiplier=getVoltageReadMultiplier(), .offset=0, .maxAnalogValue=2000, .analogIncrements=10};
     PSUData defaultCurrent = {.analog=0, .digital=0, .multiplier=getCurrentMultiplier(), .offset=0, .maxAnalogValue=100, .analogIncrements=1};
     measured[VOLTAGE] = defaultVoltage;
-    measured[PREREG]  = defaultVoltage;
     measured[VIN]     = defaultVoltage;
     setting[VOLTAGE]  = defaultVoltage;
     measured[CURRENT] = defaultCurrent;
     setting[CURRENT]  = defaultCurrent;
-    
+
     setting[VOLTAGE].multiplier = getVoltageSetMultiplier();
   }
-  
+
   // initialize settings and transfer to the DAC
   setting[VOLTAGE].analog = EEPROM_ReadNum(ADDR_STARTVOLTAGE);
+  setting[VOLTAGE].analog = 100;// FOR TESTING ONLY
   mapToDigital(&setting[VOLTAGE]);
   DAC_transfer(DAC_ctrlCode[VOLTAGE],setting[VOLTAGE].digital);
   setting[CURRENT].analog = EEPROM_ReadNum(ADDR_STARTCURRENT);
+  setting[CURRENT].analog = 100;// FOR TESTING ONLY
   mapToDigital(&setting[CURRENT]);
   DAC_transfer(DAC_ctrlCode[CURRENT],setting[CURRENT].digital);
+
+  // FOR TESTING ONLY !!!!!!!!!!!!!!!!
+  enableOutput();
 
   // Start the ADC
   sei();
@@ -86,11 +93,19 @@ int main(void)
 
   /************************
   *                       *
+  *      TESTING LOOP     *
+  *                       *
+  ************************/
+  while(1)
+  {
+  }
+  /************************
+  *                       *
   *      MAIN LOOP        *
   *                       *
   *************************/
 
-  while(1)
+  while(0)
   {
     // loop control variables
     int newVoltageSetting = 0;
@@ -100,11 +115,11 @@ int main(void)
     int selectVoltage = 0;
     int selectCurrent = 0;
     // Read the ADC.
-    int measurementCompleted[4] = {0,0,0,0};
+    int measurementCompleted[3] = {0,0,0};
     measurementCompleted[ADCmeasures] = readFromADC(&measured[ADCmeasures]);
     // Listen to USB commands.
     serialCommand newUSBCommand = readUSB();
-    
+
     // The main state machine.
     switch(state){
       case NORMAL:
@@ -118,13 +133,13 @@ int main(void)
 	setState(NORMAL);
 	break;
     }
-    
+
     // Update the output.
     if(newVoltageSetting) DAC_transfer(DAC_ctrlCode[VOLTAGE],setting[VOLTAGE].digital);
     if(newCurrentSetting) DAC_transfer(DAC_ctrlCode[CURRENT],setting[VOLTAGE].digital);
     if(turnOutputOn)      enableOutput();
     if(turnOutputOff)     disableOutput();
-    
+
     // Restart the ADC
     if(measurementCompleted[ADCmeasures])
     {
@@ -155,24 +170,24 @@ uint16_t mapToDigital(PSUData* A)
 int readFromADC(PSUData* A)
 {
   // Check global variable:
-  // WARNING This must be an ATOMIC operation since 
+  // WARNING This must be an ATOMIC operation since
   // ADC_reading is accessed by the ISR.
   int16_t reading;
   int16_t oldReading;
-  
+
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
   {
     reading = ADC_reading;
     ADC_reading = -1;
   }
-  
+
   if(reading != -1)
   {
     // We accumulate data to increase the effective number of bits
     A->average += (uint32_t) reading;
     A->numberOfSamples += 1;
-    // When we have reached the nuber of averages we bitshift right 
-    // four times, which is the same as dividing by square root of 
+    // When we have reached the nuber of averages we bitshift right
+    // four times, which is the same as dividing by square root of
     // the number of averages.
     if(A->numberOfSamples == 256) // THIS NUMBER IS 4^4 and should stay there!
     {
@@ -199,12 +214,12 @@ void startADC(ADC_MUX *measuring)
 {
   const static int nextMeasure[4] = {1,2,3,0};
   *measuring = nextMeasure[*measuring];
-  
+
   ADC_StartMeasuring(ADCregister[*measuring]);
 }
 
 // Map the analog data of A to a character array in SI units, remember
-// that by definition the analog variables are stored in 100ths of a 
+// that by definition the analog variables are stored in 100ths of a
 // SI unit i.e. 10mV or 10mA
 void mapToString(PSUData* A,char* S)
 {
@@ -370,10 +385,6 @@ serialCommand readUSB(void)
 	  sendACK();
 	  logToUSB(&measured[VIN],cmd);
 	  break;
-	case SERIAL_SEND_VPREREG:
-	  sendACK();
-	  logToUSB(&measured[PREREG],cmd);
-	  break;
 	case SERIAL_ENABLE_OUTPUT:
 	  sendACK();
 	  enableOutput();
@@ -427,13 +438,11 @@ void enableOutput()
 {
   outputIsOn = 1;
   ENABLE_OUTPUT;
-  ENABLE_PREREG;
 }
 
 void disableOutput()
 {
   outputIsOn = 0;
-  DISABLE_PREREG;
   DISABLE_OUTPUT;
 }
 
@@ -441,8 +450,6 @@ static void initRegistries()
 {
   // Turn off Bias
   IOSetOutput(SHUTDOWN_PORT,SHUTDOWN_PIN);
-  IOSetOutput(PREREG_PORT,PREREG_PIN);
   outputIsOn = 0;
-  DISABLE_PREREG;
   DISABLE_OUTPUT;
 }

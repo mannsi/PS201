@@ -13,7 +13,7 @@ void ADC_Initialize(void)
   BIT_SET(ADCSRA,BIT(ADEN));
   // Enable ADC interupt
   BIT_SET(ADCSRA,BIT(ADIE));
-  // Set the ADC prescaler to 64 for ADC 
+  // Set the ADC prescaler to 64 for ADC
   // clock of 125kHz.
   //BIT_SET(ADCSRA,BIT(ADPS0));
   BIT_SET(ADCSRA,BIT(ADPS1));
@@ -28,18 +28,10 @@ void ADC_StartMeasuring(unsigned char a)
 }
 
 // The ADC interupt function is automatically triggered
-// when the ADC has finished converting. Here we store 
-// the value. The main loop then restarts the DAC on 
+// when the ADC has finished converting. Here we store
+// the value. The main loop then restarts the DAC on
 // a different channel.
 ISR(ADC_vect)
 {
   ADC_reading = ADC;
 }
-
-// Interrupt for the ADC timer.
-ISR(TIMER0_COMPA_vect)
-{
-  TIMER_ADC_Stop();
-  //ADC_STARTCONVERSION;
-}
-

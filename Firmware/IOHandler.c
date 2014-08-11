@@ -71,24 +71,17 @@ unsigned char IOGetAllPins(port po)
 }
 
 // Definitions of ports
-port portB = {.direction = &DDRB, 
-	      .output = &PORTB, 
-	      .input = &PINB, 
-	      .interrupt = &PCMSK0, 
+port portA = {.direction = &DDRA, 
+	      .output = &PORTA, 
+	      .input = &PINA, 
+	      .interrupt = &PCMSK0,
 	      .interruptEnableRegister = &PCICR,
 	      .interruptEnableBit = PCIE0
 };
-port portC = {.direction = &DDRC, 
-	      .output = &PORTC, 
-	      .input = &PINC, 
-	      .interrupt = &PCMSK1,
+port portB = {.direction = &DDRB, 
+	      .output = &PORTB, 
+	      .input = &PINB, 
+	      .interrupt = &PCMSK1, 
 	      .interruptEnableRegister = &PCICR,
 	      .interruptEnableBit = PCIE1
-};
-port portD = {.direction = &DDRD, 
-	      .output = &PORTD, 
-	      .input = &PIND, 
-	      .interrupt = &PCMSK2,
-	      .interruptEnableRegister = &PCICR,
-	      .interruptEnableBit = PCIE2
 };
