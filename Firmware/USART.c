@@ -8,11 +8,11 @@ void USART_Initialize(void)
 {
   // Set transmit and receive registers
   IOSetOutput(UART_TRANSMIT_PORT,UART_TRANSMIT_PIN);
-  IOEnablePullup(UART_RECEIVE_PORT,UART_RECEIVE_PIN);
+  //IOEnablePullup(UART_RECEIVE_PORT,UART_RECEIVE_PIN);
 
   // Set BAUD rate
-  BIT_SET(LINBTR,BIT(LDISR));
-  LINBTR |= SAMPLES_PER_BIT;
+  //BIT_SET(LINBTR,BIT(LDISR));
+  LINBTR = (1 << LDISR) | SAMPLES_PER_BIT;
   LINBRR = MYLINBRR;
 
   // Set LIN module to UART mode
@@ -30,8 +30,8 @@ int USART_PutChar(char c, FILE *stream)
   {
     USART_PutChar('\r',stream);
   }
-  while ( !BIT_GET(LINSIR,BIT(LTXOK)) );
   LINDAT = c;
+  while ( !BIT_GET(LINSIR,BIT(LTXOK)) );
   return 0;
 }
 

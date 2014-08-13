@@ -1,7 +1,19 @@
 #include "ADC.h"
 
-// define the raw ADC read variables
-volatile uint16_t ADC_reading = -1;
+int number_of_oversamplings = 16;
+int number_of_measurements = 256; //number_of_oversamplings * number_of_oversamplings;
+int measured_voltage = 0;
+int measured_current = 0;
+
+int ADC_GetMeasuredVoltage()
+{
+	return measured_voltage;
+}
+
+int ADC_GetMeasuredCurrent()
+{
+	return measured_current;
+}
 
 // Setup for the ADC channels
 void ADC_Initialize(void)
@@ -20,10 +32,17 @@ void ADC_Initialize(void)
   BIT_SET(ADCSRA,BIT(ADPS2));
 }
 
-void ADC_StartMeasuring(unsigned char a)
+void ADC_StartMeasuringCurrent()
 {
   ADMUX = 0;
-  BIT_SET(ADMUX,a);
+  BIT_SET(ADMUX,ADC_CURRENT_MON);
+  ADC_STARTCONVERSION;
+}
+
+void ADC_StartMeasuringVoltage()
+{
+  ADMUX = 0;
+  BIT_SET(ADMUX,ADC_VOLTAGE_MON);
   ADC_STARTCONVERSION;
 }
 
@@ -33,5 +52,30 @@ void ADC_StartMeasuring(unsigned char a)
 // a different channel.
 ISR(ADC_vect)
 {
-  ADC_reading = ADC;
+  static uint32_t accumulated_voltage = 0;
+  static uint32_t accumulated_current = 0;
+  static int isMeasuringCurrent = 0;
+  static int counter = 0;
+  if (isMeasuringCurrent)
+  {
+	  accumulated_current += ADC;
+	  isMeasuringCurrent = 0;
+	  counter++;
+	  ADC_StartMeasuringVoltage();
+  }
+  else
+  {
+	  accumulated_voltage += ADC;
+	  isMeasuringCurrent = 1;
+	  ADC_StartMeasuringCurrent();
+  }
+
+  if (counter == number_of_measurements)
+  {
+	  measured_voltage = (int)(accumulated_voltage / number_of_measurements);
+	  measured_current = (int)(accumulated_current / number_of_measurements);
+	  counter = 0;
+	  accumulated_voltage = 0;
+	  accumulated_current = 0;
+  }
 }

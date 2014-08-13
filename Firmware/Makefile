@@ -85,7 +85,7 @@ PROJECTNAME=DPS201-Rev4
 # Use .cc, .cpp or .C suffix for C++ files, use .S
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c
-PRJSRC=MAIN.c SERIAL.c USART.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c CHARGEPUMP.c
+PRJSRC=MAIN.c DEVICE.c USB.c SERIAL.c USART.c ADC.c DAC.c SPI.c EEPROM.c IOHandler.c CHARGEPUMP.c
 
 # additional includes (e.g. -I/path/to/mydir)
 INC=#-I/path/to/include

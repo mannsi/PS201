@@ -13,7 +13,7 @@
 #define BAUD 9600
 #endif
 
-#define SAMPLES_PER_BIT 16
+#define SAMPLES_PER_BIT 8
 
 #define MYLINBRR (F_CPU/SAMPLES_PER_BIT/BAUD - 1)
 
