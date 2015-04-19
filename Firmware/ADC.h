@@ -4,7 +4,7 @@
 #include<avr/io.h>
 #include<avr/interrupt.h>
 #include "IOHandler.h"
-#include "TIMER.h"
+#include "Timer.h"
 #include "IOMapping.h"
 
 #define ADC_STARTCONVERSION ADCSRA |= 1 << ADSC

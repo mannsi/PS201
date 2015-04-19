@@ -1,39 +1,89 @@
 #include "Usb.h"
 
+#include "USART.h"
+#include "SerialParser.h"
+
+#define MAX_SERIAL_LENGTH   80
+#define SERIAL_ACK			"ACK"
+#define SERIAL_NAK			"NAK"
+
+/*
+ * Fetches data packet from serial. Result stored in response
+ * Returns: Bool if succesfull
+ */
+static int GetPacket(Decoded_input* response);
+
+/*
+ * Sends a packet to serial.
+ */
+static void SendPacket(char* cmd, char* data, uint8_t dataLength);
+
 void USB_Initialize(void)
 {
-    SERIAL_Initialize();
+    USART_Initialize();
 }
 
-Usb_response_struct USB_GetResponse(void)
+int USB_GetResponse(Decoded_input* response)
 {
-	Usb_response_struct usb_response = {.command=0};
-	
-	if (SERIAL_IsReceivingData())
+	if (USART_IsReceivingData())
 	{
-		uint8_t cmd = 0;
-		char data[MAXLEN];
-		
-		if(SERIAL_GetPacket(&cmd,data))
-		{
-			usb_response.command = cmd;
-			usb_response.data = data;
-		}
+		return GetPacket(response);
 	}
-	return usb_response;
+    return 0;
 }
 
 void USB_WriteAcknowledge(void)
 {
-    SERIAL_SendCmd(SERIAL_ACK);
+    SendPacket(SERIAL_ACK, "", 0);
 }
 
 void USB_WriteNotAcknowledge(void)
 {
-    SERIAL_SendCmd(SERIAL_NAK);
+    SendPacket(SERIAL_NAK, "", 0);
 }
 
-void USB_WriteAllValues(char* all_values)
+void USB_WriteAllValues(char* all_values, uint8_t allValuesLength)
 {
-	SERIAL_SendPacket(SERIAL_WRITEALL, all_values);
+	SendPacket(SERIAL_WRITEALL, all_values, allValuesLength);
 }
+
+static int GetPacket(Decoded_input* response)
+{
+    if(getchar() != SERIAL_START)
+    {
+        return 0;
+    }
+
+    int i = 0;
+    int nextChar;
+    char input[MAX_SERIAL_LENGTH] = "";
+    input[i++] = SERIAL_START;
+
+    do
+    {
+        nextChar = getchar();
+        if (nextChar == EOF || nextChar == 0 || i > MAX_SERIAL_LENGTH) return 0;
+        input[i++] = nextChar;
+    } while(nextChar != SERIAL_END);
+
+    int success = ParseSerialInput(input, i, response);
+
+    return success;
+
+}
+
+static void SendPacket(char* cmd, char* data, uint8_t dataLength)
+{
+    char output[MAX_SERIAL_LENGTH] = "";
+    uint8_t outputLength = GenerateSerialOutput(cmd, data, dataLength, output);
+    int i;
+    for(i = 0; i < outputLength; i++)
+    {
+        putchar(output[i]);
+    }
+
+}
+
+
+
+

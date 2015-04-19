@@ -9,86 +9,139 @@
 
 #include "rev3.h"
 
-static void allValuesToString(State_struct state, char* string_array);
-static void processUsbResponse(Usb_response_struct usb_response, State_struct state);
+#define SERIAL_RECEIVE_VOLTAGE 		"VOL"
+#define SERIAL_RECEIVE_CURRENT 		"CUR"
+#define SERIAL_ENABLE_OUTPUT		"OUT"
+#define SERIAL_PROGRAM_ID		    "HAN"
+
+/*
+ * Takes the state of the hardware and puts its values in string_array.
+ * The format of the string_array is:
+ output_voltage[mV];output_current[mA];target_voltage[mV];target_current[mA];output_on[int_bool]
+ * Returns: Length of string_array
+ */
+static uint8_t allValuesToString(State_struct state, char* string_array);
+
+/*
+ * Processes the input from parameter reponse. Uses the parameter state if needed.
+ */
+static void processUsbResponse(Decoded_input response, State_struct state);
+
+// DEBUG STUFF
+static void runDebugCode(void);
+static void runTestCode(void);
 
 int main(void)
 {
 	USB_Initialize();
 	Device_Initialize();
-	
+
+	//runTestCode();
+    //return 0;
+
+    //srunDebugCode();
+    //return 0;
+
 	while(1)
 	{
-		Usb_response_struct usb_response = USB_GetResponse();
-		if (usb_response.command != 0)
+        Decoded_input response;
+		if (USB_GetResponse(&response))
 		{
 			State_struct state = Device_GetState();
-			processUsbResponse(usb_response, state);
+			processUsbResponse(response, state);
 		}
 	}
 	return 0;
 }
 
-/*
- * Takes a State_struct object and converts it's values
- * into a series of ; seperated strings. These strings are
- * concatinated and store in char* string_array
- */
-static void allValuesToString(State_struct state, char* string_array)
+static void runTestCode()
 {
+    TestSerialParser();
+}
+
+// Prints predefined usb code every 1 second and blocks everything else
+static void runDebugCode()
+{
+    char* data1 = "10000";
+
+    while(1)
+    {
+        USB_WriteAllValues(data1, strlen(data1));
+        putchar ('\n');
+        USB_WriteNotAcknowledge();
+        putchar ('\n');
+        USB_WriteAcknowledge();
+        putchar ('\n');
+
+        _delay_ms(1000);
+    }
+
+}
+
+static uint8_t allValuesToString(State_struct state, char* string_array)
+{
+    uint8_t dataLength = 0;
+
 	char output_voltage_array[8];
 	char output_current_array[8];
 	char target_voltage_array[8];
 	char target_current_array[8];
 	char output_is_on_array[8];
-	
-	sprintf(output_voltage_array, "%i;", state.output_voltage);
-	sprintf(output_current_array, "%i;", state.output_current);
-	sprintf(target_voltage_array, "%i;", state.target_voltage);
-	sprintf(target_current_array, "%i;", state.target_current);
-	sprintf(output_is_on_array, "%i", state.output_on);
-	
+
+	dataLength += sprintf(output_voltage_array, "%i;", state.output_voltage);
+	dataLength += sprintf(output_current_array, "%i;", state.output_current);
+	dataLength += sprintf(target_voltage_array, "%i;", state.target_voltage);
+	dataLength += sprintf(target_current_array, "%i;", state.target_current);
+	dataLength += sprintf(output_is_on_array, "%i", state.output_on);
+
 	strcpy(string_array, output_voltage_array);
 	strcat(string_array, output_current_array);
 	strcat(string_array, target_voltage_array);
 	strcat(string_array, target_current_array);
-	strcat(string_array, output_is_on_array); 
+	strcat(string_array, output_is_on_array);
+
+	return dataLength;
 }
 
-static void processUsbResponse(Usb_response_struct usb_response, State_struct state)
+static void processUsbResponse(Decoded_input usb_response, State_struct state)
 {
-	switch (usb_response.command)
-	{
-		case SERIAL_PROGRAM_ID:
-			USB_WriteAcknowledge();
-			break;
-		case SERIAL_WRITEALL:
-			USB_WriteAcknowledge();
-			char all_values_array[50];
-			allValuesToString(state, all_values_array);
-			USB_WriteAllValues(all_values_array);
-			break;
-		case SERIAL_ENABLE_OUTPUT:
-			USB_WriteAcknowledge();
+    if (strcmp(usb_response.cmd, SERIAL_PROGRAM_ID))
+    {
+        USB_WriteAcknowledge();
+    }
+    else if (strcmp(usb_response.cmd, SERIAL_WRITEALL))
+    {
+        USB_WriteAcknowledge();
+        char all_values_array[50];
+        uint8_t dataLength = allValuesToString(state, all_values_array);
+        USB_WriteAllValues(all_values_array, dataLength);
+    }
+    else if (strcmp(usb_response.cmd, SERIAL_ENABLE_OUTPUT))
+    {
+        if (usb_response.data)
+        {
+            USB_WriteAcknowledge();
 			Device_TurnOutputOn();
-			break;
-		case SERIAL_DISABLE_OUTPUT:
-			USB_WriteAcknowledge();
+        }
+        else
+        {
+            USB_WriteAcknowledge();
 			Device_TurnOutputOff();
-			break;
-		case SERIAL_RECEIVE_VOLTAGE:
-			USB_WriteAcknowledge();
-			int voltage = atoi(usb_response.data);
-			Device_SetTargetVoltage(voltage);
-			break;
-		case SERIAL_RECEIVE_CURRENT:
-			USB_WriteAcknowledge();
-			int current = atoi (usb_response.data);
-			Device_SetTargetCurrent(current);
-			break;
-		default:
-			USB_WriteNotAcknowledge();
-			break;
-	}
+        }
+    }
+    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_VOLTAGE))
+    {
+        USB_WriteAcknowledge();
+        Device_SetTargetVoltage(usb_response.data);
+    }
+    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_CURRENT))
+    {
+        USB_WriteAcknowledge();
+        Device_SetTargetCurrent(usb_response.data);
+    }
+    else
+    {
+        USB_WriteNotAcknowledge();
+    }
 }
 
