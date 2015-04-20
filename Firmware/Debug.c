@@ -1,10 +1,10 @@
 #include "Debug.h"
 #include "USART.h"
 
-void WriteSimpleDebug(char* message, uint8_t messageLength)
+void WriteSimpleDebug(char* message)
 {
     int i;
-    for(i=0; i < messageLength; i++)
+    for(i=0; i < strlen(message); i++)
     {
         putchar(message[i]);
     }

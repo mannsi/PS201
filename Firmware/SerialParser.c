@@ -23,7 +23,7 @@ static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data);
  * Checks if value c needs to be escaped
  * Returns: Bool if c needs escaping
  */
-static int ValueNeedsEscaping(uint8_t c);
+static int ValueNeedsEscaping(char c);
 
 uint8_t GenerateSerialOutput(char* cmd, char* data, uint8_t dataLength, char* output)
 {
@@ -117,6 +117,8 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     {
         if (readCrcArray[i] != calculatedCrcArray[i])
         {
+            //char* crcError = "Crc error. ";
+            //WriteDebug(crcError, strlen(crcError), calculatedCrcArray, strlen(calculatedCrcArray), readCrcArray, strlen(readCrcArray));
             return 0;
         }
     }
@@ -131,7 +133,7 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     return 1;
 }
 
-static int ValueNeedsEscaping(uint8_t c)
+static int ValueNeedsEscaping(char c)
 {
     if (c == SERIAL_END || c == SERIAL_ESC || c == SERIAL_RETURN || c == SERIAL_NEWLINE)
     {

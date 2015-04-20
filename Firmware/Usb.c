@@ -2,6 +2,7 @@
 
 #include "USART.h"
 #include "SerialParser.h"
+#include "Debug.h"
 
 #define MAX_SERIAL_LENGTH   80
 #define SERIAL_ACK			"ACK"
@@ -49,7 +50,8 @@ void USB_WriteAllValues(char* all_values, uint8_t allValuesLength)
 
 static int GetPacket(Decoded_input* response)
 {
-    if(getchar() != SERIAL_START)
+    char firstChar = getchar();
+    if(firstChar != SERIAL_START)
     {
         return 0;
     }
@@ -62,12 +64,14 @@ static int GetPacket(Decoded_input* response)
     do
     {
         nextChar = getchar();
-        if (nextChar == EOF || nextChar == 0 || i > MAX_SERIAL_LENGTH) return 0;
+        if (nextChar == EOF || nextChar == 0 || i > MAX_SERIAL_LENGTH)
+        {
+            return 0;
+        }
         input[i++] = nextChar;
     } while(nextChar != SERIAL_END);
 
     int success = ParseSerialInput(input, i, response);
-
     return success;
 
 }

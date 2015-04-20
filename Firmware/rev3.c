@@ -9,6 +9,8 @@
 
 #include "rev3.h"
 
+#include "Debug.h"
+
 #define SERIAL_RECEIVE_VOLTAGE 		"VOL"
 #define SERIAL_RECEIVE_CURRENT 		"CUR"
 #define SERIAL_ENABLE_OUTPUT		"OUT"
@@ -39,7 +41,7 @@ int main(void)
 	//runTestCode();
     //return 0;
 
-    //srunDebugCode();
+    //runDebugCode();
     //return 0;
 
 	while(1)
@@ -75,7 +77,6 @@ static void runDebugCode()
 
         _delay_ms(1000);
     }
-
 }
 
 static uint8_t allValuesToString(State_struct state, char* string_array)
@@ -105,18 +106,18 @@ static uint8_t allValuesToString(State_struct state, char* string_array)
 
 static void processUsbResponse(Decoded_input usb_response, State_struct state)
 {
-    if (strcmp(usb_response.cmd, SERIAL_PROGRAM_ID))
+    if (strcmp(usb_response.cmd, SERIAL_PROGRAM_ID) == 0)
     {
         USB_WriteAcknowledge();
     }
-    else if (strcmp(usb_response.cmd, SERIAL_WRITEALL))
+    else if (strcmp(usb_response.cmd, SERIAL_WRITEALL) == 0)
     {
         USB_WriteAcknowledge();
         char all_values_array[50];
         uint8_t dataLength = allValuesToString(state, all_values_array);
         USB_WriteAllValues(all_values_array, dataLength);
     }
-    else if (strcmp(usb_response.cmd, SERIAL_ENABLE_OUTPUT))
+    else if (strcmp(usb_response.cmd, SERIAL_ENABLE_OUTPUT) == 0)
     {
         if (usb_response.data)
         {
@@ -129,12 +130,12 @@ static void processUsbResponse(Decoded_input usb_response, State_struct state)
 			Device_TurnOutputOff();
         }
     }
-    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_VOLTAGE))
+    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_VOLTAGE) == 0)
     {
         USB_WriteAcknowledge();
         Device_SetTargetVoltage(usb_response.data);
     }
-    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_CURRENT))
+    else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_CURRENT) == 0)
     {
         USB_WriteAcknowledge();
         Device_SetTargetCurrent(usb_response.data);
