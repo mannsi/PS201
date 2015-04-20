@@ -65,8 +65,9 @@ static int GetPacket(Decoded_input* response)
     do
     {
         nextChar = getchar();
-        if (nextChar < 32 || i > MAX_SERIAL_LENGTH)
+        if (nextChar <= 32 || i > MAX_SERIAL_LENGTH)
         {
+            // Chars below 32 are not characters but control signals
             return -1;
         }
         input[i++] = nextChar;

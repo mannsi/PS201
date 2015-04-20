@@ -118,7 +118,7 @@ static void TestDecodingWrtAllInput(void)
 {
     WriteSimpleDebug("Parser testing: Decoding with Write all ...");
 
-    char *writeAllInput = "~WRT005B7D5D~";
+    char *writeAllInput = "~WRT005B7D~";
     uint8_t inputLength = strlen(writeAllInput);
     Decoded_input output;
 

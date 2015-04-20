@@ -3,11 +3,6 @@
 #include<util/crc16.h>
 #include "Debug.h"
 
-#define SERIAL_ESC				    (0x7D)
-#define SERIAL_FLIPBIT				(0x20)
-#define SERIAL_RETURN				(0x0D)
-#define SERIAL_NEWLINE				(0x0A)
-
 #define CMD_CHAR_LENGTH             3
 #define LEN_CHAR_LENGTH             2
 #define CRC_CHAR_MIN_LENGTH         4
@@ -18,12 +13,6 @@
  * Returns: Length of hexCrc
  */
 static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data);
-
-/*
- * Checks if value c needs to be escaped
- * Returns: Bool if c needs escaping
- */
-static int ValueNeedsEscaping(char c);
 
 uint8_t GenerateSerialOutput(char* cmd, char* data, uint8_t dataLength, char* output)
 {
@@ -113,6 +102,8 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     uint8_t calculatedArrayLength = GetHexCrc(calculatedCrcArray, cmd, dataLengthArray, data);
     uint8_t readCrcArrayLength = i;
 
+    if (calculatedArrayLength != readCrcArrayLength) return 0;
+
     for (i = 0; i < calculatedArrayLength; i++)
     {
         if (readCrcArray[i] != calculatedCrcArray[i])
@@ -131,15 +122,6 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     output->cmd = cmd;
     output->data = (int)strtol(data, NULL, 10);
     return 1;
-}
-
-static int ValueNeedsEscaping(char c)
-{
-    if (c == SERIAL_END || c == SERIAL_ESC || c == SERIAL_RETURN || c == SERIAL_NEWLINE)
-    {
-        return 1;
-    }
-    return 0;
 }
 
 static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data)
@@ -170,33 +152,10 @@ static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data)
     uint8_t crc2 = (uint8_t) crc;
 
     uint8_t index = 0;
-    if (!ValueNeedsEscaping(crc1))
-    {
-        intCrcArray[index] = crc1;
-        index++;
-    }
-    else
-    {
-        intCrcArray[index] = SERIAL_ESC;
-        index++;
-        intCrcArray[index] = (SERIAL_FLIPBIT ^ crc1);
-        index++;
-    }
+    intCrcArray[index++] = crc1;
+    intCrcArray[index++] = crc2;
 
-    if (!ValueNeedsEscaping(crc2))
-    {
-        intCrcArray[index] = crc2;
-        index++;
-    }
-    else
-    {
-        intCrcArray[index] = SERIAL_ESC;
-        index++;
-        intCrcArray[index] = (SERIAL_FLIPBIT ^ crc2);
-        index++;
-    }
-
-    // Now we have a char array with escaped crc values.
+    // Now we have a char array with crc int values.
     // Now we need to convert these values to hex strings.
     uint8_t numberOfCrcValues = index;
     index = 0;
