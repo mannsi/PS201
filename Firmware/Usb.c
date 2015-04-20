@@ -65,14 +65,22 @@ static int GetPacket(Decoded_input* response)
     do
     {
         nextChar = getchar();
-        if (nextChar == EOF || nextChar == 0 || i > MAX_SERIAL_LENGTH)
+        if (nextChar < 32 || i > MAX_SERIAL_LENGTH)
         {
-            return 0;
+            return -1;
         }
         input[i++] = nextChar;
     } while(nextChar != SERIAL_END);
 
     int success = ParseSerialInput(input, i, response);
+    if (success)
+    {
+        return 1;
+    }
+    else
+    {
+        return -1;
+    }
     return success;
 
 }

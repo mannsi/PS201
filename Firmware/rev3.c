@@ -47,10 +47,15 @@ int main(void)
 	while(1)
 	{
         Decoded_input response;
-		if (USB_GetResponse(&response))
+        int usbResponse = USB_GetResponse(&response);
+		if (usbResponse == 1)
 		{
 			State_struct state = Device_GetState();
 			processUsbResponse(response, state);
+		}
+		else if (usbResponse == -1)
+		{
+            USB_WriteNotAcknowledge();
 		}
 	}
 	return 0;
