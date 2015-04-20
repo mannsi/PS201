@@ -4,9 +4,10 @@
 #include "SerialParser.h"
 #include "Debug.h"
 
-#define MAX_SERIAL_LENGTH   80
-#define SERIAL_ACK			"ACK"
-#define SERIAL_NAK			"NAK"
+#define MAX_SERIAL_LENGTH           80
+#define SERIAL_ACK		            "ACK"
+#define SERIAL_NAK			        "NAK"
+#define SERIAL_WRITE_ALL_RESPONSE   "ALL"
 
 /*
  * Fetches data packet from serial. Result stored in response
@@ -45,7 +46,7 @@ void USB_WriteNotAcknowledge(void)
 
 void USB_WriteAllValues(char* all_values, uint8_t allValuesLength)
 {
-	SendPacket(SERIAL_WRITEALL, all_values, allValuesLength);
+	SendPacket(SERIAL_WRITE_ALL_RESPONSE, all_values, allValuesLength);
 }
 
 static int GetPacket(Decoded_input* response)
