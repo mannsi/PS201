@@ -38,8 +38,8 @@ int main(void)
 	USB_Initialize();
 	Device_Initialize();
 
-	runTestCode();
-    return 0;
+	//runTestCode();
+    //return 0;
 
     //runDebugCode();
     //return 0;
