@@ -221,6 +221,8 @@ pip-log.txt
 *.ee.hex
 *.out
 *.out.map
+*.cbp
+*.layout
 
 /PsController/Output/PsController setup.exe
 /PsController/Ps201.sln
