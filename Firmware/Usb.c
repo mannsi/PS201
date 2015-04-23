@@ -60,7 +60,7 @@ static int GetPacket(Decoded_input* response)
     int i = 0;
     int nextChar;
     char input[MAX_SERIAL_LENGTH] = "";
-    input[i++] = SERIAL_START;
+    input[i++] = firstChar;
 
     do
     {

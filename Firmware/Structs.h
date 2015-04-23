@@ -11,7 +11,7 @@ typedef struct State_struct {
 
 
 typedef struct Decoded_input{
-    char* cmd;
+    char cmd[4];
     int data;
     char* rawData;
 } Decoded_input;

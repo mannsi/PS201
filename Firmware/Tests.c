@@ -65,11 +65,6 @@ static void TestDecodingCurInput()
         WriteSimpleDebug("FAIL. Wrong data, exepected 10000 but got ");
         WriteIntDebug(output.data);
     }
-    else if (strcmp(output.rawData, input) != 0)
-    {
-        char *debugString = "FAIL. Raw data output does not match input. ";
-        WriteDebug(debugString, strlen(debugString), input, inputLength, output.rawData, inputLength);
-    }
     else
     {
         WriteSimpleDebug("PASSED.");
@@ -132,11 +127,6 @@ static void TestDecodingWrtAllInput(void)
         char *debugString = "FAIL. Wrong command. ";
         WriteDebug(debugString, strlen(debugString), "WRT", 3, output.cmd, 3);
     }
-    else if (strcmp(output.rawData, writeAllInput) != 0)
-    {
-        char *debugString = "FAIL. Raw data output does not match input. ";
-        WriteDebug(debugString, strlen(debugString), writeAllInput, inputLength, output.rawData, inputLength);
-    }
     else
     {
         WriteSimpleDebug("PASSED.");
@@ -160,11 +150,6 @@ static void TestDecodingVolInput(void)
     {
         char *debugString = "FAIL. Wrong command. ";
         WriteDebug(debugString, strlen(debugString), "VOL", 3, output.cmd, 3);
-    }
-    else if (strcmp(output.rawData, volInput) != 0)
-    {
-        char *debugString = "FAIL. Raw data output does not match input. ";
-        WriteDebug(debugString, strlen(debugString), volInput, inputLength, output.rawData, inputLength);
     }
     else
     {

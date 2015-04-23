@@ -12,7 +12,7 @@
  * Populates hexCrc parameter with hex char crc values from other parameters
  * Returns: Length of hexCrc
  */
-static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data);
+static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data, int dataLength);
 
 uint8_t GenerateSerialOutput(char* cmd, char* data, uint8_t dataLength, char* output)
 {
@@ -39,7 +39,7 @@ uint8_t GenerateSerialOutput(char* cmd, char* data, uint8_t dataLength, char* ou
 
     // At most 4 item crc array possible. Each crc item maps to a 2 item hex string.
     char hexCrc[CRC_CHAR_MAX_LENGTH] = "";
-    uint8_t hexCrcLength = GetHexCrc(hexCrc, cmd, lenArray, data);
+    uint8_t hexCrcLength = GetHexCrc(hexCrc, cmd, lenArray, data, dataLength);
     i = 0;
     for(i = 0; i < hexCrcLength; i++)
     {
@@ -65,15 +65,15 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     uint8_t start = input[index++];
     if(start != SERIAL_START)
     {
-      return 0;
+        //WriteSimpleDebug("Got unexpected first char in parser");
+        return 0;
     }
 
-    char cmd[CMD_CHAR_LENGTH + 1];
+    char cmd[CMD_CHAR_LENGTH];
     // Get the command
     cmd[0] = input[index++];
     cmd[1] = input[index++];
     cmd[2] = input[index++];
-    cmd[3] = 0;
 
     // Get length and convert to int
     char dataLengthArray[LEN_CHAR_LENGTH + 1] = "";
@@ -99,10 +99,14 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     } while(input[index] != SERIAL_END && input[index] != 0 && index <= inputLength);
 
     char calculatedCrcArray[CRC_CHAR_MAX_LENGTH] = "";
-    uint8_t calculatedArrayLength = GetHexCrc(calculatedCrcArray, cmd, dataLengthArray, data);
+    uint8_t calculatedArrayLength = GetHexCrc(calculatedCrcArray, cmd, dataLengthArray, data, dataLength);
     uint8_t readCrcArrayLength = i;
 
-    if (calculatedArrayLength != readCrcArrayLength) return 0;
+    if (calculatedArrayLength != readCrcArrayLength)
+    {
+        //WriteSimpleDebug("Not the same length of calculated and read crc arrays");
+        return 0;
+    }
 
     for (i = 0; i < calculatedArrayLength; i++)
     {
@@ -115,16 +119,24 @@ int ParseSerialInput(char* input, int inputLength, Decoded_input* output)
     }
 
     // Check that the stop flag is provided
-    if (input[index] != SERIAL_END) return 0;
+    if (input[index] != SERIAL_END)
+    {
+        //WriteSimpleDebug("Got unexpected last char in parser");
+        return 0;
+    }
 
     // Copy the values to the output variable
-    output->rawData = input;
-    output->cmd = cmd;
+    output->cmd[0] = cmd[0];
+    output->cmd[1] = cmd[1];
+    output->cmd[2] = cmd[2];
+    output->cmd[3] = '\0';
+
+    data[dataLength] = ' '; // To make sure strtol stops reading data when data is finished.
     output->data = (int)strtol(data, NULL, 10);
     return 1;
 }
 
-static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data)
+static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data, int dataLength)
 {
     // There is probably a much better way to do everything in this function.
     // I just don't know how ...
@@ -136,12 +148,12 @@ static uint8_t GetHexCrc(char* hexCrc, char* cmd, char* lenArray, char* data)
         crc = _crc_xmodem_update(crc,cmd[i]);
     }
 
-    for (i = 0; i < strlen(lenArray); i++)
+    for (i = 0; i < LEN_CHAR_LENGTH; i++)
     {
         crc = _crc_xmodem_update(crc,lenArray[i]);
     }
 
-    for (i = 0; i < strlen(data); i++)
+    for (i = 0; i < dataLength; i++)
     {
         crc = _crc_xmodem_update(crc,data[i]);
     }

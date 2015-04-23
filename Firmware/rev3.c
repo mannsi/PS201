@@ -45,8 +45,9 @@ int main(void)
     //return 0;
 
 	while(1)
-	{
+    {
         Decoded_input response;
+
         int usbResponse = USB_GetResponse(&response);
 		if (usbResponse == 1)
 		{
