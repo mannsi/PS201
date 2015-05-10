@@ -9,12 +9,21 @@
 
 #include "rev3.h"
 
+#include "Usb.h"
+#include "Device.h"
+#include "Structs.h"
 #include "Debug.h"
+#include "Tests.h"
+#include "IOHandler.h"
+#include <util/delay.h>
+#include <string.h>
+
 
 #define SERIAL_RECEIVE_VOLTAGE 		"VOL"
 #define SERIAL_RECEIVE_CURRENT 		"CUR"
 #define SERIAL_ENABLE_OUTPUT		"OUT"
 #define SERIAL_PROGRAM_ID		    "HAN"
+#define SERIAL_WRITEALL			    "WRT"
 
 /*
  * Takes the state of the hardware and puts its values in string_array.

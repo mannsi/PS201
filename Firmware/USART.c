@@ -1,8 +1,18 @@
 #include "USART.h"
 
+#include "IOHandler.h"
+
+#ifndef BAUD
+#define BAUD 9600
+#endif
+
+#define MYUBRR (F_CPU/16/BAUD - 1)
+
+static int USART_PutChar(char c, FILE *stream);
+static int USART_GetChar(FILE *stream);
+
 FILE USART_input = FDEV_SETUP_STREAM(NULL,USART_GetChar,_FDEV_SETUP_READ);
 FILE USART_output = FDEV_SETUP_STREAM(USART_PutChar,NULL,_FDEV_SETUP_WRITE);
-
 
 void USART_Initialize(void)
 {
@@ -18,7 +28,7 @@ void USART_Initialize(void)
   BIT_SET(UCSR0C,BIT(UCSZ00));
 }
 
-int USART_PutChar(char c, FILE *stream)
+static int USART_PutChar(char c, FILE *stream)
 {
   if(c == '\n')
   {
@@ -29,7 +39,7 @@ int USART_PutChar(char c, FILE *stream)
   return 0;
 }
 
-int USART_GetChar(FILE *stream)
+static int USART_GetChar(FILE *stream)
 {
   while ( !BIT_GET(UCSR0A,BIT(RXC0)) );
   return (int) UDR0;

@@ -1,5 +1,16 @@
 #include "Device.h"
 
+#include "IOHandler.h"
+#include "DAC.h"
+#include "ADC.h"
+#include "EEPROM.h"
+#include<avr/interrupt.h>
+
+#define SHUTDOWN_PORT	portC
+#define SHUTDOWN_PIN	0
+#define PREREG_PORT	portB
+#define PREREG_PIN	0
+
 static float getCurrentMultiplier(void);
 static float getVoltageSetMultiplier(void);
 static float getVoltageReadMultiplier(void);
@@ -41,25 +52,25 @@ State_struct Device_GetState(void)
 /*
  * Sets the target voltage of the device. set_voltage is measured in mV
  */
-void Device_SetTargetVoltage(int set_voltage)
+void Device_SetTargetVoltage(int targetVoltage_mV)
 {
-    EEPROM_SetTargetVoltage(set_voltage);
-	state.target_voltage = set_voltage;
+    EEPROM_SetTargetVoltage(targetVoltage_mV);
+	state.target_voltage = targetVoltage_mV;
 	float voltage_mulitiplier = getVoltageSetMultiplier();
-	uint16_t device_voltage_value = mapToDevice(set_voltage, voltage_mulitiplier);
-    DAC_transfer(10, device_voltage_value);
+	uint16_t device_voltage_value = mapToDevice(targetVoltage_mV, voltage_mulitiplier);
+    DAC_SetValue(10, device_voltage_value);
 }
 
 /*
  * Sets the garget current value of the device. set_current is measured in mA
  */
-void Device_SetTargetCurrent(int set_current)
+void Device_SetTargetCurrent(int targetCurrent_mA)
 {
-    EEPROM_SetTargetCurrent(set_current);
-	state.target_current = set_current;
+    EEPROM_SetTargetCurrent(targetCurrent_mA);
+	state.target_current = targetCurrent_mA;
 	float current_mulitiplier = getCurrentMultiplier();
-	uint16_t device_current_value = mapToDevice(set_current, current_mulitiplier);
-    DAC_transfer(9, device_current_value);
+	uint16_t device_current_value = mapToDevice(targetCurrent_mA, current_mulitiplier);
+    DAC_SetValue(9, device_current_value);
 }
 
 void Device_TurnOutputOn()

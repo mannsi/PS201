@@ -4,8 +4,6 @@
 #include "Structs.h"
 #include <stdio.h>
 
-#define SERIAL_WRITEALL			"WRT"
-
 void USB_Initialize(void);
 
 /*

@@ -1,15 +1,22 @@
 #include "SPI.h"
 
+#define SPI_MOSI_PORT	portB
+#define SPI_MOSI_PIN	3
+#define SPI_MISO_PORT	portB
+#define SPI_MISO_PIN	4
+#define SPI_SCK_PORT	portB
+#define SPI_SCK_PIN	5
+
 void SPI_Initialize(void)
 {
   // SS pin must be set as output
-  IOSetOutput(portB,2); 
-  
+  IOSetOutput(portB,2);
+
   // Setup IO pins
   IOSetOutput(SPI_MOSI_PORT,SPI_MOSI_PIN);
   IOSetInput(SPI_MISO_PORT,SPI_MISO_PIN);
   IOSetOutput(SPI_SCK_PORT,SPI_SCK_PIN);
-  
+
   // Enable SPI, Master, set clock rate fck/16
   SPCR = 0;
   BIT_SET(SPCR,BIT(MSTR));

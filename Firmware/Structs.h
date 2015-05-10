@@ -16,4 +16,15 @@ typedef struct Decoded_input{
     char* rawData;
 } Decoded_input;
 
+// Collect all port information in one struct
+typedef struct
+{
+  volatile unsigned char *direction;			// Direction register
+  volatile unsigned char *output;			// Output register, to output data to port
+  volatile unsigned char *input;			// Input register, to read data from port
+  volatile unsigned char *interrupt;			// Pin change interrupt for the port
+  volatile unsigned char *interruptEnableRegister;	// Register and bit to enable and
+  unsigned char interruptEnableBit;			// Disable the ports pin change interrupt.
+} port;
+
 #endif

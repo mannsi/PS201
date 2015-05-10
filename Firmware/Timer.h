@@ -1,7 +1,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "IOMapping.h"
+#include "IOHandler.h"
 
 void TIMER_Initialize(void);
 

@@ -1,6 +1,8 @@
 #include "Debug.h"
 #include "USART.h"
 
+#include<string.h>
+
 void WriteSimpleDebug(char* message)
 {
     int i;

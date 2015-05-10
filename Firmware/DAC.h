@@ -1,15 +1,14 @@
 #ifndef DAC_H
 #define DAC_H
 
-#include "SPI.h"
-#include "IOMapping.h"
+#include <stdint.h>
 
-// Shortcuts for the DAC chip select pin
-#define SELECT_DAC IOClearPin(DAC_CS_PORT,DAC_CS_PIN)
-#define DESELECT_DAC IOSetPin(DAC_CS_PORT,DAC_CS_PIN)
-
-// A driver for the LTC1661
 void DAC_Initialize(void);
-void DAC_transfer(unsigned char CTRL,uint16_t a);
+
+/*
+ * Set the data value for the given data type
+ * data_type: values 10 for voltage, 9 for current
+ */
+void DAC_SetValue(unsigned char data_type,uint16_t data);
 
 #endif

@@ -2,7 +2,6 @@
 
 #include "USART.h"
 #include "SerialParser.h"
-#include "Debug.h"
 
 #define MAX_SERIAL_LENGTH           80
 #define SERIAL_ACK		            "ACK"

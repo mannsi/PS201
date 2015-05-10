@@ -1,4 +1,15 @@
 #include "ADC.h"
+#include<avr/interrupt.h>
+#include "Timer.h"
+#include "IOHandler.h"
+
+#define ADC_STARTCONVERSION ADCSRA |= 1 << ADSC
+#define ADC_DELAY 20 //in ms
+
+#define ADC_VOLTAGE_MON 0x07 // ADC7
+#define ADC_CURRENT_MON 0x01 // ADC1
+#define ADC_PREREG	0x02 // ADC2
+#define ADC_VIN_MON	0x06 // ADC6
 
 int number_of_oversamplings = 16;
 int number_of_measurements = 256; //number_of_oversamplings * number_of_oversamplings;
@@ -15,7 +26,6 @@ int ADC_GetMeasuredCurrent()
 	return measured_current;
 }
 
-// Setup for the ADC channels
 void ADC_Initialize(void)
 {
   ADMUX = 0;
@@ -25,7 +35,7 @@ void ADC_Initialize(void)
   BIT_SET(ADCSRA,BIT(ADEN));
   // Enable ADC interupt
   BIT_SET(ADCSRA,BIT(ADIE));
-  // Set the ADC prescaler to 64 for ADC 
+  // Set the ADC prescaler to 64 for ADC
   // clock of 125kHz.
   //BIT_SET(ADCSRA,BIT(ADPS0));
   BIT_SET(ADCSRA,BIT(ADPS1));
@@ -47,8 +57,8 @@ void ADC_StartMeasuringVoltage()
 }
 
 // The ADC interupt function is automatically triggered
-// when the ADC has finished converting. Here we store 
-// the value. The main loop then restarts the DAC on 
+// when the ADC has finished converting. Here we store
+// the value. The main loop then restarts the DAC on
 // a different channel.
 ISR(ADC_vect)
 {
@@ -69,7 +79,7 @@ ISR(ADC_vect)
 	  isMeasuringCurrent = 1;
 	  ADC_StartMeasuringCurrent();
   }
-  
+
   if (counter == number_of_measurements)
   {
 	  measured_voltage = (int)(accumulated_voltage / number_of_measurements);

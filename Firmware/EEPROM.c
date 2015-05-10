@@ -4,7 +4,6 @@
 #define ADDR_CURRENT	20
 #define ADDR_DEVICE_ON	30
 
-
 static int getValue(int address);
 static void setValue(int value,int address);
 
