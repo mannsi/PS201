@@ -26,9 +26,17 @@ typedef uint8_t pin;
 // To set a pin to input/output
 void IOSetOutput(port po, pin pi);
 void IOSetInput(port po, pin pi);
+
+// As the name suggests, enable pull-up. Note that the function does not
+// check that the respective pin is really a input.
+void IOEnablePullup(port po, pin pi);
+
 // Set a output pin high.
 void IOSetPin(port po, pin pi);
 // Set a output pin low.
 void IOClearPin(port po, pin pi);
+
+// Get the value of a input pin.
+unsigned char IOGetPin(port po, pin pi);
 
 #endif

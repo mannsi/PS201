@@ -10,6 +10,11 @@ void IOSetInput(port po, pin pi)
   BIT_CLEAR(*(po.direction),BIT(pi));
 }
 
+void IOEnablePullup(port po, pin pi)
+{
+	IOSetPin(po,pi);
+}
+
 void IOSetPin(port po, pin pi)
 {
   BIT_SET(*(po.output),BIT(pi));
@@ -18,6 +23,11 @@ void IOSetPin(port po, pin pi)
 void IOClearPin(port po, pin pi)
 {
   BIT_CLEAR(*(po.output),BIT(pi));
+}
+
+unsigned char IOGetPin(port po, pin pi)
+{
+	return BIT_GET(*(po.input),BIT(pi));
 }
 
 // Definitions of ports

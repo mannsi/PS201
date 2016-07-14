@@ -12,6 +12,7 @@
 #include "Usb.h"
 #include "Device.h"
 #include "Structs.h"
+#include "Switch.h"
 #include "Debug.h"
 #include "Tests.h"
 #include "IOHandler.h"
@@ -38,6 +39,20 @@ static uint8_t allValuesToString(State_struct state, char* string_array);
  */
 static void processUsbResponse(Decoded_input response, State_struct state);
 
+/*
+ * Process input from the physical buttons on the device
+ */
+static void processSwitches(UICommand command);
+
+
+int CurrentActive = 0;
+State_struct deviceState;
+
+static const int VoltageIncrement = 100;
+static const int CurrentIncrement = 100;
+static const int VoltageMaxValue = 20000;
+static const int CurrentMaxValue = 1000;
+
 // DEBUG STUFF
 static void runDebugCode(void);
 static void runTestCode(void);
@@ -46,6 +61,7 @@ int main(void)
 {
 	USB_Initialize();
 	Device_Initialize();
+    SWITCH_Initialize();
 
 	//runTestCode();
     //return 0;
@@ -67,7 +83,12 @@ int main(void)
 		{
             USB_WriteNotAcknowledge();
 		}
-	}
+        else
+        {
+            UICommand newUICommand = SWITCH_readUI();
+            processSwitches(newUICommand);
+        }
+    }
 	return 0;
 }
 
@@ -158,6 +179,65 @@ static void processUsbResponse(Decoded_input usb_response, State_struct state)
     else
     {
         USB_WriteNotAcknowledge();
+    }
+}
+
+static void processSwitches(UICommand command)
+{
+    switch(command){
+        case NO_UI_COMMAND:
+            break;
+        case UP:
+            CurrentActive = !CurrentActive;
+            break;
+        case DOWN:
+            CurrentActive = !CurrentActive;
+            break;
+        case CANCEL:
+            deviceState = Device_GetState();
+            if (deviceState.output_on)
+            {
+                Device_TurnOutputOff();
+            }
+            else
+            {
+                Device_TurnOutputOn();
+            }
+            break;
+        case ENTER:
+            break;
+        case CLOCKWISE:
+            deviceState = Device_GetState();
+            if (CurrentActive)
+            {
+                int newTargetCurrent = deviceState.target_current + CurrentIncrement;
+                if (newTargetCurrent > CurrentMaxValue) break;
+                Device_SetTargetCurrent(newTargetCurrent);
+            }
+            else
+            {
+                int newTargetVoltage = deviceState.target_voltage + VoltageIncrement;
+                if (newTargetVoltage > VoltageMaxValue) break;
+                Device_SetTargetVoltage(newTargetVoltage);
+            }
+            break;
+        case COUNTERCLOCKWISE:
+            deviceState = Device_GetState();
+            if (CurrentActive)
+            {
+                int newTargetCurrent = deviceState.target_current - CurrentIncrement;
+                if (newTargetCurrent < 0) break;
+                Device_SetTargetCurrent(newTargetCurrent);
+            }
+            else
+            {
+                int newTargetVoltage = deviceState.target_voltage - VoltageIncrement;
+                if (newTargetVoltage < 0) break;
+                Device_SetTargetVoltage(newTargetVoltage);
+            }
+            break;
+        default:
+            break;
     }
 }
 
