@@ -49,7 +49,7 @@ int CurrentActive = 0;
 State_struct deviceState;
 
 static const int VoltageIncrement = 100;
-static const int CurrentIncrement = 100;
+static const int CurrentIncrement = 10;
 static const int VoltageMaxValue = 20000;
 static const int CurrentMaxValue = 1000;
 
