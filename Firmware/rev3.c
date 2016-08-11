@@ -45,17 +45,24 @@ static void processUsbResponse(Decoded_input response, State_struct state);
  */
 static void processSwitches(UICommand command);
 
+/*
+ * Sends the current device state on screen.
+ * param showTargetVoltage: If target voltage should be shown or output voltage
+ * param showTargetCurrent: If target current should be shown or output current
+ */
+static void displayDeviceState(int showTargetVoltage, int showTargetCurrent);
 
-int CurrentActive = 0;
-State_struct deviceState;
-
+static const int StandardDelay = 5000;
 static const int VoltageIncrement = 100;
 static const int CurrentIncrement = 10;
 static const int VoltageMaxValue = 20000;
 static const int CurrentMaxValue = 1000;
-
 static const uint8_t backlightIntensity = 10;
 static const uint8_t contrast = 10;
+
+int VoltageActive = 1;
+int DisplayDelayCounter = 0;
+State_struct deviceState;
 
 // DEBUG STUFF
 static void runDebugCode(void);
@@ -69,6 +76,9 @@ int main(void)
     SWITCH_Initialize();
     DISPLAY_StartScreen();
 
+    _delay_ms(1000);
+
+    displayDeviceState(0,0);
 	//runTestCode();
     //return 0;
 
@@ -93,6 +103,15 @@ int main(void)
         {
             UICommand newUICommand = SWITCH_readUI();
             processSwitches(newUICommand);
+        }
+
+        if (DisplayDelayCounter > 0)
+        {
+            DisplayDelayCounter--;
+            if (DisplayDelayCounter == 0)
+            {
+                displayDeviceState(0,0);
+            }
         }
     }
 	return 0;
@@ -171,16 +190,19 @@ static void processUsbResponse(Decoded_input usb_response, State_struct state)
             USB_WriteAcknowledge();
 			Device_TurnOutputOff();
         }
+        DisplayDelayCounter = StandardDelay;
     }
     else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_VOLTAGE) == 0)
     {
         USB_WriteAcknowledge();
         Device_SetTargetVoltage(usb_response.data);
+        DisplayDelayCounter = StandardDelay;
     }
     else if (strcmp(usb_response.cmd, SERIAL_RECEIVE_CURRENT) == 0)
     {
         USB_WriteAcknowledge();
         Device_SetTargetCurrent(usb_response.data);
+        DisplayDelayCounter = StandardDelay;
     }
     else
     {
@@ -194,12 +216,14 @@ static void processSwitches(UICommand command)
         case NO_UI_COMMAND:
             break;
         case UP:
-            CurrentActive = !CurrentActive;
-            break;
-        case DOWN:
-            CurrentActive = !CurrentActive;
+            VoltageActive = 0;
+            displayDeviceState(0,0);
             break;
         case CANCEL:
+            VoltageActive = 1;
+            displayDeviceState(0,0);
+            break;
+        case DOWN:
             deviceState = Device_GetState();
             if (deviceState.output_on)
             {
@@ -209,41 +233,92 @@ static void processSwitches(UICommand command)
             {
                 Device_TurnOutputOn();
             }
+            displayDeviceState(0,0);
+            DisplayDelayCounter = StandardDelay;
             break;
         case ENTER:
             break;
         case CLOCKWISE:
             deviceState = Device_GetState();
-            if (CurrentActive)
-            {
-                int newTargetCurrent = deviceState.target_current + CurrentIncrement;
-                if (newTargetCurrent > CurrentMaxValue) break;
-                Device_SetTargetCurrent(newTargetCurrent);
-            }
-            else
+            if (VoltageActive)
             {
                 int newTargetVoltage = deviceState.target_voltage + VoltageIncrement;
                 if (newTargetVoltage > VoltageMaxValue) break;
                 Device_SetTargetVoltage(newTargetVoltage);
+                displayDeviceState(1,0);
             }
+            else
+            {
+                int newTargetCurrent = deviceState.target_current + CurrentIncrement;
+                if (newTargetCurrent > CurrentMaxValue) break;
+                Device_SetTargetCurrent(newTargetCurrent);
+                displayDeviceState(0,1);
+            }
+
+            DisplayDelayCounter = StandardDelay;
             break;
         case COUNTERCLOCKWISE:
             deviceState = Device_GetState();
-            if (CurrentActive)
-            {
-                int newTargetCurrent = deviceState.target_current - CurrentIncrement;
-                if (newTargetCurrent < 0) break;
-                Device_SetTargetCurrent(newTargetCurrent);
-            }
-            else
+            if (VoltageActive)
             {
                 int newTargetVoltage = deviceState.target_voltage - VoltageIncrement;
                 if (newTargetVoltage < 0) break;
                 Device_SetTargetVoltage(newTargetVoltage);
+                displayDeviceState(1,0);
             }
+            else
+            {
+                int newTargetCurrent = deviceState.target_current - CurrentIncrement;
+                if (newTargetCurrent < 0) break;
+                Device_SetTargetCurrent(newTargetCurrent);
+                displayDeviceState(0,1);
+            }
+
+            DisplayDelayCounter = StandardDelay;
             break;
         default:
             break;
     }
+}
+
+static void displayDeviceState(int showTargetVoltage, int showTargetCurrent)
+{
+    State_struct state = Device_GetState();
+    char* vol = "OUT";
+    char* cur = "OUT";
+
+    int displayVoltage = state.output_voltage;
+    int displayCurrent = state.output_current;
+    if (showTargetVoltage == 1 || !state.output_on)
+    {
+        displayVoltage = state.target_voltage;
+    }
+
+    if (showTargetCurrent == 1 || !state.output_on)
+    {
+        displayCurrent = state.target_current;
+    }
+
+    char voltageArray[8];
+    voltageArray[0] = displayVoltage < 10000 ? ' ' : (char) ( ((int) '0') + displayVoltage / 10000 );
+    voltageArray[1] = displayVoltage < 1000  ? '0' : (char) ( ((int) '0') + (displayVoltage%10000) / (1000) );
+    voltageArray[2] = '.';
+    voltageArray[3] = (char) ( ((int) '0') + (displayVoltage%1000)/100);
+    voltageArray[4] = (char) ( ((int) '0') + (displayVoltage%100)/10);
+    voltageArray[5] = ' ';
+    voltageArray[6] = 'V';
+    voltageArray[7] = '\0';
+
+    char currentArray[8];
+    currentArray[0] = ' ';
+    currentArray[1] = displayCurrent < 100  ? '0' : (char) ( ((int) '0') + (displayCurrent%1000) / (100) );
+    currentArray[2] = '.';
+    currentArray[3] = (char) ( ((int) '0') + (displayCurrent%100)/10);
+    currentArray[4] = (char) ( ((int) '0') + (displayCurrent%10));
+    currentArray[5] = ' ';
+    currentArray[6] = 'A';
+    currentArray[7] = '\0';
+
+    DISPLAY_HomeScreen(voltageArray, currentArray, state.output_on, VoltageActive);
 }
 

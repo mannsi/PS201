@@ -32,7 +32,7 @@ static void DISPLAY_WriteSelectorLower(void)
     LCD_Write("~");
 }
 
-void DISPLAY_HomeScreen(char* voltage,char* current, uint8_t outputOn, unsigned char encoderControls)
+void DISPLAY_HomeScreen(char* voltage,char* current, uint8_t outputOn, int voltageSelected)
 {
     // Write normal home screen
     LCD_Clear();
@@ -41,11 +41,18 @@ void DISPLAY_HomeScreen(char* voltage,char* current, uint8_t outputOn, unsigned 
     LCD_Cursor(1,0);
     LCD_Write("I:");
 
-    DISPLAY_WriteSelectorUpper();
+    if (voltageSelected == 1)
+    {
+        DISPLAY_WriteSelectorUpper();
+
+    } else
+    {
+        DISPLAY_WriteSelectorLower();
+    }
     DISPLAY_WriteVoltage(voltage);
     DISPLAY_WriteCurrent(current);
 
-    if(outputOn)
+    if(outputOn == 1)
     {
         DISPLAY_OutputOn();
     }

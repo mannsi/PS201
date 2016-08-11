@@ -12,7 +12,7 @@
 
 void DISPLAY_Initialize(uint8_t backlight, uint8_t contrast);
 void DISPLAY_StartScreen(void);
-void DISPLAY_HomeScreen(char *v,char *c, uint8_t outputOn, unsigned char encoderControls);
+void DISPLAY_HomeScreen(char *v,char *c, uint8_t outputOn, int voltageSelected);
 unsigned char DISPLAY_MenuScreen(void);
 void DISPLAY_SelectVoltage(void);
 void DISPLAY_SelectCurrent(void);
