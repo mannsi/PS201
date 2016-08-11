@@ -16,6 +16,7 @@
 #include "Debug.h"
 #include "Tests.h"
 #include "IOHandler.h"
+#include "Display.h"
 #include <util/delay.h>
 #include <string.h>
 
@@ -53,16 +54,20 @@ static const int CurrentIncrement = 10;
 static const int VoltageMaxValue = 20000;
 static const int CurrentMaxValue = 1000;
 
+static const uint8_t backlightIntensity = 10;
+static const uint8_t contrast = 10;
+
 // DEBUG STUFF
 static void runDebugCode(void);
 static void runTestCode(void);
 
 int main(void)
 {
+    DISPLAY_Initialize(backlightIntensity,contrast);
 	USB_Initialize();
 	Device_Initialize();
     SWITCH_Initialize();
-    // TODO Initialize screen
+    DISPLAY_StartScreen();
 
 	//runTestCode();
     //return 0;

@@ -1,4 +1,4 @@
-#include "DISPLAY.h"
+#include "Display.h"
 
 int showOutputOn = 1;
 
@@ -10,10 +10,10 @@ void DISPLAY_Initialize(uint8_t backlight, uint8_t contrast)
 void DISPLAY_StartScreen()
 {
     LCD_Clear();
-    LCD_Cursor(0,4);
-    LCD_Write("Digital");
-    LCD_Cursor(1,6);
-    LCD_Write("PSU");
+    LCD_Cursor(0,1);
+    LCD_Write("Fridrik Freyr G");
+    LCD_Cursor(1,5);
+    LCD_Write("Bitch");
 }
 
 static void DISPLAY_WriteSelectorUpper(void)

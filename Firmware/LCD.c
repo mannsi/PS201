@@ -1,5 +1,14 @@
 #include "LCD.h"
 
+#define LCD_ENABLE_PORT portD
+#define LCD_ENABLE_PIN	5
+#define LCD_CS_PORT	portD
+#define LCD_CS_PIN	6
+#define BACKLIGHT_PORT	portB
+#define BACKLIGHT_PIN	2
+#define CONTRAST_PORT	portB
+#define CONTRAST_PIN	1
+
 // Set up the display in 4 bit mode and ready for writing to
 void LCD_Initialize(uint8_t backlight, uint8_t contrast)
 {

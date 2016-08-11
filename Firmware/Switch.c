@@ -5,8 +5,6 @@ static void SWITCH_InitializeButton(button *b);
 // Returns one if switch state is updated
 static unsigned char SWITCH_UpdateState(button *b);
 static unsigned char SWITCH_GetState(button *b);
-static unsigned char SWITCH_Pressed(button *b);
-static unsigned char SW_CheckEncoder(void);
 static unsigned char SW_encoderState;
 
 // Switches
@@ -75,7 +73,7 @@ static unsigned char SWITCH_GetState(button *b)
     return b->state;
 }
 
-static unsigned char SWITCH_Pressed(button *b)
+unsigned char SWITCH_Pressed(button *b)
 {
     return (SWITCH_UpdateState(b) && !SWITCH_GetState(b));
 }
@@ -105,7 +103,7 @@ const unsigned char rotaryTable[6][4] = {
 };
 
 
-static unsigned char SW_CheckEncoder()
+unsigned char SW_CheckEncoder()
 {
     SW_encoderState = rotaryTable[SW_encoderState & 0x0f][ENCODER];
     return SW_encoderState & 0x30;

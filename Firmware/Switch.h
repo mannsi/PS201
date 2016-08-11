@@ -26,6 +26,9 @@ typedef struct
     unsigned char state;
 } button;
 
+extern button switch1, switch2, switch3, switch4;
+
+
 // UI commands
 typedef enum {
     NO_UI_COMMAND,
@@ -37,6 +40,8 @@ typedef enum {
     COUNTERCLOCKWISE,
 } UICommand;
 
+
+
 void SWITCH_Initialize(void);
 
 // readUI reads the physical switches on the device and
@@ -45,7 +50,8 @@ void SWITCH_Initialize(void);
 UICommand SWITCH_readUI(void);
 
 
-
+unsigned char SWITCH_Pressed(button *b);
+unsigned char SW_CheckEncoder(void);
 
 
 // Needs to be rewritten:
