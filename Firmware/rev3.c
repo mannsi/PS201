@@ -62,6 +62,7 @@ int main(void)
 	USB_Initialize();
 	Device_Initialize();
     SWITCH_Initialize();
+    // TODO Initialize screen
 
 	//runTestCode();
     //return 0;

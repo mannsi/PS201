@@ -85,7 +85,7 @@ PROJECTNAME=PS201
 # Use .cc, .cpp or .C suffix for C++ files, use .S
 # (NOT .s !!!) for assembly source code files.
 #PRJSRC=blink.c LED.c SWITCH.c IOHandler.c
-PRJSRC=ADC.c DAC.c Debug.c Device.c EEPROM.c IOHandler.c rev3.c SerialParser.c SPI.c Tests.c Timer.c USART.c Usb.c Switch.c
+PRJSRC=ADC.c DAC.c Debug.c Device.c EEPROM.c IOHandler.c rev3.c SerialParser.c SPI.c Tests.c Timer.c USART.c Usb.c Switch.c LCD.c Display.c
 
 # Optimization level,
 # use s (size opt), 1, 2, 3 or 0 (off)
@@ -110,7 +110,7 @@ AVRDUDE_PROGRAMMERID=stk500v2
 # port--serial or parallel port to which your
 # hardware programmer is attached
 #
-AVRDUDE_PORT=/dev/ttyUSB1
+AVRDUDE_PORT=/dev/ttyUSB0
 
 ####################################################
 #####                Config Done               #####
