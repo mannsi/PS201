@@ -232,9 +232,9 @@ static void processSwitches(UICommand command)
             else
             {
                 Device_TurnOutputOn();
+                DisplayDelayCounter = StandardDelay;
             }
             displayDeviceState(0,0);
-            DisplayDelayCounter = StandardDelay;
             break;
         case ENTER:
             break;
@@ -255,7 +255,10 @@ static void processSwitches(UICommand command)
                 displayDeviceState(0,1);
             }
 
-            DisplayDelayCounter = StandardDelay;
+            if (deviceState.output_on == 1)
+            {
+                DisplayDelayCounter = StandardDelay;
+            }
             break;
         case COUNTERCLOCKWISE:
             deviceState = Device_GetState();
@@ -274,7 +277,10 @@ static void processSwitches(UICommand command)
                 displayDeviceState(0,1);
             }
 
-            DisplayDelayCounter = StandardDelay;
+            if (deviceState.output_on == 1)
+            {
+                DisplayDelayCounter = StandardDelay;
+            }
             break;
         default:
             break;
@@ -311,10 +317,10 @@ static void displayDeviceState(int showTargetVoltage, int showTargetCurrent)
 
     char currentArray[8];
     currentArray[0] = ' ';
-    currentArray[1] = displayCurrent < 100  ? '0' : (char) ( ((int) '0') + (displayCurrent%1000) / (100) );
+    currentArray[1] = displayCurrent < 1000  ? '0' : (char) ( ((int) '0') + (displayCurrent%10000) / (1000) );
     currentArray[2] = '.';
-    currentArray[3] = (char) ( ((int) '0') + (displayCurrent%100)/10);
-    currentArray[4] = (char) ( ((int) '0') + (displayCurrent%10));
+    currentArray[3] = (char) ( ((int) '0') + (displayCurrent%1000)/100);
+    currentArray[4] = (char) ( ((int) '0') + (displayCurrent%100)/10);
     currentArray[5] = ' ';
     currentArray[6] = 'A';
     currentArray[7] = '\0';
